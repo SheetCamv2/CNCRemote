@@ -1,0 +1,42 @@
+option optimize_for = LITE_RUNTIME;
+
+
+
+message CncAxes {
+    optional double x = 1;
+    optional double y = 2;
+    optional double z = 3;
+    optional double a = 4;
+    optional double b = 5;
+    optional double c = 6;
+}
+
+//this data is sent from the server to the client(s) whenever it is available
+message CncStateBuf {
+    optional CncAxes abs_pos = 1; //Axes in machine coordinates. All axis values are metric
+    optional CncAxes offset_work = 2; //Work offsets
+    optional CncAxes offset_fixture = 3; //Fixture offsets
+    optional double lin_unit_scale = 4; // Scale factor to convert millimetres to the display units
+    optional bool control_on = 7; //Control is on and ready to execute command
+    optional bool machine_connected = 8; //machine controller is responding.
+    optional bool paused = 9; //machine is paused
+    optional bool optional_stop = 10; //Optional stop
+    optional bool block_delete = 11; //block delete
+    optional bool running = 12; //Machine is running code
+    optional int32 currentline = 13; //current gcode line running
+}
+
+//used for commands and responses
+message CncCmdBuf{
+    required uint32 type = 1;
+    optional string string = 2;
+    optional bool state = 3;
+    optional bool boolx = 4;
+    optional bool booly = 5;
+    optional bool boolz = 6;
+    optional bool boola = 7;
+    optional bool boolb = 8;
+    optional bool boolc = 9;
+    optional double rate = 10;
+    optional CncAxes axes = 11;
+}
