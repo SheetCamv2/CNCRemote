@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="EdingCNC402" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="../../../plugins/EdingCNC402" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-g" />
+					<Add directory="../../include" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="../../../plugins/EdingCNC402" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+		</Compiler>
+		<Unit filename="../../include/cncplugin.h" />
+		<Unit filename="../../src/cncplugin.cpp" />
+		<Unit filename="CncLang.h" />
+		<Unit filename="EdingCNC.cpp" />
+		<Unit filename="EdingCNC.h" />
+		<Unit filename="Tos.h" />
+		<Unit filename="cnc_basic_types.h" />
+		<Unit filename="cnc_kin_types.h" />
+		<Unit filename="cnc_types.h" />
+		<Unit filename="cnc_types_managed.h" />
+		<Unit filename="cncapi.h" />
+		<Unit filename="cncapi2.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
+		<Unit filename="stdint.h" />
+		<Unit filename="utl.h" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

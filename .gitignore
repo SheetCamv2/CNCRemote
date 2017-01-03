@@ -1,8 +1,8 @@
 *.o
 *~
-bin
+Debug
+Release
 obj
 *.depend
 *.layout
-
 

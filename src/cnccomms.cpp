@@ -1,208 +1,141 @@
 #include "cnccomms.h"
+#include <stdio.h>
+#include <string.h>
 
-#include "zmq.hpp"
+namespace CncRemote{
 
-
-CncComms::CncComms(const string ipAddress, const string statePort, const string cmdPort, const bool server)
+Comms::Comms()
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
-    m_context = new zmq::context_t(1);
-    m_stateSocket = NULL;
-
-    m_isServer = server;
-    string stateAddr = "tcp://" + ipAddress + ":" + statePort;
-    string cmdAddr = "tcp://" + ipAddress + ":" + cmdPort;
-
-    if(server)
-    {
-        m_stateSocket = new zmq::socket_t(*m_context, ZMQ_PUB);
-        m_stateSocket->bind(stateAddr.c_str());
-        m_cmdSocket = new zmq::socket_t(*m_context, ZMQ_PULL);
-        m_cmdSocket->bind(cmdAddr.c_str());
-    }else
-    {
-        m_stateSocket = new zmq::socket_t(*m_context, ZMQ_SUB);
-        m_stateSocket->connect (stateAddr.c_str());
-        m_stateSocket->setsockopt(ZMQ_SUBSCRIBE,"",0);
-        m_cmdSocket = new zmq::socket_t(*m_context, ZMQ_PUSH);
-        m_cmdSocket->connect (cmdAddr.c_str());
-    }
+    m_socket = NULL;
+	m_context = zmq_ctx_new();
 }
 
-CncComms::~CncComms()
+Comms::~Comms()
 {
-    if (m_stateSocket)
-    {
-        delete m_stateSocket;
-    }
-    delete m_context;
+	zmq_close(m_socket);
+    zmq_ctx_destroy(m_context);
 }
 
-
-void CncComms::Send()
+bool Comms::SendPacket(const Packet &packet)
 {
-    if(!m_stateSocket)
-    {
-        CommsException exc("Not initialized");
-        return;
-    }
-    string buf;
-    SerializeToString(&buf);
-    zmq::message_t request (buf.size());
-    memcpy ((void *) request.data (), buf.c_str(), buf.size());
-    if(m_stateSocket->send (request, ZMQ_NOBLOCK))
-    {
-        Clear(); //only clear current data if packet was successfully sent
-    }
+    int rc = zmq_send (m_socket, NULL, 0, ZMQ_SNDMORE | ZMQ_DONTWAIT); //delimiter
+	if(rc < 0) return false;
+
+    zmq_msg_t message;
+    zmq_msg_init_size (&message, packet.data.size() + 1);
+	uint8_t * ptr = (uint8_t *)zmq_msg_data (&message);
+	*ptr++ = packet.cmd;
+    memcpy (ptr, packet.data.c_str(), packet.data.size());
+    rc = zmq_msg_send (&message, m_socket, ZMQ_DONTWAIT);
+	if(rc < 0) return false;
+	return true;
 }
 
+#define DELIMSIZE 10
 
-bool CncComms::Poll()
+bool Comms::RecvPacket(Packet &packet)
 {
-    bool ret = false;
-    if(m_isServer)
-    {
-        if(!m_cmdSocket) return false;
-        zmq::message_t request;
-        while(m_cmdSocket->recv (&request, ZMQ_NOBLOCK))
-        {
-            string buf(static_cast<char*>(request.data()), request.size());
-            CncCmdBuf cmd;
-            cmd.ParseFromString(buf);
-            ExecuteCommand(cmd);
-            ret = true;
-        }
-        return ret;
-    }
+	char buf[DELIMSIZE];
+	int ret = zmq_recv (m_socket, buf, DELIMSIZE, ZMQ_DONTWAIT);
+	size_t bufSize = DELIMSIZE;
+	if(ret < 0 ||
+		zmq_getsockopt(m_socket, ZMQ_RCVMORE, buf, &bufSize) < 0 ||
+		buf[0] == 0)
+	{
+		return false;
+	}
 
-    if(!m_stateSocket) return false;
-    zmq::message_t request;
-    while(m_stateSocket->recv (&request, ZMQ_NOBLOCK))
-    {
-        std::string buf(static_cast<char*>(request.data()), request.size());
-        CncStateBuf state;
-        state.ParseFromString(buf);
-        MergeFrom(state);
-        ret = true;
-    }
-    return true;
+    zmq_msg_t msg;
+    zmq_msg_init (&msg);
+	ret = zmq_msg_recv (&msg, m_socket, ZMQ_DONTWAIT);
+	if(ret < 0)
+	{
+		zmq_msg_close (&msg);
+		return false;
+	}
+	bufSize = zmq_msg_size (&msg);
+	char * ptr = (char *)zmq_msg_data(&msg);
+	bool r = false;
+	if(bufSize > 0)
+	{
+		packet.cmd = *ptr++;
+		bufSize--;
+		packet.data=string(ptr, bufSize);
+		r = true;
+	}else
+	{
+		packet.cmd = cmdNULL;
+	}
+	zmq_msg_close (&msg);
+	return r;
 }
 
-void CncComms::SendCommand(const CncCmdBuf& cmd)
+
+int Comms::RecvString(string& data)
 {
-    if(!m_cmdSocket)
-    {
-        CommsException exc("Not initialized");
-    }
-    string buf;
-    cmd.SerializeToString(&buf);
-    zmq::message_t cmdMsg (buf.size());
-    memcpy ((void *) cmdMsg.data (), buf.c_str(), buf.size());
-    if(m_cmdSocket->send (cmdMsg))
-    {
-        CommsException exc("Failed to send data");
-    }
+	zmq_msg_t msg;
+	zmq_msg_init (&msg);
+	int ret = zmq_msg_recv (&msg, m_socket, ZMQ_NOBLOCK);
+	if(ret >= 0)
+	{
+		string sret((char *)zmq_msg_data (&msg), zmq_msg_size (&msg));
+		data = sret;
+	}
+	zmq_msg_close (&msg);
+	return ret;
 }
 
-
-
-
-CncClient::CncClient(const string ipAddress, const string statePort, const string cmdPort) : CncComms(ipAddress, statePort, cmdPort, false)
+bool Comms::SendCommand(const uint16_t cmd)
 {
-
+    if(m_socket < 0) return false;
+	Packet packet;
+	packet.cmd = cmd;
+	return SendPacket(packet);
 }
 
-
-void CncClient::DrivesOn(const bool state)
+bool Comms::SendCommand(const uint16_t cmd, const bool state)
 {
-    CncCmdBuf cmd;
-    cmd.set_type(cmdDRIVESON);
-    cmd.set_state(state);
-    SendCommand(cmd);
+	CmdBuf buf;
+	buf.set_state(state);
+	return SendCommand(cmd, buf);
 }
 
-void CncClient::JogVel(const AXES velocities)
+bool Comms::SendCommand(const uint16_t cmd, const double value)
 {
-    CncCmdBuf cmd;
-    cmd.set_type(cmdJOGVEL);
-    CncAxes& axes = *cmd.mutable_axes();
-    axes.set_x(velocities.x);
-    axes.set_y(velocities.y);
-    axes.set_z(velocities.z);
-    axes.set_a(velocities.a);
-    axes.set_b(velocities.b);
-    axes.set_c(velocities.c);
-    SendCommand(cmd);
+	CmdBuf buf;
+	buf.set_rate(value);
+	return SendCommand(cmd, buf);
 }
 
-void CncClient::Mdi(const string line)
+bool Comms::SendCommand(const uint16_t cmd, const string value)
 {
-    CncCmdBuf cmd;
-    cmd.set_type(cmdMDI);
-    cmd.set_string(line);
-    SendCommand(cmd);
+	CmdBuf buf;
+	buf.set_string(value);
+	return SendCommand(cmd, buf);
 }
 
 
-void CncClient::SetFRO(const double percent)
+bool Comms::SendCommand(const uint16_t command, const CmdBuf& data)
 {
-    CncCmdBuf cmd;
-    cmd.set_type(cmdFRO);
-    cmd.set_rate(percent);
-    SendCommand(cmd);
+    if(m_socket < 0) return false;
+	Packet packet;
+    data.SerializeToString(&packet.data);
+	packet.cmd = command;
+	return SendPacket(packet);
 }
 
-void CncClient::LoadFile(const string file)
+/*
+string Comms::CreateAddress(const CONTROLSTATUS status, const string ipAddress, const int port, const bool local)
 {
-    CncCmdBuf cmd;
-    cmd.set_type(cmdFILE);
-    cmd.set_string(file);
-    SendCommand(cmd);
+	string ret = "tcp://" ;
+	if(status == ctrlLOCAL || local)
+	{
+		ret = "127.0.0.1"
+	}
 }
 
-void CncClient::CycleStart()
-{
-    CncCmdBuf cmd;
-    cmd.set_type(cmdSTART);
-    SendCommand(cmd);
-}
+*/
 
-void CncClient::Stop()
-{
-    CncCmdBuf cmd;
-    cmd.set_type(cmdSTOP);
-    SendCommand(cmd);
-}
+} //namespace CncRemote
 
-void CncClient::Pause(const bool state)
-{
-    CncCmdBuf cmd;
-    cmd.set_type(cmdPAUSE);
-    cmd.set_state(state);
-    SendCommand(cmd);
-}
-
-
-void CncClient::BlockDelete(const bool state)
-{
-    CncCmdBuf cmd;
-    cmd.set_type(cmdBLOCKDEL);
-    cmd.set_state(state);
-    SendCommand(cmd);
-}
-
-void CncClient::SingleStep(const bool state)
-{
-    CncCmdBuf cmd;
-    cmd.set_type(cmdSINGLESTEP);
-    cmd.set_state(state);
-    SendCommand(cmd);
-}
-
-void CncClient::OptionalStop(const bool state)
-{
-    CncCmdBuf cmd;
-    cmd.set_type(cmdOPTSTOP);
-    cmd.set_state(state);
-    SendCommand(cmd);
-}

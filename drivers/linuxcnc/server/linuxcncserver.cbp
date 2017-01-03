@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="linuxcncserver" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option platforms="Unix;" />
+				<Option output="bin/Debug/linuxcncserver" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-std=c++11" />
+					<Add directory="linuxcnc/src/emc/usr_intf" />
+					<Add directory="../include" />
+					<Add directory="linuxcnc/include" />
+				</Compiler>
+				<Linker>
+					<Add library="protobuf" />
+					<Add library="zmq" />
+					<Add library="linuxcncini" />
+					<Add library="linuxcnchal" />
+					<Add library="linuxcnc" />
+					<Add library="nml" />
+					<Add directory="linuxcnc/lib" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option platforms="Unix;" />
+				<Option output="bin/Release/linuxcncserver" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+		</Compiler>
+		<Unit filename="../include/cnccomms.h" />
+		<Unit filename="../include/cncstate.h" />
+		<Unit filename="../include/cncstatebuf.pb.h" />
+		<Unit filename="../include/millisleep.h" />
+		<Unit filename="../src/cnccomms.cpp" />
+		<Unit filename="../src/cncstatebuf.pb.cc" />
+		<Unit filename="../src/cncstatebuf.proto" />
+		<Unit filename="linuxcnc/src/emc/usr_intf/shcom.cc" />
+		<Unit filename="main.cpp" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

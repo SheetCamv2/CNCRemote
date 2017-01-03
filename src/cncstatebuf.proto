@@ -1,8 +1,16 @@
+syntax = "proto2";
+
+package CncRemote;
+
 option optimize_for = LITE_RUNTIME;
 
+enum SPINDLE {
+	spinOFF = 0;
+	spinFWD = 1;
+	spinREV = 2;
+}
 
-
-message CncAxes {
+message Axes {
     optional double x = 1;
     optional double y = 2;
     optional double z = 3;
@@ -11,32 +19,43 @@ message CncAxes {
     optional double c = 6;
 }
 
+message BoolAxes {
+    optional bool x = 1;
+    optional bool y = 2;
+    optional bool z = 3;
+    optional bool a = 4;
+    optional bool b = 5;
+    optional bool c = 6;
+}
+
 //this data is sent from the server to the client(s) whenever it is available
-message CncStateBuf {
-    optional CncAxes abs_pos = 1; //Axes in machine coordinates. All axis values are metric
-    optional CncAxes offset_work = 2; //Work offsets
-    optional CncAxes offset_fixture = 3; //Fixture offsets
-    optional double lin_unit_scale = 4; // Scale factor to convert millimetres to the display units
+message StateBuf {
+//    optional uint32 heartbeat = 1; //Automatically incremented once every time a packet is sent.
+    optional Axes abs_pos = 2; //Axes in machine coordinates. All axis values are metric
+    optional Axes offset_work = 3; //Work offsets
+    optional Axes offset_fixture = 4; //Fixture offsets
+    optional double lin_unit_scale = 5; // Scale factor to convert millimetres to the display units
+    optional double feed_override = 6; //Feed rate override
     optional bool control_on = 7; //Control is on and ready to execute command
     optional bool machine_connected = 8; //machine controller is responding.
     optional bool paused = 9; //machine is paused
     optional bool optional_stop = 10; //Optional stop
     optional bool block_delete = 11; //block delete
     optional bool running = 12; //Machine is running code
-    optional int32 currentline = 13; //current gcode line running
+    optional int32 current_line = 13; //current gcode line running
+    optional bool single_step = 14; //Single step
+    optional double spindle_speed = 15;
+    optional uint32 spindle_state = 16; //one of spinOFF,spinFWD,spinREV
+    optional bool mist = 17;
+    optional bool flood = 18;
+    
 }
 
 //used for commands and responses
-message CncCmdBuf{
-    required uint32 type = 1;
+message CmdBuf{
     optional string string = 2;
     optional bool state = 3;
-    optional bool boolx = 4;
-    optional bool booly = 5;
-    optional bool boolz = 6;
-    optional bool boola = 7;
-    optional bool boolb = 8;
-    optional bool boolc = 9;
-    optional double rate = 10;
-    optional CncAxes axes = 11;
+    optional Axes axes = 4;
+    optional BoolAxes bool_axes = 5;
+    optional double rate = 6;
 }

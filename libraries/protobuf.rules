@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioToolFile
+	Name="Protobuf"
+	Version="8.00"
+	>
+	<Rules>
+		<CustomBuildRule
+			Name="Protobuf"
+			DisplayName="Protobuf"
+			CommandLine="cncremote\libraries\bin\protoc.exe --cpp_out=$(InputDir) --proto_path=$(InputDir) $(InputPath)"
+			Outputs="$(InputDir)\$(InputName).pb.h"
+			FileExtensions="*.proto"
+			ExecutionDescription="Compiling protocol buffers"
+			>
+			<Properties>
+			</Properties>
+		</CustomBuildRule>
+	</Rules>
+</VisualStudioToolFile>

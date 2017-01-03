@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Sim" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="./$(PROJECT_NAME)" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-march=i686" />
+					<Add option="-std=c++11" />
+					<Add option="-g" />
+					<Add option="-m32" />
+					<Add option="-DZMQ_STATIC" />
+					<Add directory="../../../include" />
+					<Add directory="../../../src" />
+					<Add directory="../../../../cncremote/libraries/include" />
+				</Compiler>
+				<Linker>
+					<Add option="-m32" />
+					<Add library="protobuf-lite-3_1_0-32" />
+					<Add library="zmq-4_2_1-32" />
+					<Add library="ws2_32" />
+					<Add library="IPHLPAPI" />
+					<Add directory="../../../libraries/lib" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="./$(PROJECT_NAME)" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+		</Compiler>
+		<Unit filename="../../../include/cnccomms.h" />
+		<Unit filename="../../../include/cncplugin.h" />
+		<Unit filename="../../../include/cncserver.h" />
+		<Unit filename="../../../include/millisleep.h" />
+		<Unit filename="../../../src/cnccomms.cpp" />
+		<Unit filename="../../../src/cncserver.cpp" />
+		<Unit filename="../../../src/cncstatebuf.pb.cc" />
+		<Unit filename="../../../src/cncstatebuf.pb.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
+		<Unit filename="sim.cpp" />
+		<Unit filename="sim.h" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
