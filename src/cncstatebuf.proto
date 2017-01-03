@@ -48,7 +48,7 @@ message StateBuf {
     optional uint32 spindle_state = 16; //one of spinOFF,spinFWD,spinREV
     optional bool mist = 17;
     optional bool flood = 18;
-    
+
 }
 
 //used for commands and responses

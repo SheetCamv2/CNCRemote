@@ -19,14 +19,14 @@ public:
     virtual void UpdateState(){} //Called just before state is sent out
 
 protected:
-    struct Identity
+/*    struct Identity
     {
         string name;
         time_t timeout;
         bool needState;
     };
 
-    vector<Identity> m_ids;
+    vector<Identity> m_ids;*/
     string m_curId;
 
 private:

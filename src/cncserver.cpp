@@ -40,10 +40,10 @@ Comms::COMERROR Server::SendState(const string& id)
     {
         return errNOSOCKET;
     }
-    if(m_ids.empty()) //nothing to do
+/*    if(m_ids.empty()) //nothing to do
     {
         return(errOK);
-    }
+    }*/
 
     string s;
     SerializeToString(&s);
@@ -55,7 +55,7 @@ Comms::COMERROR Server::SendState(const string& id)
 
     COMERROR ret = errOK;
     bool sent = false;
-    int rc = zmq_send (m_socket,id.c_str(), id.size(), ZMQ_SNDMORE | ZMQ_DONTWAIT);
+    int rc = zmq_send (m_socket,id.data(), id.size(), ZMQ_SNDMORE | ZMQ_DONTWAIT);
     if(rc < 0)
     {
         return errFAILED;
@@ -89,7 +89,7 @@ bool Server::Poll()
         {
             break;
         }
-        int id = -1;
+/*        int id = -1;
         for(unsigned int ct=0; ct < m_ids.size(); ct++)
         {
             if(m_ids[ct].name == ident)
@@ -101,14 +101,13 @@ bool Server::Poll()
         if(id <0)
         {
             Identity i;
-            i.name = ident;
+            i.name = "wed";//ident;
             i.timeout = time(NULL) + CONN_TIMEOUT;
             m_ids.push_back(i);
-printf("Connected %s", i.name.c_str());
         }else
         {
             m_ids[id].timeout = time(NULL) + CONN_TIMEOUT;
-        }
+        }*/
         m_curId = ident;
 
 		Packet pkt;
@@ -116,14 +115,14 @@ printf("Connected %s", i.name.c_str());
 		{
 			break;
 		}
+//        m_ids[id].needState = true;
+        needState = true;
 		switch(pkt.cmd)
 		{
 		case cmdNULL:
 			break;
 
         case cmdSTATE:
-            m_ids[id].needState = true;
-            needState = true;
             break;
 
 		case cmdSENDFILE: //TODO: File handling
@@ -140,8 +139,9 @@ printf("Connected %s", i.name.c_str());
     if(needState)
     {
         UpdateState();
+        SendState(m_curId);
     }
-    time_t t = time(NULL);
+/*    time_t t = time(NULL);
     for(int ct=0; ct < m_ids.size(); ct++)
     {
         Identity & id = m_ids[ct];
@@ -151,11 +151,7 @@ printf("ID %s timed out\n", id.name.c_str());
             m_ids.erase(m_ids.begin() + ct);
             ct--;
         }
-        if(id.needState)
-        {
-            SendState(id.name);
-        }
-    }
+    }*/
 	return ret;
 }
 
