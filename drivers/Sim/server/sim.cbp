@@ -7,6 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
+				<Option platforms="Windows;" />
 				<Option output="./$(PROJECT_NAME)" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
@@ -14,10 +15,8 @@
 				<Option use_console_runner="0" />
 				<Compiler>
 					<Add option="-march=i686" />
-					<Add option="-std=c++11" />
 					<Add option="-g" />
-					<Add option="-m32" />
-					<Add option="-DZMQ_STATIC" />
+					<Add option="-std=c++11" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../../cncremote/libraries/include" />
@@ -44,11 +43,35 @@
 					<Add option="-s" />
 				</Linker>
 			</Target>
+			<Target title="Debug-Linux">
+				<Option platforms="Unix;" />
+				<Option output="./$(PROJECT_NAME)" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-march=i686" />
+					<Add option="-g" />
+					<Add option="-std=c++11" />
+					<Add directory="../../../include" />
+					<Add directory="../../../src" />
+				</Compiler>
+				<Linker>
+					<Add library="protobuf-lite" />
+					<Add library="zmq" />
+					<Add directory="../../../libraries/lib" />
+				</Linker>
+			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
+		<Unit filename="sim.cpp" />
+		<Unit filename="sim.h" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
 		<Unit filename="../../../include/cncserver.h" />
@@ -57,10 +80,6 @@
 		<Unit filename="../../../src/cncserver.cpp" />
 		<Unit filename="../../../src/cncstatebuf.pb.cc" />
 		<Unit filename="../../../src/cncstatebuf.pb.h" />
-		<Unit filename="main.cpp" />
-		<Unit filename="main.h" />
-		<Unit filename="sim.cpp" />
-		<Unit filename="sim.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

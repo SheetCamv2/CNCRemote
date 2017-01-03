@@ -79,8 +79,17 @@ int Comms::RecvString(string& data)
 	int ret = zmq_msg_recv (&msg, m_socket, ZMQ_NOBLOCK);
 	if(ret >= 0)
 	{
+
+char c[255];
+int s = zmq_msg_size (&msg);
+memcpy(c,zmq_msg_data (&msg), zmq_msg_size (&msg));
+
 		string sret((char *)zmq_msg_data (&msg), zmq_msg_size (&msg));
 		data = sret;
+s = data.size();
+
+memcpy(c,zmq_msg_data (&msg), zmq_msg_size (&msg));
+
 	}
 	zmq_msg_close (&msg);
 	return ret;
