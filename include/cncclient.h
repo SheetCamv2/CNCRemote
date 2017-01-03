@@ -52,8 +52,8 @@ protected:
 
 private:
 	bool m_isConnected;
+	bool m_wasConnected;
 	unsigned int m_lastHeart;
-	time_t m_nextTime;
     vector<Plugin> m_plugins;
 	string m_address;
 };

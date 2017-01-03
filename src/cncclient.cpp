@@ -11,8 +11,8 @@ namespace CncRemote
 Client::Client()
 {
 	m_isConnected = false;
+	m_wasConnected = false;
 	m_lastHeart = 0;
-	m_nextTime = time(NULL) + CONN_TIMEOUT;
 }
 
 Client::~Client()
@@ -190,6 +190,14 @@ bool Client::Poll()
 	{
 		SendCommand(cmdSTATE);
 	}
+	if(m_isConnected != m_wasConnected)
+	{
+		m_wasConnected = m_isConnected;
+		if(!m_isConnected) //we have just disconnected
+		{
+			SendCommand(cmdSTATE); //queue another state message to wake up the server when we connect
+		}
+	}
 	return ret;
 }
 
@@ -211,7 +219,7 @@ bool Client::Connect(const int index, const string address)
 	char* identity = "sheetcam";
     zmq_setsockopt (socket, ZMQ_IDENTITY, identity, strlen (identity));
 	Packet pkt;
-	pkt.cmd = cmdPING;
+	pkt.cmd = cmdSTATE;
 	SendPacket(pkt);
 	return true;
 }
