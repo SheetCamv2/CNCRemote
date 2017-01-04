@@ -31,10 +31,10 @@ message BoolAxes {
 //this data is sent from the server to the client(s) whenever it is available
 message StateBuf {
 //    optional uint32 heartbeat = 1; //Automatically incremented once every time a packet is sent.
-    optional Axes abs_pos = 2; //Axes in machine coordinates. All axis values are metric
-    optional Axes offset_work = 3; //Work offsets
-    optional Axes offset_fixture = 4; //Fixture offsets
-    optional double lin_unit_scale = 5; // Scale factor to convert millimetres to the display units
+    optional Axes abs_pos = 2; //Axes in machine coordinates (in metric units)
+    optional Axes offset_work = 3; //Work offsets (in metric units)
+    optional Axes offset_fixture = 4; //Fixture offsets (in metric units)
+
     optional double feed_override = 6; //Feed rate override
     optional bool control_on = 7; //Control is on and ready to execute command
     optional bool machine_connected = 8; //machine controller is responding.
@@ -49,6 +49,7 @@ message StateBuf {
     optional bool mist = 17;
     optional bool flood = 18;
     optional BoolAxes homed = 19; //homed status
+    optional BoolAxes axis_linear = 20; //true if the axis is linear
 }
 
 //used for commands and responses
@@ -58,4 +59,5 @@ message CmdBuf{
     optional Axes axes = 4;
     optional BoolAxes bool_axes = 5;
     optional double rate = 6;
+    optional int32 intval=7;
 }

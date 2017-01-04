@@ -70,7 +70,7 @@ class Comms : public StateBuf
             cmdOPTSTOP,
 			cmdSENDFILE,
 			cmdREQFILE,
-			cmdCOOLANT,
+			cmdFLOOD,
 			cmdMIST,
 			cmdSPINDLE,
 			cmdHOME,
