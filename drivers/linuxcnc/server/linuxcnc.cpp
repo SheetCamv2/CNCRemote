@@ -20,6 +20,54 @@ LinuxCnc::LinuxCnc()
     m_heartbeat = 0;
     m_nextTime = 0;
     m_connected = false;
+
+    IniFile inifile;
+    const char *inistring;
+    m_maxSpeedLin = 4000;
+    m_maxSpeedAng = 100;
+
+    // open it
+    if (inifile.Open(emc_inifile) == false)
+    {
+        return;
+    }
+    float tmp = 0;
+    if (NULL != (inistring = inifile.Find("MAX_LINEAR_VELOCITY", "DISPLAY")))
+    {
+        // copy to global
+        if (1 != sscanf(inistring, "%f", &tmp))
+        {
+            tmp = 0;
+        }
+    }
+    if (tmp == 0 && NULL != (inistring = inifile.Find("MAX_LINEAR_VELOCITY", "TRAJ")))
+    {
+        // copy to global
+        if (1 != sscanf(inistring, "%f", &tmp))
+        {
+            tmp = 4000;
+        }
+    }
+    m_maxSpeedLin = tmp;
+
+    tmp = 0;
+    if (NULL != (inistring = inifile.Find("MAX_ANGULAR_VELOCITY", "DISPLAY")))
+    {
+        // copy to global
+        if (1 != sscanf(inistring, "%f", &tmp))
+        {
+            tmp = 0;
+        }
+    }
+    if (tmp == 0 && NULL != (inistring = inifile.Find("MAX_ANGULAR_VELOCITY", "TRAJ")))
+    {
+        // copy to global
+        if (1 != sscanf(inistring, "%f", &tmp))
+        {
+            tmp = 4000;
+        }
+    }
+    m_maxSpeedLin = tmp;
 }
 
 void LinuxCnc::ConnectLCnc()
@@ -37,7 +85,6 @@ void LinuxCnc::ConnectLCnc()
     m_heartbeat = emcStatus->task.heartbeat;
     m_nextTime = time(NULL) + 1; //check every second
     m_connected = true;
-
 }
 
 bool LinuxCnc::Poll()
@@ -108,6 +155,7 @@ void LinuxCnc::UpdateState()
 
     case 6:
         set_running(emcStatus->task.interpState != EMC_TASK_INTERP_IDLE);
+        updateError();
         if(error_string[0] != 0)
         {
             set_error_msg(error_string);
@@ -117,7 +165,8 @@ void LinuxCnc::UpdateState()
         {
             set_display_msg(operator_text_string);
             operator_text_string[0] = 0;
-        }else if(operator_display_string[0] != 0)
+        }
+        else if(operator_display_string[0] != 0)
         {
             set_display_msg(operator_display_string);
             operator_display_string[0] = 0;
@@ -181,7 +230,13 @@ void LinuxCnc::UpdateState()
     }
 }
 
-
+void LinuxCnc::SendJog(const int axis, const double val)
+{
+    if(emcStatus->motion.joint[axis].jointType == EMC_LINEAR)
+        sendJogCont(axis,JOGTELEOP, val * m_maxSpeedLin);
+    else
+        sendJogCont(axis,JOGTELEOP, val * m_maxSpeedAng);
+}
 
 void LinuxCnc::HandlePacket(const Packet & pkt)
 {
@@ -207,12 +262,12 @@ void LinuxCnc::HandlePacket(const Packet & pkt)
         sendSetTeleopEnable(true);
         {
             const CncRemote::Axes& axes = cmd.axes();
-            sendJogCont(0,JOGTELEOP,axes.x());
-            sendJogCont(1,JOGTELEOP,axes.y());
-            sendJogCont(2,JOGTELEOP,axes.z());
-            sendJogCont(3,JOGTELEOP,axes.a());
-            sendJogCont(4,JOGTELEOP,axes.b());
-            sendJogCont(5,JOGTELEOP,axes.c());
+            SendJog(0,axes.x());
+            SendJog(1,axes.y());
+            SendJog(2,axes.z());
+            SendJog(3,axes.a());
+            SendJog(4,axes.b());
+            SendJog(5,axes.c());
         }
         break;
 
@@ -316,7 +371,7 @@ void LinuxCnc::HandlePacket(const Packet & pkt)
             break;
 
         case CncRemote::spinREV:
-                sendSpindleReverse();
+            sendSpindleReverse();
             break;
         }
         break;
@@ -326,7 +381,8 @@ void LinuxCnc::HandlePacket(const Packet & pkt)
         if(cmd.state())
         {
             sendFloodOn();
-        }else
+        }
+        else
         {
             sendFloodOff();
         }
@@ -336,7 +392,8 @@ void LinuxCnc::HandlePacket(const Packet & pkt)
         if(cmd.state())
         {
             sendMistOn();
-        }else
+        }
+        else
         {
             sendMistOff();
         }
@@ -363,5 +420,6 @@ void LinuxCnc::SetMode(const int mode)
         break;
     }
 }
+
 
 
