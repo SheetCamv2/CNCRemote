@@ -6,3 +6,7 @@ obj
 *.depend
 *.layout
 *.pb.*
+*.~*
+*.~*
+*.old
+
