@@ -108,6 +108,20 @@ void LinuxCnc::UpdateState()
 
     case 6:
         set_running(emcStatus->task.interpState != EMC_TASK_INTERP_IDLE);
+        if(error_string[0] != 0)
+        {
+            set_error_msg(error_string);
+            error_string[0] = 0;
+        }
+        if(operator_text_string[0] != 0)
+        {
+            set_display_msg(operator_text_string);
+            operator_text_string[0] = 0;
+        }else if(operator_display_string[0] != 0)
+        {
+            set_display_msg(operator_display_string);
+            operator_display_string[0] = 0;
+        }
         break;
 
     case 7:

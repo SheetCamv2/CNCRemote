@@ -50,6 +50,8 @@ message StateBuf {
     optional bool flood = 18;
     optional BoolAxes homed = 19; //homed status
     optional BoolAxes axis_linear = 20; //true if the axis is linear
+    optional string error_msg = 21; //string. Contains last error message
+    optional string display_msg = 22; //string. Contains any text that should be displayed to the user
 }
 
 //used for commands and responses
