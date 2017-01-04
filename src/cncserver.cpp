@@ -53,8 +53,6 @@ Comms::COMERROR Server::SendState(const string& id)
 	*ptr++ = cmdSTATE;
     memcpy (ptr, s.c_str(), s.size());
 
-    COMERROR ret = errOK;
-    bool sent = false;
     int rc = zmq_send (m_socket,id.data(), id.size(), ZMQ_SNDMORE | ZMQ_DONTWAIT);
     if(rc < 0)
     {
@@ -79,7 +77,6 @@ bool Server::Poll()
 {
     if(m_socket == NULL) return false;
     bool ret = false;
-	char *buf = NULL;
 	bool needState = false;
 	while(1)
 	{
