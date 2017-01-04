@@ -537,6 +537,15 @@ class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   bool flood() const;
   void set_flood(bool value);
 
+  // optional .CncRemote.BoolAxes homed = 19;
+  bool has_homed() const;
+  void clear_homed();
+  static const int kHomedFieldNumber = 19;
+  const ::CncRemote::BoolAxes& homed() const;
+  ::CncRemote::BoolAxes* mutable_homed();
+  ::CncRemote::BoolAxes* release_homed();
+  void set_allocated_homed(::CncRemote::BoolAxes* homed);
+
   // @@protoc_insertion_point(class_scope:CncRemote.StateBuf)
  private:
   inline void set_has_abs_pos();
@@ -573,6 +582,8 @@ class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   inline void clear_has_mist();
   inline void set_has_flood();
   inline void clear_has_flood();
+  inline void set_has_homed();
+  inline void clear_has_homed();
 
   ::google::protobuf::internal::ArenaStringPtr _unknown_fields_;
   ::google::protobuf::Arena* _arena_ptr_;
@@ -582,6 +593,7 @@ class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   ::CncRemote::Axes* abs_pos_;
   ::CncRemote::Axes* offset_work_;
   ::CncRemote::Axes* offset_fixture_;
+  ::CncRemote::BoolAxes* homed_;
   double lin_unit_scale_;
   double feed_override_;
   bool control_on_;
@@ -1529,6 +1541,51 @@ inline void StateBuf::set_flood(bool value) {
   set_has_flood();
   flood_ = value;
   // @@protoc_insertion_point(field_set:CncRemote.StateBuf.flood)
+}
+
+// optional .CncRemote.BoolAxes homed = 19;
+inline bool StateBuf::has_homed() const {
+  return (_has_bits_[0] & 0x00020000u) != 0;
+}
+inline void StateBuf::set_has_homed() {
+  _has_bits_[0] |= 0x00020000u;
+}
+inline void StateBuf::clear_has_homed() {
+  _has_bits_[0] &= ~0x00020000u;
+}
+inline void StateBuf::clear_homed() {
+  if (homed_ != NULL) homed_->::CncRemote::BoolAxes::Clear();
+  clear_has_homed();
+}
+inline const ::CncRemote::BoolAxes& StateBuf::homed() const {
+  // @@protoc_insertion_point(field_get:CncRemote.StateBuf.homed)
+  return homed_ != NULL ? *homed_
+                         : *::CncRemote::BoolAxes::internal_default_instance();
+}
+inline ::CncRemote::BoolAxes* StateBuf::mutable_homed() {
+  set_has_homed();
+  if (homed_ == NULL) {
+    homed_ = new ::CncRemote::BoolAxes;
+  }
+  // @@protoc_insertion_point(field_mutable:CncRemote.StateBuf.homed)
+  return homed_;
+}
+inline ::CncRemote::BoolAxes* StateBuf::release_homed() {
+  // @@protoc_insertion_point(field_release:CncRemote.StateBuf.homed)
+  clear_has_homed();
+  ::CncRemote::BoolAxes* temp = homed_;
+  homed_ = NULL;
+  return temp;
+}
+inline void StateBuf::set_allocated_homed(::CncRemote::BoolAxes* homed) {
+  delete homed_;
+  homed_ = homed;
+  if (homed) {
+    set_has_homed();
+  } else {
+    clear_has_homed();
+  }
+  // @@protoc_insertion_point(field_set_allocated:CncRemote.StateBuf.homed)
 }
 
 inline const StateBuf* StateBuf::internal_default_instance() {
