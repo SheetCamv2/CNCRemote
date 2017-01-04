@@ -22,32 +22,24 @@
 #include <google/protobuf/arena.h>
 #include <google/protobuf/arenastring.h>
 #include <google/protobuf/generated_message_util.h>
-#include <google/protobuf/metadata.h>
 #include <google/protobuf/message_lite.h>
-#include <google/protobuf/repeated_field.h>  // IWYU pragma: export
-#include <google/protobuf/extension_set.h>  // IWYU pragma: export
+#include <google/protobuf/repeated_field.h>
+#include <google/protobuf/extension_set.h>
 #include <google/protobuf/generated_enum_util.h>
 // @@protoc_insertion_point(includes)
-namespace CncRemote {
-class Axes;
-class AxesDefaultTypeInternal;
-extern AxesDefaultTypeInternal _Axes_default_instance_;
-class BoolAxes;
-class BoolAxesDefaultTypeInternal;
-extern BoolAxesDefaultTypeInternal _BoolAxes_default_instance_;
-class CmdBuf;
-class CmdBufDefaultTypeInternal;
-extern CmdBufDefaultTypeInternal _CmdBuf_default_instance_;
-class StateBuf;
-class StateBufDefaultTypeInternal;
-extern StateBufDefaultTypeInternal _StateBuf_default_instance_;
-}  // namespace CncRemote
 
 namespace CncRemote {
 
 // Internal implementation detail -- do not call these.
 void protobuf_AddDesc_cncstatebuf_2eproto();
 void protobuf_InitDefaults_cncstatebuf_2eproto();
+void protobuf_AssignDesc_cncstatebuf_2eproto();
+void protobuf_ShutdownFile_cncstatebuf_2eproto();
+
+class Axes;
+class BoolAxes;
+class CmdBuf;
+class StateBuf;
 
 enum SPINDLE {
   spinOFF = 0,
@@ -74,56 +66,55 @@ class Axes : public ::google::protobuf::MessageLite /* @@protoc_insertion_point(
   }
 
   inline const ::std::string& unknown_fields() const {
-    return _internal_metadata_.unknown_fields();
+    return _unknown_fields_.GetNoArena(
+        &::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
 
   inline ::std::string* mutable_unknown_fields() {
-    return _internal_metadata_.mutable_unknown_fields();
+    return _unknown_fields_.MutableNoArena(
+        &::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
 
   static const Axes& default_instance();
 
-  static inline const Axes* internal_default_instance() {
-    return reinterpret_cast<const Axes*>(
-               &_Axes_default_instance_);
-  }
+  static const Axes* internal_default_instance();
 
   void Swap(Axes* other);
 
   // implements Message ----------------------------------------------
 
-  inline Axes* New() const PROTOBUF_FINAL { return New(NULL); }
+  inline Axes* New() const { return New(NULL); }
 
-  Axes* New(::google::protobuf::Arena* arena) const PROTOBUF_FINAL;
-  void CheckTypeAndMergeFrom(const ::google::protobuf::MessageLite& from)
-    PROTOBUF_FINAL;
+  Axes* New(::google::protobuf::Arena* arena) const;
+  void CheckTypeAndMergeFrom(const ::google::protobuf::MessageLite& from);
   void CopyFrom(const Axes& from);
   void MergeFrom(const Axes& from);
-  void Clear() PROTOBUF_FINAL;
-  bool IsInitialized() const PROTOBUF_FINAL;
+  void Clear();
+  bool IsInitialized() const;
 
-  size_t ByteSizeLong() const PROTOBUF_FINAL;
+  size_t ByteSizeLong() const;
   bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input) PROTOBUF_FINAL;
+      ::google::protobuf::io::CodedInputStream* input);
   void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const PROTOBUF_FINAL;
+      ::google::protobuf::io::CodedOutputStream* output) const;
   void DiscardUnknownFields();
-  int GetCachedSize() const PROTOBUF_FINAL { return _cached_size_; }
+  int GetCachedSize() const { return _cached_size_; }
   private:
   void SharedCtor();
   void SharedDtor();
   void SetCachedSize(int size) const;
   void InternalSwap(Axes* other);
+  void UnsafeMergeFrom(const Axes& from);
   private:
   inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
-    return NULL;
+    return _arena_ptr_;
   }
-  inline void* MaybeArenaPtr() const {
-    return NULL;
+  inline ::google::protobuf::Arena* MaybeArenaPtr() const {
+    return _arena_ptr_;
   }
   public:
 
-  ::std::string GetTypeName() const PROTOBUF_FINAL;
+  ::std::string GetTypeName() const;
 
   // nested types ----------------------------------------------------
 
@@ -173,20 +164,22 @@ class Axes : public ::google::protobuf::MessageLite /* @@protoc_insertion_point(
 
   // @@protoc_insertion_point(class_scope:CncRemote.Axes)
  private:
-  void set_has_x();
-  void clear_has_x();
-  void set_has_y();
-  void clear_has_y();
-  void set_has_z();
-  void clear_has_z();
-  void set_has_a();
-  void clear_has_a();
-  void set_has_b();
-  void clear_has_b();
-  void set_has_c();
-  void clear_has_c();
+  inline void set_has_x();
+  inline void clear_has_x();
+  inline void set_has_y();
+  inline void clear_has_y();
+  inline void set_has_z();
+  inline void clear_has_z();
+  inline void set_has_a();
+  inline void clear_has_a();
+  inline void set_has_b();
+  inline void clear_has_b();
+  inline void set_has_c();
+  inline void clear_has_c();
 
-  ::google::protobuf::internal::InternalMetadataWithArenaLite _internal_metadata_;
+  ::google::protobuf::internal::ArenaStringPtr _unknown_fields_;
+  ::google::protobuf::Arena* _arena_ptr_;
+
   ::google::protobuf::internal::HasBits<1> _has_bits_;
   mutable int _cached_size_;
   double x_;
@@ -197,10 +190,13 @@ class Axes : public ::google::protobuf::MessageLite /* @@protoc_insertion_point(
   double c_;
   friend void  protobuf_InitDefaults_cncstatebuf_2eproto_impl();
   friend void  protobuf_AddDesc_cncstatebuf_2eproto_impl();
-  friend const ::google::protobuf::uint32* protobuf_Offsets_cncstatebuf_2eproto();
+  friend void protobuf_AssignDesc_cncstatebuf_2eproto();
   friend void protobuf_ShutdownFile_cncstatebuf_2eproto();
 
+  void InitAsDefaultInstance();
 };
+extern ::google::protobuf::internal::ExplicitlyConstructed<Axes> Axes_default_instance_;
+
 // -------------------------------------------------------------------
 
 class BoolAxes : public ::google::protobuf::MessageLite /* @@protoc_insertion_point(class_definition:CncRemote.BoolAxes) */ {
@@ -216,56 +212,55 @@ class BoolAxes : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   }
 
   inline const ::std::string& unknown_fields() const {
-    return _internal_metadata_.unknown_fields();
+    return _unknown_fields_.GetNoArena(
+        &::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
 
   inline ::std::string* mutable_unknown_fields() {
-    return _internal_metadata_.mutable_unknown_fields();
+    return _unknown_fields_.MutableNoArena(
+        &::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
 
   static const BoolAxes& default_instance();
 
-  static inline const BoolAxes* internal_default_instance() {
-    return reinterpret_cast<const BoolAxes*>(
-               &_BoolAxes_default_instance_);
-  }
+  static const BoolAxes* internal_default_instance();
 
   void Swap(BoolAxes* other);
 
   // implements Message ----------------------------------------------
 
-  inline BoolAxes* New() const PROTOBUF_FINAL { return New(NULL); }
+  inline BoolAxes* New() const { return New(NULL); }
 
-  BoolAxes* New(::google::protobuf::Arena* arena) const PROTOBUF_FINAL;
-  void CheckTypeAndMergeFrom(const ::google::protobuf::MessageLite& from)
-    PROTOBUF_FINAL;
+  BoolAxes* New(::google::protobuf::Arena* arena) const;
+  void CheckTypeAndMergeFrom(const ::google::protobuf::MessageLite& from);
   void CopyFrom(const BoolAxes& from);
   void MergeFrom(const BoolAxes& from);
-  void Clear() PROTOBUF_FINAL;
-  bool IsInitialized() const PROTOBUF_FINAL;
+  void Clear();
+  bool IsInitialized() const;
 
-  size_t ByteSizeLong() const PROTOBUF_FINAL;
+  size_t ByteSizeLong() const;
   bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input) PROTOBUF_FINAL;
+      ::google::protobuf::io::CodedInputStream* input);
   void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const PROTOBUF_FINAL;
+      ::google::protobuf::io::CodedOutputStream* output) const;
   void DiscardUnknownFields();
-  int GetCachedSize() const PROTOBUF_FINAL { return _cached_size_; }
+  int GetCachedSize() const { return _cached_size_; }
   private:
   void SharedCtor();
   void SharedDtor();
   void SetCachedSize(int size) const;
   void InternalSwap(BoolAxes* other);
+  void UnsafeMergeFrom(const BoolAxes& from);
   private:
   inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
-    return NULL;
+    return _arena_ptr_;
   }
-  inline void* MaybeArenaPtr() const {
-    return NULL;
+  inline ::google::protobuf::Arena* MaybeArenaPtr() const {
+    return _arena_ptr_;
   }
   public:
 
-  ::std::string GetTypeName() const PROTOBUF_FINAL;
+  ::std::string GetTypeName() const;
 
   // nested types ----------------------------------------------------
 
@@ -315,20 +310,22 @@ class BoolAxes : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
 
   // @@protoc_insertion_point(class_scope:CncRemote.BoolAxes)
  private:
-  void set_has_x();
-  void clear_has_x();
-  void set_has_y();
-  void clear_has_y();
-  void set_has_z();
-  void clear_has_z();
-  void set_has_a();
-  void clear_has_a();
-  void set_has_b();
-  void clear_has_b();
-  void set_has_c();
-  void clear_has_c();
+  inline void set_has_x();
+  inline void clear_has_x();
+  inline void set_has_y();
+  inline void clear_has_y();
+  inline void set_has_z();
+  inline void clear_has_z();
+  inline void set_has_a();
+  inline void clear_has_a();
+  inline void set_has_b();
+  inline void clear_has_b();
+  inline void set_has_c();
+  inline void clear_has_c();
 
-  ::google::protobuf::internal::InternalMetadataWithArenaLite _internal_metadata_;
+  ::google::protobuf::internal::ArenaStringPtr _unknown_fields_;
+  ::google::protobuf::Arena* _arena_ptr_;
+
   ::google::protobuf::internal::HasBits<1> _has_bits_;
   mutable int _cached_size_;
   bool x_;
@@ -339,10 +336,13 @@ class BoolAxes : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   bool c_;
   friend void  protobuf_InitDefaults_cncstatebuf_2eproto_impl();
   friend void  protobuf_AddDesc_cncstatebuf_2eproto_impl();
-  friend const ::google::protobuf::uint32* protobuf_Offsets_cncstatebuf_2eproto();
+  friend void protobuf_AssignDesc_cncstatebuf_2eproto();
   friend void protobuf_ShutdownFile_cncstatebuf_2eproto();
 
+  void InitAsDefaultInstance();
 };
+extern ::google::protobuf::internal::ExplicitlyConstructed<BoolAxes> BoolAxes_default_instance_;
+
 // -------------------------------------------------------------------
 
 class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_point(class_definition:CncRemote.StateBuf) */ {
@@ -358,56 +358,55 @@ class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   }
 
   inline const ::std::string& unknown_fields() const {
-    return _internal_metadata_.unknown_fields();
+    return _unknown_fields_.GetNoArena(
+        &::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
 
   inline ::std::string* mutable_unknown_fields() {
-    return _internal_metadata_.mutable_unknown_fields();
+    return _unknown_fields_.MutableNoArena(
+        &::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
 
   static const StateBuf& default_instance();
 
-  static inline const StateBuf* internal_default_instance() {
-    return reinterpret_cast<const StateBuf*>(
-               &_StateBuf_default_instance_);
-  }
+  static const StateBuf* internal_default_instance();
 
   void Swap(StateBuf* other);
 
   // implements Message ----------------------------------------------
 
-  inline StateBuf* New() const PROTOBUF_FINAL { return New(NULL); }
+  inline StateBuf* New() const { return New(NULL); }
 
-  StateBuf* New(::google::protobuf::Arena* arena) const PROTOBUF_FINAL;
-  void CheckTypeAndMergeFrom(const ::google::protobuf::MessageLite& from)
-    PROTOBUF_FINAL;
+  StateBuf* New(::google::protobuf::Arena* arena) const;
+  void CheckTypeAndMergeFrom(const ::google::protobuf::MessageLite& from);
   void CopyFrom(const StateBuf& from);
   void MergeFrom(const StateBuf& from);
-  void Clear() PROTOBUF_FINAL;
-  bool IsInitialized() const PROTOBUF_FINAL;
+  void Clear();
+  bool IsInitialized() const;
 
-  size_t ByteSizeLong() const PROTOBUF_FINAL;
+  size_t ByteSizeLong() const;
   bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input) PROTOBUF_FINAL;
+      ::google::protobuf::io::CodedInputStream* input);
   void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const PROTOBUF_FINAL;
+      ::google::protobuf::io::CodedOutputStream* output) const;
   void DiscardUnknownFields();
-  int GetCachedSize() const PROTOBUF_FINAL { return _cached_size_; }
+  int GetCachedSize() const { return _cached_size_; }
   private:
   void SharedCtor();
   void SharedDtor();
   void SetCachedSize(int size) const;
   void InternalSwap(StateBuf* other);
+  void UnsafeMergeFrom(const StateBuf& from);
   private:
   inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
-    return NULL;
+    return _arena_ptr_;
   }
-  inline void* MaybeArenaPtr() const {
-    return NULL;
+  inline ::google::protobuf::Arena* MaybeArenaPtr() const {
+    return _arena_ptr_;
   }
   public:
 
-  ::std::string GetTypeName() const PROTOBUF_FINAL;
+  ::std::string GetTypeName() const;
 
   // nested types ----------------------------------------------------
 
@@ -540,42 +539,44 @@ class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
 
   // @@protoc_insertion_point(class_scope:CncRemote.StateBuf)
  private:
-  void set_has_abs_pos();
-  void clear_has_abs_pos();
-  void set_has_offset_work();
-  void clear_has_offset_work();
-  void set_has_offset_fixture();
-  void clear_has_offset_fixture();
-  void set_has_lin_unit_scale();
-  void clear_has_lin_unit_scale();
-  void set_has_feed_override();
-  void clear_has_feed_override();
-  void set_has_control_on();
-  void clear_has_control_on();
-  void set_has_machine_connected();
-  void clear_has_machine_connected();
-  void set_has_paused();
-  void clear_has_paused();
-  void set_has_optional_stop();
-  void clear_has_optional_stop();
-  void set_has_block_delete();
-  void clear_has_block_delete();
-  void set_has_running();
-  void clear_has_running();
-  void set_has_current_line();
-  void clear_has_current_line();
-  void set_has_single_step();
-  void clear_has_single_step();
-  void set_has_spindle_speed();
-  void clear_has_spindle_speed();
-  void set_has_spindle_state();
-  void clear_has_spindle_state();
-  void set_has_mist();
-  void clear_has_mist();
-  void set_has_flood();
-  void clear_has_flood();
+  inline void set_has_abs_pos();
+  inline void clear_has_abs_pos();
+  inline void set_has_offset_work();
+  inline void clear_has_offset_work();
+  inline void set_has_offset_fixture();
+  inline void clear_has_offset_fixture();
+  inline void set_has_lin_unit_scale();
+  inline void clear_has_lin_unit_scale();
+  inline void set_has_feed_override();
+  inline void clear_has_feed_override();
+  inline void set_has_control_on();
+  inline void clear_has_control_on();
+  inline void set_has_machine_connected();
+  inline void clear_has_machine_connected();
+  inline void set_has_paused();
+  inline void clear_has_paused();
+  inline void set_has_optional_stop();
+  inline void clear_has_optional_stop();
+  inline void set_has_block_delete();
+  inline void clear_has_block_delete();
+  inline void set_has_running();
+  inline void clear_has_running();
+  inline void set_has_current_line();
+  inline void clear_has_current_line();
+  inline void set_has_single_step();
+  inline void clear_has_single_step();
+  inline void set_has_spindle_speed();
+  inline void clear_has_spindle_speed();
+  inline void set_has_spindle_state();
+  inline void clear_has_spindle_state();
+  inline void set_has_mist();
+  inline void clear_has_mist();
+  inline void set_has_flood();
+  inline void clear_has_flood();
 
-  ::google::protobuf::internal::InternalMetadataWithArenaLite _internal_metadata_;
+  ::google::protobuf::internal::ArenaStringPtr _unknown_fields_;
+  ::google::protobuf::Arena* _arena_ptr_;
+
   ::google::protobuf::internal::HasBits<1> _has_bits_;
   mutable int _cached_size_;
   ::CncRemote::Axes* abs_pos_;
@@ -597,10 +598,13 @@ class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   bool flood_;
   friend void  protobuf_InitDefaults_cncstatebuf_2eproto_impl();
   friend void  protobuf_AddDesc_cncstatebuf_2eproto_impl();
-  friend const ::google::protobuf::uint32* protobuf_Offsets_cncstatebuf_2eproto();
+  friend void protobuf_AssignDesc_cncstatebuf_2eproto();
   friend void protobuf_ShutdownFile_cncstatebuf_2eproto();
 
+  void InitAsDefaultInstance();
 };
+extern ::google::protobuf::internal::ExplicitlyConstructed<StateBuf> StateBuf_default_instance_;
+
 // -------------------------------------------------------------------
 
 class CmdBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_point(class_definition:CncRemote.CmdBuf) */ {
@@ -616,56 +620,55 @@ class CmdBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_poin
   }
 
   inline const ::std::string& unknown_fields() const {
-    return _internal_metadata_.unknown_fields();
+    return _unknown_fields_.GetNoArena(
+        &::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
 
   inline ::std::string* mutable_unknown_fields() {
-    return _internal_metadata_.mutable_unknown_fields();
+    return _unknown_fields_.MutableNoArena(
+        &::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
 
   static const CmdBuf& default_instance();
 
-  static inline const CmdBuf* internal_default_instance() {
-    return reinterpret_cast<const CmdBuf*>(
-               &_CmdBuf_default_instance_);
-  }
+  static const CmdBuf* internal_default_instance();
 
   void Swap(CmdBuf* other);
 
   // implements Message ----------------------------------------------
 
-  inline CmdBuf* New() const PROTOBUF_FINAL { return New(NULL); }
+  inline CmdBuf* New() const { return New(NULL); }
 
-  CmdBuf* New(::google::protobuf::Arena* arena) const PROTOBUF_FINAL;
-  void CheckTypeAndMergeFrom(const ::google::protobuf::MessageLite& from)
-    PROTOBUF_FINAL;
+  CmdBuf* New(::google::protobuf::Arena* arena) const;
+  void CheckTypeAndMergeFrom(const ::google::protobuf::MessageLite& from);
   void CopyFrom(const CmdBuf& from);
   void MergeFrom(const CmdBuf& from);
-  void Clear() PROTOBUF_FINAL;
-  bool IsInitialized() const PROTOBUF_FINAL;
+  void Clear();
+  bool IsInitialized() const;
 
-  size_t ByteSizeLong() const PROTOBUF_FINAL;
+  size_t ByteSizeLong() const;
   bool MergePartialFromCodedStream(
-      ::google::protobuf::io::CodedInputStream* input) PROTOBUF_FINAL;
+      ::google::protobuf::io::CodedInputStream* input);
   void SerializeWithCachedSizes(
-      ::google::protobuf::io::CodedOutputStream* output) const PROTOBUF_FINAL;
+      ::google::protobuf::io::CodedOutputStream* output) const;
   void DiscardUnknownFields();
-  int GetCachedSize() const PROTOBUF_FINAL { return _cached_size_; }
+  int GetCachedSize() const { return _cached_size_; }
   private:
   void SharedCtor();
   void SharedDtor();
   void SetCachedSize(int size) const;
   void InternalSwap(CmdBuf* other);
+  void UnsafeMergeFrom(const CmdBuf& from);
   private:
   inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
-    return NULL;
+    return _arena_ptr_;
   }
-  inline void* MaybeArenaPtr() const {
-    return NULL;
+  inline ::google::protobuf::Arena* MaybeArenaPtr() const {
+    return _arena_ptr_;
   }
   public:
 
-  ::std::string GetTypeName() const PROTOBUF_FINAL;
+  ::std::string GetTypeName() const;
 
   // nested types ----------------------------------------------------
 
@@ -677,9 +680,6 @@ class CmdBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_poin
   static const int kStringFieldNumber = 2;
   const ::std::string& string() const;
   void set_string(const ::std::string& value);
-  #if LANG_CXX11
-  void set_string(::std::string&& value);
-  #endif
   void set_string(const char* value);
   void set_string(const char* value, size_t size);
   ::std::string* mutable_string();
@@ -720,18 +720,20 @@ class CmdBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_poin
 
   // @@protoc_insertion_point(class_scope:CncRemote.CmdBuf)
  private:
-  void set_has_string();
-  void clear_has_string();
-  void set_has_state();
-  void clear_has_state();
-  void set_has_axes();
-  void clear_has_axes();
-  void set_has_bool_axes();
-  void clear_has_bool_axes();
-  void set_has_rate();
-  void clear_has_rate();
+  inline void set_has_string();
+  inline void clear_has_string();
+  inline void set_has_state();
+  inline void clear_has_state();
+  inline void set_has_axes();
+  inline void clear_has_axes();
+  inline void set_has_bool_axes();
+  inline void clear_has_bool_axes();
+  inline void set_has_rate();
+  inline void clear_has_rate();
 
-  ::google::protobuf::internal::InternalMetadataWithArenaLite _internal_metadata_;
+  ::google::protobuf::internal::ArenaStringPtr _unknown_fields_;
+  ::google::protobuf::Arena* _arena_ptr_;
+
   ::google::protobuf::internal::HasBits<1> _has_bits_;
   mutable int _cached_size_;
   ::google::protobuf::internal::ArenaStringPtr string_;
@@ -741,10 +743,13 @@ class CmdBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_poin
   bool state_;
   friend void  protobuf_InitDefaults_cncstatebuf_2eproto_impl();
   friend void  protobuf_AddDesc_cncstatebuf_2eproto_impl();
-  friend const ::google::protobuf::uint32* protobuf_Offsets_cncstatebuf_2eproto();
+  friend void protobuf_AssignDesc_cncstatebuf_2eproto();
   friend void protobuf_ShutdownFile_cncstatebuf_2eproto();
 
+  void InitAsDefaultInstance();
 };
+extern ::google::protobuf::internal::ExplicitlyConstructed<CmdBuf> CmdBuf_default_instance_;
+
 // ===================================================================
 
 
@@ -897,6 +902,9 @@ inline void Axes::set_c(double value) {
   // @@protoc_insertion_point(field_set:CncRemote.Axes.c)
 }
 
+inline const Axes* Axes::internal_default_instance() {
+  return &Axes_default_instance_.get();
+}
 // -------------------------------------------------------------------
 
 // BoolAxes
@@ -1045,6 +1053,9 @@ inline void BoolAxes::set_c(bool value) {
   // @@protoc_insertion_point(field_set:CncRemote.BoolAxes.c)
 }
 
+inline const BoolAxes* BoolAxes::internal_default_instance() {
+  return &BoolAxes_default_instance_.get();
+}
 // -------------------------------------------------------------------
 
 // StateBuf
@@ -1330,13 +1341,13 @@ inline void StateBuf::set_optional_stop(bool value) {
 
 // optional bool block_delete = 11;
 inline bool StateBuf::has_block_delete() const {
-  return (_has_bits_[0] & 0x00000400u) != 0;
+  return (_has_bits_[0] & 0x00000200u) != 0;
 }
 inline void StateBuf::set_has_block_delete() {
-  _has_bits_[0] |= 0x00000400u;
+  _has_bits_[0] |= 0x00000200u;
 }
 inline void StateBuf::clear_has_block_delete() {
-  _has_bits_[0] &= ~0x00000400u;
+  _has_bits_[0] &= ~0x00000200u;
 }
 inline void StateBuf::clear_block_delete() {
   block_delete_ = false;
@@ -1354,13 +1365,13 @@ inline void StateBuf::set_block_delete(bool value) {
 
 // optional bool running = 12;
 inline bool StateBuf::has_running() const {
-  return (_has_bits_[0] & 0x00000800u) != 0;
+  return (_has_bits_[0] & 0x00000400u) != 0;
 }
 inline void StateBuf::set_has_running() {
-  _has_bits_[0] |= 0x00000800u;
+  _has_bits_[0] |= 0x00000400u;
 }
 inline void StateBuf::clear_has_running() {
-  _has_bits_[0] &= ~0x00000800u;
+  _has_bits_[0] &= ~0x00000400u;
 }
 inline void StateBuf::clear_running() {
   running_ = false;
@@ -1378,13 +1389,13 @@ inline void StateBuf::set_running(bool value) {
 
 // optional int32 current_line = 13;
 inline bool StateBuf::has_current_line() const {
-  return (_has_bits_[0] & 0x00000200u) != 0;
+  return (_has_bits_[0] & 0x00000800u) != 0;
 }
 inline void StateBuf::set_has_current_line() {
-  _has_bits_[0] |= 0x00000200u;
+  _has_bits_[0] |= 0x00000800u;
 }
 inline void StateBuf::clear_has_current_line() {
-  _has_bits_[0] &= ~0x00000200u;
+  _has_bits_[0] &= ~0x00000800u;
 }
 inline void StateBuf::clear_current_line() {
   current_line_ = 0;
@@ -1426,13 +1437,13 @@ inline void StateBuf::set_single_step(bool value) {
 
 // optional double spindle_speed = 15;
 inline bool StateBuf::has_spindle_speed() const {
-  return (_has_bits_[0] & 0x00008000u) != 0;
+  return (_has_bits_[0] & 0x00002000u) != 0;
 }
 inline void StateBuf::set_has_spindle_speed() {
-  _has_bits_[0] |= 0x00008000u;
+  _has_bits_[0] |= 0x00002000u;
 }
 inline void StateBuf::clear_has_spindle_speed() {
-  _has_bits_[0] &= ~0x00008000u;
+  _has_bits_[0] &= ~0x00002000u;
 }
 inline void StateBuf::clear_spindle_speed() {
   spindle_speed_ = 0;
@@ -1474,13 +1485,13 @@ inline void StateBuf::set_spindle_state(::google::protobuf::uint32 value) {
 
 // optional bool mist = 17;
 inline bool StateBuf::has_mist() const {
-  return (_has_bits_[0] & 0x00002000u) != 0;
+  return (_has_bits_[0] & 0x00008000u) != 0;
 }
 inline void StateBuf::set_has_mist() {
-  _has_bits_[0] |= 0x00002000u;
+  _has_bits_[0] |= 0x00008000u;
 }
 inline void StateBuf::clear_has_mist() {
-  _has_bits_[0] &= ~0x00002000u;
+  _has_bits_[0] &= ~0x00008000u;
 }
 inline void StateBuf::clear_mist() {
   mist_ = false;
@@ -1520,6 +1531,9 @@ inline void StateBuf::set_flood(bool value) {
   // @@protoc_insertion_point(field_set:CncRemote.StateBuf.flood)
 }
 
+inline const StateBuf* StateBuf::internal_default_instance() {
+  return &StateBuf_default_instance_.get();
+}
 // -------------------------------------------------------------------
 
 // CmdBuf
@@ -1540,21 +1554,13 @@ inline void CmdBuf::clear_string() {
 }
 inline const ::std::string& CmdBuf::string() const {
   // @@protoc_insertion_point(field_get:CncRemote.CmdBuf.string)
-  return string_.GetNoArena();
+  return string_.GetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
 inline void CmdBuf::set_string(const ::std::string& value) {
   set_has_string();
   string_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
   // @@protoc_insertion_point(field_set:CncRemote.CmdBuf.string)
 }
-#if LANG_CXX11
-inline void CmdBuf::set_string(::std::string&& value) {
-  set_has_string();
-  string_.SetNoArena(
-    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
-  // @@protoc_insertion_point(field_set_rvalue:CncRemote.CmdBuf.string)
-}
-#endif
 inline void CmdBuf::set_string(const char* value) {
   set_has_string();
   string_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
@@ -1588,13 +1594,13 @@ inline void CmdBuf::set_allocated_string(::std::string* string) {
 
 // optional bool state = 3;
 inline bool CmdBuf::has_state() const {
-  return (_has_bits_[0] & 0x00000010u) != 0;
+  return (_has_bits_[0] & 0x00000002u) != 0;
 }
 inline void CmdBuf::set_has_state() {
-  _has_bits_[0] |= 0x00000010u;
+  _has_bits_[0] |= 0x00000002u;
 }
 inline void CmdBuf::clear_has_state() {
-  _has_bits_[0] &= ~0x00000010u;
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void CmdBuf::clear_state() {
   state_ = false;
@@ -1612,13 +1618,13 @@ inline void CmdBuf::set_state(bool value) {
 
 // optional .CncRemote.Axes axes = 4;
 inline bool CmdBuf::has_axes() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 inline void CmdBuf::set_has_axes() {
-  _has_bits_[0] |= 0x00000002u;
+  _has_bits_[0] |= 0x00000004u;
 }
 inline void CmdBuf::clear_has_axes() {
-  _has_bits_[0] &= ~0x00000002u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void CmdBuf::clear_axes() {
   if (axes_ != NULL) axes_->::CncRemote::Axes::Clear();
@@ -1657,13 +1663,13 @@ inline void CmdBuf::set_allocated_axes(::CncRemote::Axes* axes) {
 
 // optional .CncRemote.BoolAxes bool_axes = 5;
 inline bool CmdBuf::has_bool_axes() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
 inline void CmdBuf::set_has_bool_axes() {
-  _has_bits_[0] |= 0x00000004u;
+  _has_bits_[0] |= 0x00000008u;
 }
 inline void CmdBuf::clear_has_bool_axes() {
-  _has_bits_[0] &= ~0x00000004u;
+  _has_bits_[0] &= ~0x00000008u;
 }
 inline void CmdBuf::clear_bool_axes() {
   if (bool_axes_ != NULL) bool_axes_->::CncRemote::BoolAxes::Clear();
@@ -1702,13 +1708,13 @@ inline void CmdBuf::set_allocated_bool_axes(::CncRemote::BoolAxes* bool_axes) {
 
 // optional double rate = 6;
 inline bool CmdBuf::has_rate() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
+  return (_has_bits_[0] & 0x00000010u) != 0;
 }
 inline void CmdBuf::set_has_rate() {
-  _has_bits_[0] |= 0x00000008u;
+  _has_bits_[0] |= 0x00000010u;
 }
 inline void CmdBuf::clear_has_rate() {
-  _has_bits_[0] &= ~0x00000008u;
+  _has_bits_[0] &= ~0x00000010u;
 }
 inline void CmdBuf::clear_rate() {
   rate_ = 0;
@@ -1724,6 +1730,9 @@ inline void CmdBuf::set_rate(double value) {
   // @@protoc_insertion_point(field_set:CncRemote.CmdBuf.rate)
 }
 
+inline const CmdBuf* CmdBuf::internal_default_instance() {
+  return &CmdBuf_default_instance_.get();
+}
 #endif  // !PROTOBUF_INLINE_NOT_IN_HEADERS
 // -------------------------------------------------------------------
 
@@ -1733,7 +1742,6 @@ inline void CmdBuf::set_rate(double value) {
 
 
 // @@protoc_insertion_point(namespace_scope)
-
 
 }  // namespace CncRemote
 
