@@ -54,26 +54,27 @@ class Comms : public StateBuf
 
         enum CMDTYPE { //it is safe to add to this list but entries must not be deleted or rearranged
             cmdNULL,
-            cmdPING,
-			cmdSTATE,
-            cmdDRIVESON,
-            cmdJOGVEL,
-            cmdMDI,
-            cmdFRO,
-            cmdFILE,
-			cmdCLOSEFILE,
-            cmdSTART,
-            cmdSTOP,
-            cmdPAUSE,
-            cmdBLOCKDEL,
-            cmdSINGLESTEP,
-            cmdOPTSTOP,
-			cmdSENDFILE,
+            cmdPING,	//none
+			cmdSTATE,	//StateBuf
+            cmdDRIVESON, //boolean
+            cmdJOGVEL,	//Axes. Jog at given velocities
+			cmdJOGSTEP,  //Axes. Jog the given amount
+            cmdMDI,		//string
+            cmdFRO,		//float
+            cmdFILE,	//string
+			cmdCLOSEFILE, //none
+            cmdSTART,	//none	
+            cmdSTOP,	//none
+            cmdPAUSE,	//none
+            cmdBLOCKDEL,	//boolean
+            cmdSINGLESTEP,	//boolean
+            cmdOPTSTOP,		//boolean
+			cmdSENDFILE,	//string
 			cmdREQFILE,
-			cmdFLOOD,
-			cmdMIST,
-			cmdSPINDLE,
-			cmdHOME,
+			cmdFLOOD,		//boolean
+			cmdMIST,		//boolean
+			cmdSPINDLE, //integer: one of spinOFF,spinFWD,spinREV
+			cmdHOME,	//BoolAxes. All true = home all. otherwise ONE axis only.
 
 
 			cmdMAX, //this should always be the last entry. Note your code should always be able to handle command numbers past this.
