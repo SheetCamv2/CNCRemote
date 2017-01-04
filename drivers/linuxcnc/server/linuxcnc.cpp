@@ -124,6 +124,18 @@ void LinuxCnc::UpdateState()
     }
     break;
 
+    case 11:
+    {
+        CncRemote::BoolAxes& axes = *mutable_homed();
+        axes.set_x(emcStatus->motion.joint[0].homed);
+        axes.set_y(emcStatus->motion.joint[1].homed);
+        axes.set_z(emcStatus->motion.joint[2].homed);
+        axes.set_a(emcStatus->motion.joint[3].homed);
+        axes.set_b(emcStatus->motion.joint[4].homed);
+        axes.set_c(emcStatus->motion.joint[5].homed);
+    }
+    break;
+
     default:
         if(time(NULL) > m_nextTime)
         {
@@ -147,6 +159,7 @@ void LinuxCnc::HandlePacket(const Packet & pkt)
 {
     CncRemote::CmdBuf cmd;
     cmd.ParseFromString(pkt.data);
+    if(emcStatus == NULL) return;
     switch(pkt.cmd)
     {
     case cmdDRIVESON:
@@ -216,6 +229,19 @@ void LinuxCnc::HandlePacket(const Packet & pkt)
 
     case cmdOPTSTOP:
         sendSetOptionalStop(cmd.state());
+
+    case cmdHOME:
+    {
+        SetMode(EMC_TASK_MODE_MANUAL);
+        const CncRemote::BoolAxes& axes = cmd.bool_axes();
+        if(axes.z()) sendHome(2);
+        if(axes.x()) sendHome(0);
+        if(axes.y()) sendHome(1);
+        if(axes.a()) sendHome(3);
+        if(axes.b()) sendHome(4);
+        if(axes.c()) sendHome(5);
+    }
+
         break;
     }
 }
