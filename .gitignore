@@ -1,12 +1,11 @@
 *.o
-*~
 Debug
 Release
 obj
 *.depend
 *.layout
 *.pb.*
-*.~*
-*.~*
+*.*~*
+*.*~*
 *.old
 
