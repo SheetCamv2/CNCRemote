@@ -28,7 +28,8 @@ public:
 
     bool Poll(); //Call at least as often as you need to send/receive data. Returns true if any data was received.
 	const vector<Plugin> GetPlugins(){return m_plugins;} //Get the available plugins
-	bool Connect(const int index, const string address); //Connect to server
+	CncString GenerateTcpAddress(const CncString& ipAddress, const bool useLocal, const int port = DEFAULT_COMMS_PORT); //Generates a TCP address for Connect(). useLocal overrides the given IP address
+	bool Connect(const int index, const CncString& address); //Connect to server
 	void Disconnect(); //Disconnect (normally disconnection is automatic so you shouldn't need to call this)
  	bool IsConnected(){return m_isConnected;} //Is the server connected and running?
 
@@ -55,7 +56,7 @@ private:
 	bool m_wasConnected;
 	unsigned int m_lastHeart;
     vector<Plugin> m_plugins;
-	string m_address;
+	CncString m_address;
 };
 
 } //namespace CncRemote

@@ -125,17 +125,5 @@ bool Comms::SendCommand(const uint16_t command, const CmdBuf& data)
 	return SendPacket(packet);
 }
 
-/*
-string Comms::CreateAddress(const CONTROLSTATUS status, const string ipAddress, const int port, const bool local)
-{
-	string ret = "tcp://" ;
-	if(status == ctrlLOCAL || local)
-	{
-		ret = "127.0.0.1"
-	}
-}
-
-*/
-
 } //namespace CncRemote
 

@@ -7,7 +7,7 @@
 #include "Shlwapi.h"
 using namespace std;
 
-wstring utf8towchar(const char * string)
+wstring from_utf8(const char * string)
 {
     int len = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, string, -1, NULL, 0);
     if (!len)
@@ -20,6 +20,26 @@ wstring utf8towchar(const char * string)
         return L"ErrorA2W";
 
     return &wbuff[0];}
+
+string to_utf8(const CncString& string)
+{
+    int len = WideCharToMultiByte(CP_UTF8, 0, string.c_str(), string.length(), 
+                                  0, 0, 0, 0);
+    if (!len)
+        return "ErrorA";
+
+    std::vector<char> abuff(len + 1);
+
+    // NOTE: this does not NULL terminate the string in abuff, but this is ok
+    //       since it was zero-initialized in the vector constructor
+    if (!WideCharToMultiByte(CP_UTF8, 0, string.c_str(), string.length(), 
+                             &abuff[0], len, 0, 0))
+    {
+        return "ErrorA";
+    }//if
+
+    return &abuff[0];
+}
 #endif
 
 
@@ -27,7 +47,7 @@ wstring utf8towchar(const char * string)
 FILE * ufopen(const char * file, const char * mode)
 {
 #ifdef _USING_WINDOWS
-    FILE * ret = _wfopen(utf8towchar(file).c_str(), utf8towchar(mode).c_str());
+    FILE * ret = _wfopen(from_utf8(file).c_str(), from_utf8(mode).c_str());
     return ret;
 #else
     return fopen(file, mode);

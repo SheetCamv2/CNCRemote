@@ -84,16 +84,16 @@ typedef enum{ctrlNONE, ctrlREMOTE, ctrlLOCAL} CONTROLSTATUS;
 }
 #endif
 
-/*  Get a setting from the application's config file.
-    name is a free-form string that is teh name of teh setting.
-IMPORT_CNC uint32_t GetSetting(const char * name, const char * result, const uint32_t resultSize);
-*/
-
 
 #ifdef _USING_WINDOWS
-/* Convert UTF8 Windows WCHAR
+/* Convert UTF8 to Windows WCHAR
 */
-std::wstring utf8towchar(const char * string);
+CncString from_utf8(const char * string);
+std::string to_utf8(const CncString& string);
+
+#else
+CncString from_utf8(const char * string){return CncString(string);}
+std::string to_utf8(const CncString& string){return(string);}
 #endif
 
 /* Open a file with UTF-8 encoded path

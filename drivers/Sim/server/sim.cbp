@@ -67,19 +67,21 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
+			<Add option="-DZMQ_STATIC" />
 		</Compiler>
-		<Unit filename="main.cpp" />
-		<Unit filename="main.h" />
-		<Unit filename="sim.cpp" />
-		<Unit filename="sim.h" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
 		<Unit filename="../../../include/cncserver.h" />
 		<Unit filename="../../../include/millisleep.h" />
 		<Unit filename="../../../src/cnccomms.cpp" />
+		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncserver.cpp" />
 		<Unit filename="../../../src/cncstatebuf.pb.cc" />
 		<Unit filename="../../../src/cncstatebuf.pb.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
+		<Unit filename="sim.cpp" />
+		<Unit filename="sim.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

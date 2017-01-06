@@ -5,6 +5,8 @@
 #include "Shlwapi.h"
 #endif
 
+#include <sstream>
+
 namespace CncRemote
 {
 
@@ -201,7 +203,26 @@ bool Client::Poll()
 	return ret;
 }
 
-bool Client::Connect(const int index, const string address)
+CncString Client::GenerateTcpAddress(const CncString& ipAddress, const bool useLocal, const int port)
+{
+#ifdef _USING_WINDOWS
+	wstringstream stream;
+#define _TT(n) L##n
+#else
+	stringstream stream;
+#define _TT(n) n
+#endif
+	if(useLocal)
+	{
+		stream <<  _TT("tcp://localhost:") << DEFAULT_COMMS_PORT;
+	}else
+	{
+		stream <<  _TT("tcp://") << ipAddress << _TT(":") << port;
+	}
+	return stream.str();
+}
+
+bool Client::Connect(const int index, const CncString& address)
 {
 	m_address.clear();
 	if(!m_socket)
@@ -211,7 +232,7 @@ bool Client::Connect(const int index, const string address)
 		int opt = 0;
 		zmq_setsockopt(m_socket, ZMQ_LINGER, &opt, sizeof(opt)); 
 	}
-	if(zmq_connect(m_socket, address.c_str()) < 0)
+	if(zmq_connect(m_socket, to_utf8(address).c_str()) < 0)
 	{
 		return false;
 	}
@@ -231,7 +252,7 @@ void Client::Disconnect()
 	{
 		return;
 	}
-	zmq_disconnect(m_socket, m_address.c_str());
+	zmq_disconnect(m_socket, to_utf8(m_address).c_str());
 	m_isConnected = false;
 }
 

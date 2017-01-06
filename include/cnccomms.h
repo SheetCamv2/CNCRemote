@@ -17,7 +17,7 @@ enum {CONN_TIMEOUT = 50};
 
 #define MAX_AXES 6
 
-#define DEFAULT_COMMS_PORT "5080"
+#define DEFAULT_COMMS_PORT 5080
 
 class Comms : public StateBuf
 {

@@ -5,7 +5,7 @@
 int main(int argc, char * argv[])
 {
     Sim sim;
-    if(sim.Connect("tcp://*:" DEFAULT_COMMS_PORT) != CncRemote::Comms::errOK)
+    if(sim.Connect(sim.GenerateTcpAddress()) != CncRemote::Comms::errOK)
     {
         printf("Failed to bind. Is another instance of the server running?\n");
         return -1;

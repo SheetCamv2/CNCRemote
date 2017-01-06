@@ -1,4 +1,5 @@
 #include "cncserver.h"
+#include <sstream>
 
 namespace CncRemote
 {
@@ -11,13 +12,26 @@ Server::~Server()
 {
 }
 
-Comms::COMERROR Server::Connect(const string address)
+CncString Server::GenerateTcpAddress(const int port)
+{
+#ifdef _USING_WINDOWS
+	wstringstream stream;
+#define _TT(n) L##n
+#else
+	stringstream stream;
+#define _TT(n) n
+#endif
+	stream <<  _TT("tcp://*:") << port;
+	return stream.str();
+}
+
+Comms::COMERROR Server::Connect(const CncString address)
 {
     Disconnect();
     int ok;
     m_socket = zmq_socket(m_context, ZMQ_ROUTER);
     if(m_socket == NULL) return errSOCKET;
-    ok = zmq_bind(m_socket, address.c_str());
+    ok = zmq_bind(m_socket, to_utf8(address).c_str());
     if(ok < 0)
     {
         zmq_close(m_socket);
