@@ -52,7 +52,8 @@ message StateBuf {
     optional BoolAxes axis_linear = 20; //true if the axis is linear
     optional string error_msg = 21; //string. Contains last error message
     optional string display_msg = 22; //string. Contains any text that should be displayed to the user
-    optional Axes max_feed = 23; //maximum feed rate for each axis
+    optional double max_feed_lin = 23;
+    optional double max_feed_ang = 24;
 }
 
 //used for commands and responses

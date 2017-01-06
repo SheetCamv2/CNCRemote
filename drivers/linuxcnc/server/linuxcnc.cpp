@@ -230,12 +230,21 @@ void LinuxCnc::UpdateState()
     }
 }
 
-void LinuxCnc::SendJog(const int axis, const double val)
+void LinuxCnc::SendJogVel(const int axis, const double val)
 {
     if(emcStatus->motion.joint[axis].jointType == EMC_LINEAR)
-        sendJogCont(axis,JOGTELEOP, val * m_maxSpeedLin);
+        sendJogCont(axis,JOGTELEOP, val * emcStatus->motion.joint[axis].units);
     else
-        sendJogCont(axis,JOGTELEOP, val * m_maxSpeedAng);
+        sendJogCont(axis,JOGTELEOP, val * emcStatus->motion.joint[axis].units);
+}
+
+
+void LinuxCnc::SendJogStep(const int axis, const double val)
+{
+    if(emcStatus->motion.joint[axis].jointType == EMC_LINEAR)
+        sendJogIncr(axis,JOGTELEOP, val * emcStatus->motion.joint[0].units, m_maxSpeedLin);
+    else
+        sendJogIncr(axis,JOGTELEOP, val * emcStatus->motion.joint[0].units, m_maxSpeedAng);
 }
 
 void LinuxCnc::HandlePacket(const Packet & pkt)
@@ -262,12 +271,26 @@ void LinuxCnc::HandlePacket(const Packet & pkt)
         sendSetTeleopEnable(true);
         {
             const CncRemote::Axes& axes = cmd.axes();
-            SendJog(0,axes.x());
-            SendJog(1,axes.y());
-            SendJog(2,axes.z());
-            SendJog(3,axes.a());
-            SendJog(4,axes.b());
-            SendJog(5,axes.c());
+            SendJogVel(0,axes.x());
+            SendJogVel(1,axes.y());
+            SendJogVel(2,axes.z());
+            SendJogVel(3,axes.a());
+            SendJogVel(4,axes.b());
+            SendJogVel(5,axes.c());
+        }
+        break;
+
+    case cmdJOGSTEP:
+        SetMode(EMC_TASK_MODE_MANUAL);
+        sendSetTeleopEnable(true);
+        {
+            const CncRemote::Axes& axes = cmd.axes();
+            SendJogStep(0,axes.x());
+            SendJogStep(1,axes.y());
+            SendJogStep(2,axes.z());
+            SendJogStep(3,axes.a());
+            SendJogStep(4,axes.b());
+            SendJogStep(5,axes.c());
         }
         break;
 

@@ -92,8 +92,8 @@ CncString from_utf8(const char * string);
 std::string to_utf8(const CncString& string);
 
 #else
-CncString from_utf8(const char * string){return CncString(string);}
-std::string to_utf8(const CncString& string){return(string);}
+CncString from_utf8(const char * string);
+std::string to_utf8(const CncString& string);
 #endif
 
 /* Open a file with UTF-8 encoded path

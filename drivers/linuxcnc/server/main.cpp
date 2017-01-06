@@ -23,7 +23,7 @@
 #include "timer.hh"             // etime()
 #include "shcom.hh"
 
-char port[PATH_MAX] = {DEFAULT_COMMS_PORT};
+int port = DEFAULT_COMMS_PORT;
 
 struct option longopts[] =
 {
@@ -90,7 +90,7 @@ static void usage(char* pname)
     printf("         %s [Options] [-- LinuxCNC_Options]\n"
            "Options:\n"
            "         --help       this help\n"
-           "         --port       <port number>  (default=%s)\n"
+           "         --port       <port number>  (default=%d)\n"
            "         --path       <path>         (default=%s)\n"
            "LinuxCNC_Options:\n"
            "          -ini        <inifile>      (default=%s)\n"
@@ -114,7 +114,7 @@ int main(int argc, char * argv[])
             usage(argv[0]);
             exit(1);
         case 'p':
-            strncpy(port, optarg, strlen(optarg) + 1);
+            sscanf(optarg, "%d", &port); break;
             break;
         case 'd':
             strncpy(defaultPath, optarg, strlen(optarg) + 1);
@@ -145,11 +145,9 @@ int main(int argc, char * argv[])
 
 
     LinuxCnc machine;
-    string t = "tcp://*:";
-    t += port;
-    if(machine.Connect(t) != CncRemote::Comms::errOK)
+    if(machine.Connect(machine.GenerateTcpAddress(port)) != CncRemote::Comms::errOK)
     {
-        printf("Failed to bind port %s. Is another server already running on that port?\n", port);
+        printf("Failed to bind port %d. Is another server already running on that port?\n", port);
         return -1;
     }
     while(1)

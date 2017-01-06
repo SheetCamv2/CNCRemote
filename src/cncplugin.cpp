@@ -12,7 +12,7 @@ wstring from_utf8(const char * string)
     int len = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, string, -1, NULL, 0);
     if (!len)
         return L"ErrorA2W";
-    
+
     std::vector<wchar_t> wbuff(len);
     // NOTE: this does not NULL terminate the string in wbuff, but this is ok
     //       since it was zero-initialized in the vector constructor
@@ -23,7 +23,7 @@ wstring from_utf8(const char * string)
 
 string to_utf8(const CncString& string)
 {
-    int len = WideCharToMultiByte(CP_UTF8, 0, string.c_str(), string.length(), 
+    int len = WideCharToMultiByte(CP_UTF8, 0, string.c_str(), string.length(),
                                   0, 0, 0, 0);
     if (!len)
         return "ErrorA";
@@ -32,7 +32,7 @@ string to_utf8(const CncString& string)
 
     // NOTE: this does not NULL terminate the string in abuff, but this is ok
     //       since it was zero-initialized in the vector constructor
-    if (!WideCharToMultiByte(CP_UTF8, 0, string.c_str(), string.length(), 
+    if (!WideCharToMultiByte(CP_UTF8, 0, string.c_str(), string.length(),
                              &abuff[0], len, 0, 0))
     {
         return "ErrorA";
@@ -40,6 +40,17 @@ string to_utf8(const CncString& string)
 
     return &abuff[0];
 }
+#else
+CncString from_utf8(const char * string)
+{
+    return CncString(string);
+}
+
+std::string to_utf8(const CncString& string)
+{
+    return(string);
+}
+
 #endif
 
 
