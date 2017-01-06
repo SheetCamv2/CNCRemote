@@ -98,6 +98,8 @@ static void usage(char* pname)
           );
 }
 
+#include "timer.h"
+
 
 
 int main(int argc, char * argv[])
@@ -155,10 +157,20 @@ int main(int argc, char * argv[])
         // get configuration information
         iniLoad(emc_inifile);
         machine.ConnectLCnc();
-        while(machine.Poll())
+
+
+TestTimer tt("Main");
+        while(1)
         {
+            if(!machine.Poll())
+            {
+                break;
+            }
+tt.Start();
             sleep_ms(2);
+tt.Check();
         }
+printf("Disconnected from LinuxCNC\n");
         Disconnect();
     }
     return 0;

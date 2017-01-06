@@ -15,6 +15,7 @@
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-std=c++11" />
+					<Add option="-O0" />
 					<Add directory="$(#LINUXCNC)/src/emc/usr_intf" />
 					<Add directory="$(#LINUXCNC)/include" />
 					<Add directory="../../../include" />
@@ -53,7 +54,9 @@
 		<Unit filename="main.cpp" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncserver.h" />
+		<Unit filename="../../../include/timer.h" />
 		<Unit filename="../../../src/cnccomms.cpp" />
+		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncserver.cpp" />
 		<Unit filename="../../../src/cncstatebuf.proto">
 			<Option compile="1" />

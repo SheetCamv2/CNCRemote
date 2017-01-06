@@ -141,6 +141,8 @@ void LinuxCnc::UpdateState()
 
     case 3:
         set_paused(emcStatus->task.task_paused);
+        set_max_feed_lin(m_maxSpeedLin);
+        set_max_feed_ang(m_maxSpeedLin);
         break;
 
     case 4:

@@ -86,7 +86,8 @@ Comms::COMERROR Server::SendState(const string& id)
     return errOK;
 }
 
-
+#include "timer.h"
+TestTimer ttm("packet");
 bool Server::Poll()
 {
     if(m_socket == NULL) return false;
@@ -143,7 +144,12 @@ bool Server::Poll()
 			break;
 
 		default:
+		{
+		    ttm.Start();
 			HandlePacket(pkt);
+			ttm.Check();
+
+		}
 		}
         ret = true;
     }
