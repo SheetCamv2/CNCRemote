@@ -87,10 +87,13 @@ void LinuxCnc::ConnectLCnc()
     m_connected = true;
 }
 
+#include "timer.h"
+
 bool LinuxCnc::Poll()
 {
     if(updateStatus() != 0)
     {
+        printf("Disconnected\n");
         Disconnect();
         return false;
     }

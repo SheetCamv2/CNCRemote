@@ -162,13 +162,13 @@ int main(int argc, char * argv[])
 TestTimer tt("Main");
         while(1)
         {
+tt.Start();
             if(!machine.Poll())
             {
                 break;
             }
-tt.Start();
-            sleep_ms(2);
 tt.Check();
+            sleep_ms(2);
         }
 printf("Disconnected from LinuxCNC\n");
         Disconnect();
