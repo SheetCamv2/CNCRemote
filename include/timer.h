@@ -8,22 +8,36 @@ class TestTimer
 public:
     TestTimer(const string& msg)
     {
-        m_msg = msg;
+		m_msg = msg;
+#ifdef _USING_WINDOWS
+		m_time = timeGetTime();
+#else
         clock_gettime(CLOCK_MONOTONIC, &m_time);
-        m_lastTime = 0;
+#endif
+		m_lastTime = 0;
     }
 
     void Start()
     {
+#ifdef _USING_WINDOWS
+		m_time = timeGetTime();
+#else
         clock_gettime(CLOCK_MONOTONIC, &m_time);
-    }
+#endif
+	}
 
     void Check()
     {
+#ifdef _USING_WINDOWS
+		unsigned long diff = 0;
+		DWORD time = timeGetTime();
+		diff = time - m_time;
+#else
         timespec time;
         clock_gettime(CLOCK_MONOTONIC, &time);
         unsigned long diff = time.tv_nsec - m_time.tv_nsec;
-        if(diff > m_lastTime)
+#endif
+		if(diff > m_lastTime)
         {
             m_lastTime = diff;
             printf("%s = %f ms\n", m_msg.c_str(), (float)diff / 1000000);
@@ -31,8 +45,12 @@ public:
     }
 
 private:
+#ifdef _USING_WINDOWS
+	DWORD m_time;
+#else
     timespec m_time;
-    unsigned long m_lastTime;
+#endif
+	unsigned long m_lastTime;
     string m_msg;
 };
 
