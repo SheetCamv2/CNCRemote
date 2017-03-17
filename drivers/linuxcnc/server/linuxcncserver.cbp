@@ -13,13 +13,14 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-g" />
 					<Add option="-std=c++11" />
+					<Add option="-g" />
 					<Add option="-O0" />
 					<Add directory="$(#LINUXCNC)/src/emc/usr_intf" />
 					<Add directory="$(#LINUXCNC)/include" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
+					<Add directory="../../../libraries/include" />
 				</Compiler>
 				<Linker>
 					<Add library="protobuf" />
@@ -49,9 +50,6 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Unit filename="linuxcnc.cpp" />
-		<Unit filename="linuxcnc.h" />
-		<Unit filename="main.cpp" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncserver.h" />
 		<Unit filename="../../../include/timer.h" />
@@ -59,9 +57,11 @@
 		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncserver.cpp" />
 		<Unit filename="../../../src/cncstatebuf.proto">
-			<Option compile="1" />
 			<Option weight="0" />
 		</Unit>
+		<Unit filename="linuxcnc.cpp" />
+		<Unit filename="linuxcnc.h" />
+		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />
 			<envvars />

@@ -14,6 +14,9 @@
 
 #include "shcom.cc" //this way we can use the include search path to find shcom.cc
 
+#define LINUXCNCVER 27
+
+
 LinuxCnc::LinuxCnc()
 {
     m_slowCount = 0;
@@ -110,12 +113,19 @@ void LinuxCnc::UpdateState()
         return;
     }
     CncRemote::Axes& axes = *mutable_abs_pos();
-    axes.set_x(emcStatus->motion.traj.actualPosition.tran.x / emcStatus->motion.joint[0].units);
+#if LINUXCNCVER < 28
+    axes.set_x(emcStatus->motion.traj.actualPosition.tran.x / emcStatus->motion.axis[0].units);
+    axes.set_z(emcStatus->motion.traj.actualPosition.tran.z / emcStatus->motion.axis[2].units);
+    axes.set_a(emcStatus->motion.traj.actualPosition.a / emcStatus->motion.axis[3].units);
+    axes.set_b(emcStatus->motion.traj.actualPosition.b / emcStatus->motion.axis[4].units);
+    axes.set_c(emcStatus->motion.traj.actualPosition.c / emcStatus->motion.axis[5].units);
+#else
     axes.set_y(emcStatus->motion.traj.actualPosition.tran.y / emcStatus->motion.joint[1].units);
     axes.set_z(emcStatus->motion.traj.actualPosition.tran.z / emcStatus->motion.joint[2].units);
     axes.set_a(emcStatus->motion.traj.actualPosition.a / emcStatus->motion.joint[3].units);
     axes.set_b(emcStatus->motion.traj.actualPosition.b / emcStatus->motion.joint[4].units);
     axes.set_c(emcStatus->motion.traj.actualPosition.c / emcStatus->motion.joint[5].units);
+#endif
 
     switch (m_slowCount++) //these don't need to be updated very fast so only send one per frame
     {
@@ -185,36 +195,59 @@ void LinuxCnc::UpdateState()
     case 8:
     {
         CncRemote::Axes& axes = *mutable_offset_fixture();
+#if LINUXCNCVER < 28
+        axes.set_x(emcStatus->task.g5x_offset.tran.x / emcStatus->motion.axis[0].units);
+        axes.set_y(emcStatus->task.g5x_offset.tran.y / emcStatus->motion.axis[1].units);
+        axes.set_z(emcStatus->task.g5x_offset.tran.z / emcStatus->motion.axis[2].units);
+        axes.set_a(emcStatus->task.g5x_offset.a / emcStatus->motion.axis[3].units);
+        axes.set_b(emcStatus->task.g5x_offset.b / emcStatus->motion.axis[4].units);
+        axes.set_c(emcStatus->task.g5x_offset.c / emcStatus->motion.axis[5].units);
+#else
         axes.set_x(emcStatus->task.g5x_offset.tran.x / emcStatus->motion.joint[0].units);
         axes.set_y(emcStatus->task.g5x_offset.tran.y / emcStatus->motion.joint[1].units);
         axes.set_z(emcStatus->task.g5x_offset.tran.z / emcStatus->motion.joint[2].units);
         axes.set_a(emcStatus->task.g5x_offset.a / emcStatus->motion.joint[3].units);
         axes.set_b(emcStatus->task.g5x_offset.b / emcStatus->motion.joint[4].units);
         axes.set_c(emcStatus->task.g5x_offset.c / emcStatus->motion.joint[5].units);
+#endif
     }
     break;
 
     case 9:
     {
         CncRemote::Axes& axes = *mutable_offset_work();
-        axes.set_x(emcStatus->task.g92_offset.tran.x / emcStatus->motion.joint[0].units);
+#if LINUXCNCVER < 28
+        axes.set_y(emcStatus->task.g92_offset.tran.y / emcStatus->motion.axis[1].units);
+        axes.set_z(emcStatus->task.g92_offset.tran.z / emcStatus->motion.axis[2].units);
+        axes.set_a(emcStatus->task.g92_offset.a / emcStatus->motion.axis[3].units);
+        axes.set_b(emcStatus->task.g92_offset.b / emcStatus->motion.axis[4].units);
+        axes.set_c(emcStatus->task.g92_offset.c / emcStatus->motion.axis[5].units);
+#else
         axes.set_y(emcStatus->task.g92_offset.tran.y / emcStatus->motion.joint[1].units);
         axes.set_z(emcStatus->task.g92_offset.tran.z / emcStatus->motion.joint[2].units);
         axes.set_a(emcStatus->task.g92_offset.a / emcStatus->motion.joint[3].units);
         axes.set_b(emcStatus->task.g92_offset.b / emcStatus->motion.joint[4].units);
         axes.set_c(emcStatus->task.g92_offset.c / emcStatus->motion.joint[5].units);
+#endif
     }
     break;
 
     case 10:
     {
         CncRemote::BoolAxes& axes = *mutable_homed();
-        axes.set_x(emcStatus->motion.joint[0].homed);
+#if LINUXCNCVER < 28
+        axes.set_y(emcStatus->motion.axis[1].homed);
+        axes.set_z(emcStatus->motion.axis[2].homed);
+        axes.set_a(emcStatus->motion.axis[3].homed);
+        axes.set_b(emcStatus->motion.axis[4].homed);
+        axes.set_c(emcStatus->motion.axis[5].homed);
+#else
         axes.set_y(emcStatus->motion.joint[1].homed);
         axes.set_z(emcStatus->motion.joint[2].homed);
         axes.set_a(emcStatus->motion.joint[3].homed);
         axes.set_b(emcStatus->motion.joint[4].homed);
         axes.set_c(emcStatus->motion.joint[5].homed);
+#endif
     }
     break;
 
@@ -237,19 +270,30 @@ void LinuxCnc::UpdateState()
 
 void LinuxCnc::SendJogVel(const int axis, const double val)
 {
+#if LINUXCNCVER < 28
+    sendJogCont(axis, val * emcStatus->motion.axis[axis].units);
+#else
     if(emcStatus->motion.joint[axis].jointType == EMC_LINEAR)
         sendJogCont(axis,JOGTELEOP, val * emcStatus->motion.joint[axis].units);
     else
         sendJogCont(axis,JOGTELEOP, val * emcStatus->motion.joint[axis].units);
+#endif
 }
 
 
 void LinuxCnc::SendJogStep(const int axis, const double val)
 {
+#if LINUXCNCVER < 28
+    if(emcStatus->motion.axis[axis].axisType == EMC_AXIS_LINEAR)
+        sendJogIncr(axis, val * emcStatus->motion.axis[0].units, m_maxSpeedLin);
+    else
+        sendJogIncr(axis, val * emcStatus->motion.axis[0].units, m_maxSpeedAng);
+#else
     if(emcStatus->motion.joint[axis].jointType == EMC_LINEAR)
         sendJogIncr(axis,JOGTELEOP, val * emcStatus->motion.joint[0].units, m_maxSpeedLin);
     else
         sendJogIncr(axis,JOGTELEOP, val * emcStatus->motion.joint[0].units, m_maxSpeedAng);
+#endif
 }
 
 void LinuxCnc::HandlePacket(const Packet & pkt)
