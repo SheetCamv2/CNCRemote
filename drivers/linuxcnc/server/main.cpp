@@ -93,7 +93,7 @@ static void usage(char* pname)
            "         --port       <port number>  (default=%d)\n"
            "         --path       <path>         (default=%s)\n"
            "LinuxCNC_Options:\n"
-           "          -ini        <inifile>      (default=%s)\n"
+           "         -ini        <inifile>      (default=%s)\n"
            ,pname,port,defaultPath,emc_inifile
           );
 }
@@ -108,7 +108,7 @@ int main(int argc, char * argv[])
 
     initMain();
     // process local command line args
-    while((opt = getopt_long(argc, argv, "he:p:d:", longopts, NULL)) != - 1)
+/*    while((opt = getopt_long(argc, argv, "he:p:d:", longopts, NULL)) != - 1)
     {
         switch(opt)
         {
@@ -122,7 +122,7 @@ int main(int argc, char * argv[])
             strncpy(defaultPath, optarg, strlen(optarg) + 1);
             break;
         }
-    }
+    }*/
 
     // process LinuxCNC command line args
     // Note: '--' may be used to separate cmd line args

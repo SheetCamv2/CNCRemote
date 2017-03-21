@@ -12,6 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="-ini /home/plasma/linuxcnc/configs/sim.axis/axis.ini" />
 				<Compiler>
 					<Add option="-std=c++11" />
 					<Add option="-g" />
@@ -29,7 +30,10 @@
 					<Add library="linuxcnchal" />
 					<Add library="linuxcnc" />
 					<Add library="nml" />
-					<Add directory="linuxcnc/lib" />
+					<Add library="pthread" />
+					<Add directory="$(#LINUXCNC)/lib" />
+					<Add directory="../../../libraries/lib/i386-linux-gnu" />
+					<Add directory="../../../libraries/lib" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -56,6 +60,7 @@
 		<Unit filename="../../../src/cnccomms.cpp" />
 		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncserver.cpp" />
+		<Unit filename="../../../src/cncstatebuf.pb.cc" />
 		<Unit filename="../../../src/cncstatebuf.proto">
 			<Option weight="0" />
 		</Unit>

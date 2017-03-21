@@ -35,12 +35,14 @@ public:
 #else
         timespec time;
         clock_gettime(CLOCK_MONOTONIC, &time);
-        unsigned long diff = time.tv_nsec - m_time.tv_nsec;
+        uint64_t t1 = (time.tv_nsec / 1000) + (time.tv_sec * 1000000);
+        uint64_t t2 = (m_time.tv_nsec / 1000) + (m_time.tv_sec * 1000000);
+        unsigned long diff = (t1 - t2);
 #endif
-		if(diff > m_lastTime)
+		if(abs((long int)(diff - m_lastTime)) > 500)
         {
             m_lastTime = diff;
-            printf("%s = %f ms\n", m_msg.c_str(), (float)diff / 1000000);
+            printf("%s = %f ms\n", m_msg.c_str(), (float)diff / 1000);
         }
     }
 

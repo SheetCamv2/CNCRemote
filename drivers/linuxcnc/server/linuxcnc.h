@@ -17,7 +17,7 @@ private:
 
     virtual void HandlePacket(const Packet & pkt);
     void SetMode(const int mode);
-    void SendJogVel(const int axis, const double val);
+    int SendJogVel(const double x, const double y, const double z, const double a, const double b, const double c);
     void SendJogStep(const int axis, const double val);
 
     int m_slowCount;
