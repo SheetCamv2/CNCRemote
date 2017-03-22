@@ -7,7 +7,7 @@
 #include "canon.hh"		// CANON_UNITS, CANON_UNITS_INCHES,MM,CM
 #include "emcglb.h"		// EMC_NMLFILE, TRAJ_MAX_VELOCITY, etc.
 #include "emccfg.h"		// DEFAULT_TRAJ_MAX_VELOCITY
-#include "inifile.hh"		// INIFILE
+//#include "inifile.hh"		// INIFILE
 #include "rcs_print.hh"
 #include "timer.hh"             // etime()
 #include "shcom.hh"             // NML Messaging functions
@@ -24,11 +24,11 @@ LinuxCnc::LinuxCnc()
     m_nextTime = 0;
     m_connected = false;
 
-    IniFile inifile;
-    const char *inistring;
+//    IniFile inifile;
+//    const char *inistring;
     m_maxSpeedLin = 4000;
     m_maxSpeedAng = 100;
-
+/*
     // open it
     if (inifile.Open(emc_inifile) == false)
     {
@@ -77,6 +77,7 @@ LinuxCnc::LinuxCnc()
     {
         m_maxSpeedAng = tmp;
     }
+    */
 }
 
 void LinuxCnc::ConnectLCnc()
@@ -86,10 +87,24 @@ void LinuxCnc::ConnectLCnc()
         set_machine_connected(false);
         Server::Poll();
     }
+
     // init NML
     // get current serial number, and save it for restoring when we quit
     // so as not to interfere with real operator interface
     updateStatus();
+
+    if(emcStatus->size != sizeof(EMC_STAT))
+    {
+        printf("Wrong LinuxCNC version");
+        exit(0);
+    }
+
+
+    m_maxSpeedLin = emcStatus->motion.traj.maxVelocity;
+    m_maxSpeedAng = emcStatus->motion.traj.maxVelocity;
+
+
+
     emcCommandSerialNumber = emcStatus->echo_serial_number;
     m_heartbeat = emcStatus->task.heartbeat;
     m_nextTime = time(NULL) + 1; //check every second
@@ -142,7 +157,16 @@ void LinuxCnc::UpdateState()
     switch (m_slowCount++) //these don't need to be updated very fast so only send one per frame
     {
     case 1:
-        set_control_on(emcStatus->task.state == EMC_TASK_STATE_ON );
+        {
+            static bool prevState = false;
+            bool state = emcStatus->task.state == EMC_TASK_STATE_ON;
+            if(state != prevState)
+            {
+                ZeroJog();
+                prevState = state;
+            }
+            set_control_on(state);
+        }
         set_machine_connected(true);
         break;
 
@@ -166,8 +190,8 @@ void LinuxCnc::UpdateState()
 
     case 3:
         set_paused(emcStatus->task.task_paused);
-        set_max_feed_lin(m_maxSpeedLin);
-        set_max_feed_ang(m_maxSpeedLin);
+        set_max_feed_lin((m_maxSpeedLin * 60) / emcStatus->motion.axis[0].units);
+        set_max_feed_ang((m_maxSpeedAng * 60) / emcStatus->motion.axis[0].units);
         break;
 
     case 4:
@@ -181,7 +205,17 @@ void LinuxCnc::UpdateState()
         break;
 
     case 6:
-        set_running(emcStatus->task.interpState != EMC_TASK_INTERP_IDLE);
+        {
+            static bool prevState = false;
+            bool state = emcStatus->task.interpState != EMC_TASK_INTERP_IDLE;
+            if(state != prevState)
+            {
+                ZeroJog();
+                prevState = state;
+            }
+            set_running(state);
+        }
+
         updateError();
         if(error_string[0] != 0)
         {
@@ -284,20 +318,45 @@ void LinuxCnc::UpdateState()
     }
 }
 
+inline void LinuxCnc::SendJog(const int axis, const double vel)
+{
+    if(vel == m_jogAxes[axis]) return;
+//printf("Jog %f\n", vel);
+    if(vel != 0)
+    {
+        EMC_AXIS_JOG emc_axis_jog_msg;
+        emc_axis_jog_msg.axis = axis;
+        emc_axis_jog_msg.vel = vel;
+        emcCommandSend(emc_axis_jog_msg);
+    }else
+    {
+        EMC_AXIS_ABORT emc_axis_abort_msg;
+        emc_axis_abort_msg.axis = axis;
+        emcCommandSend(emc_axis_abort_msg);
+    }
+    m_jogAxes[axis] = vel;
+}
+
+void LinuxCnc::ZeroJog()
+{
+    memset(m_jogAxes, 0, sizeof(m_jogAxes));
+}
+
 int LinuxCnc::SendJogVel(const double x, const double y, const double z, const double a, const double b, const double c)
 {
-
-    EMC_AXIS_JOG emc_axis_jog_msg;
-    EMC_TRAJ_SET_TELEOP_VECTOR emc_set_teleop_vector;
-
     if (emcStatus->motion.traj.mode != EMC_TRAJ_MODE_TELEOP)
     {
-        /*
-        	emc_axis_jog_msg.axis = axis;
-        	emc_axis_jog_msg.vel = speed / 60.0;
-        	emcCommandSend(emc_axis_jog_msg);*/
+        SendJog(0,x * m_maxSpeedLin);
+        SendJog(1,y * m_maxSpeedLin);
+        SendJog(2,z * m_maxSpeedLin);
+        SendJog(3,a * m_maxSpeedAng);
+        SendJog(4,b * m_maxSpeedAng);
+        SendJog(5,c * m_maxSpeedAng);
         return 0;
     }
+
+
+    EMC_TRAJ_SET_TELEOP_VECTOR emc_set_teleop_vector;
     ZERO_EMC_POSE(emc_set_teleop_vector.vector);
 #if LINUXCNCVER < 28
     emc_set_teleop_vector.vector.tran.x = x * m_maxSpeedLin;
@@ -318,14 +377,14 @@ int LinuxCnc::SendJogVel(const double x, const double y, const double z, const d
 
     emcCommandSend(emc_set_teleop_vector);
 
-    if (emcWaitType == EMC_WAIT_RECEIVED)
+//    if (emcWaitType == EMC_WAIT_RECEIVED)
     {
-        return emcCommandWaitReceived();
+//        return emcCommandWaitReceived();
     }
-    else if (emcWaitType == EMC_WAIT_DONE)
+/*    else if (emcWaitType == EMC_WAIT_DONE)
     {
         return emcCommandWaitDone();
-    }
+    }*/
 
     return 0;
     /*
@@ -379,7 +438,7 @@ void LinuxCnc::HandlePacket(const Packet & pkt)
 
     case cmdJOGVEL:
         SetMode(EMC_TASK_MODE_MANUAL);
-        sendSetTeleopEnable(true);
+//        sendSetTeleopEnable(true);
         {
             const CncRemote::Axes& axes = cmd.axes();
             SendJogVel(axes.x(), axes.y(), axes.z(), axes.a(), axes.b(), axes.c());

@@ -92,8 +92,8 @@ static void usage(char* pname)
            "         --help       this help\n"
            "         --port       <port number>  (default=%d)\n"
            "         --path       <path>         (default=%s)\n"
-           "LinuxCNC_Options:\n"
-           "         -ini        <inifile>      (default=%s)\n"
+//           "LinuxCNC_Options:\n"
+//           "         -ini        <inifile>      (default=%s)\n"
            ,pname,port,defaultPath,emc_inifile
           );
 }
@@ -155,7 +155,7 @@ int main(int argc, char * argv[])
     while(1)
     {
         // get configuration information
-        iniLoad(emc_inifile);
+//        iniLoad(emc_inifile);
         machine.ConnectLCnc();
 
 
