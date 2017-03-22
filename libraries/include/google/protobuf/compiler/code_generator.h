@@ -50,7 +50,6 @@ namespace io { class ZeroCopyOutputStream; }
 class FileDescriptor;
 
 namespace compiler {
-class Version;
 
 // Defined in this file.
 class CodeGenerator;
@@ -91,7 +90,7 @@ class LIBPROTOC_EXPORT CodeGenerator {
   //
   // Returns true if successful.  Otherwise, sets *error to a description of
   // the problem (e.g. "invalid parameter") and returns false.
-  virtual bool GenerateAll(const std::vector<const FileDescriptor*>& files,
+  virtual bool GenerateAll(const vector<const FileDescriptor*>& files,
                            const string& parameter,
                            GeneratorContext* generator_context,
                            string* error) const;
@@ -142,11 +141,7 @@ class LIBPROTOC_EXPORT GeneratorContext {
   // Returns a vector of FileDescriptors for all the files being compiled
   // in this run.  Useful for languages, such as Go, that treat files
   // differently when compiled as a set rather than individually.
-  virtual void ListParsedFiles(std::vector<const FileDescriptor*>* output);
-
-  // Retrieves the version number of the protocol compiler associated with
-  // this GeneratorContext.
-  virtual void GetCompilerVersion(Version* version) const;
+  virtual void ListParsedFiles(vector<const FileDescriptor*>* output);
 
  private:
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(GeneratorContext);
@@ -162,8 +157,8 @@ typedef GeneratorContext OutputDirectory;
 //   "foo=bar,baz,qux=corge"
 // parses to the pairs:
 //   ("foo", "bar"), ("baz", ""), ("qux", "corge")
-extern void LIBPROTOC_EXPORT ParseGeneratorParameter(const string&,
-            std::vector<std::pair<string, string> >*);
+extern void ParseGeneratorParameter(const string&,
+            vector<pair<string, string> >*);
 
 }  // namespace compiler
 }  // namespace protobuf

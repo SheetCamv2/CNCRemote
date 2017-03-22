@@ -62,7 +62,6 @@
 #include <string>
 #include <vector>
 #include <google/protobuf/stubs/common.h>
-#include <google/protobuf/stubs/mutex.h>
 
 // TYPE_BOOL is defined in the MacOS's ConditionalMacros.h.
 #ifdef TYPE_BOOL

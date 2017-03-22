@@ -64,7 +64,7 @@ namespace protobuf {
 namespace strings {
 
 // An abstract interface for an object that consumes a sequence of bytes. This
-// interface offers a way to append data as well as a Flush() function.
+// interface offers 3 different ways to append data, and a Flush() function.
 //
 // Example:
 //

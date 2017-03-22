@@ -556,7 +556,7 @@ inline bool MapTypeHandler<WireFormatLite::TYPE_MESSAGE,
                                        Type>::MapEntryAccessorType&            \
   MapTypeHandler<WireFormatLite::TYPE_##FieldType,                             \
                  Type>::GetExternalReference(const TypeOnMemory& value) {      \
-    return value.Get();                                                        \
+    return value.Get(&::google::protobuf::internal::GetEmptyStringAlreadyInited());      \
   }                                                                            \
   template <typename Type>                                                     \
   inline int                                                                   \
@@ -581,9 +581,11 @@ inline bool MapTypeHandler<WireFormatLite::TYPE_MESSAGE,
                         arena);                                                \
   }                                                                            \
   template <typename Type>                                                     \
-  inline void MapTypeHandler<WireFormatLite::TYPE_##FieldType, Type>::         \
-      ClearMaybeByDefaultEnum(TypeOnMemory* value, Arena* arena,               \
-                              int default_enum) {                              \
+  inline void                                                                  \
+  MapTypeHandler<WireFormatLite::TYPE_##FieldType,                             \
+                 Type>::ClearMaybeByDefaultEnum(TypeOnMemory* value,           \
+                                                Arena* arena,                  \
+                                                int default_enum) {            \
     Clear(value, arena);                                                       \
   }                                                                            \
   template <typename Type>                                                     \
@@ -607,9 +609,11 @@ inline bool MapTypeHandler<WireFormatLite::TYPE_MESSAGE,
         &::google::protobuf::internal::GetEmptyStringAlreadyInited());                   \
   }                                                                            \
   template <typename Type>                                                     \
-  inline void MapTypeHandler<WireFormatLite::TYPE_##FieldType, Type>::         \
-      InitializeMaybeByDefaultEnum(TypeOnMemory* value,                        \
-                                   int default_enum_value, Arena* arena) {     \
+  inline void                                                                  \
+  MapTypeHandler<WireFormatLite::TYPE_##FieldType,                             \
+                 Type>::InitializeMaybeByDefaultEnum(TypeOnMemory* value,      \
+                                                     int default_enum_value,   \
+                                                     Arena* arena) {           \
     Initialize(value, arena);                                                  \
   }                                                                            \
   template <typename Type>                                                     \
@@ -627,7 +631,7 @@ inline bool MapTypeHandler<WireFormatLite::TYPE_MESSAGE,
                  Type>::DefaultIfNotInitialized(const TypeOnMemory& value,     \
                                                 const TypeOnMemory&            \
                                                     default_value) {           \
-    return value.Get();                                                        \
+    return value.Get(&::google::protobuf::internal::GetEmptyStringAlreadyInited());      \
   }                                                                            \
   template <typename Type>                                                     \
   inline bool MapTypeHandler<WireFormatLite::TYPE_##FieldType,                 \
