@@ -17,8 +17,10 @@ private:
 
     virtual void HandlePacket(const Packet & pkt);
     void SetMode(const int mode);
+    inline void SendJog(const int axis, const double vel);
     int SendJogVel(const double x, const double y, const double z, const double a, const double b, const double c);
     void SendJogStep(const int axis, const double val);
+    void ZeroJog();
 
     int m_slowCount;
     uint32_t m_heartbeat;
@@ -26,6 +28,8 @@ private:
     bool m_connected;
     double m_maxSpeedLin;
     double m_maxSpeedAng;
+
+    double m_jogAxes[MAX_AXES];
 };
 
 
