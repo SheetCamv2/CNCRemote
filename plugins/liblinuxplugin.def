@@ -1,6 +1,0 @@
-EXPORTS
-    ControlExists @1
-    GetName @2
-    Poll @3
-    Quit @4
-    Start @5
