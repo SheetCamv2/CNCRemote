@@ -8,4 +8,5 @@ obj
 *.*~*
 *.*~*
 *.old
-
+drivers/
+plugins/
