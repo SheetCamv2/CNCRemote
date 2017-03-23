@@ -4,7 +4,10 @@ Release
 obj
 *.depend
 *.layout
-*.pb.*
 *.*~*
 *.*~*
 *.old
+*_d.so
+*_d
+*_d.dll
+*_d.exe

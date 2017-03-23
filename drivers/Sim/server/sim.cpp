@@ -94,13 +94,13 @@ void Sim::UpdateState()
 {
     set_machine_connected(true);
     set_control_on(true);
-    CncRemote::Axes& axes = *mutable_max_feed();
+/*    CncRemote::Axes& axes = *mutable_max_feed();
     axes.set_x(1);
     axes.set_y(1);
     axes.set_z(1);
     axes.set_a(1);
     axes.set_b(1);
-    axes.set_c(1);
+    axes.set_c(1);*/
 }
 
 bool Sim::Poll()
