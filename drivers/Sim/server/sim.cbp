@@ -6,7 +6,7 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Debug">
+			<Target title="Debug-Windows">
 				<Option platforms="Windows;" />
 				<Option output="./$(PROJECT_NAME)" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
@@ -30,22 +30,9 @@
 					<Add directory="../../../libraries/lib" />
 				</Linker>
 			</Target>
-			<Target title="Release">
-				<Option output="./$(PROJECT_NAME)" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Release/" />
-				<Option type="1" />
-				<Option compiler="gcc" />
-				<Option use_console_runner="0" />
-				<Compiler>
-					<Add option="-O2" />
-				</Compiler>
-				<Linker>
-					<Add option="-s" />
-				</Linker>
-			</Target>
 			<Target title="Debug-Linux">
 				<Option platforms="Unix;" />
-				<Option output="./$(PROJECT_NAME)" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../bin/drivers/i386-linux-gnu/$(PROJECT_NAME)" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -58,8 +45,8 @@
 					<Add directory="../../../src" />
 				</Compiler>
 				<Linker>
-					<Add library="protobuf-lite" />
-					<Add library="zmq" />
+					<Add library="protobuf-lite-3_1_0" />
+					<Add library="zmq-4_2_1" />
 					<Add directory="../../../libraries/lib" />
 				</Linker>
 			</Target>
