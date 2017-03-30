@@ -6,19 +6,6 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Debug-win32">
-				<Option platforms="Windows;" />
-				<Option output="../../../plugins/$(PROJECT_NAME)" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Debug/" />
-				<Option type="3" />
-				<Option compiler="gcc" />
-				<Option createDefFile="1" />
-				<Option createStaticLib="1" />
-				<Compiler>
-					<Add option="-g" />
-					<Add directory="../../../include" />
-				</Compiler>
-			</Target>
 			<Target title="Debug-Linux">
 				<Option platforms="Unix;" />
 				<Option output="../../../bin/plugins/i386-linux-gnu/$(PROJECT_NAME)_d" prefix_auto="0" extension_auto="1" />
@@ -27,7 +14,10 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
+					<Add option="-D_CREATING_CLIENT" />
 					<Add directory="../../../include" />
+					<Add directory="../../../src" />
+					<Add directory="../../../libraries/include" />
 				</Compiler>
 				<Linker>
 					<Add library="zmq-4.2.3" />
@@ -43,7 +33,10 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O3" />
+					<Add option="-D_CREATING_CLIENT" />
 					<Add directory="../../../include" />
+					<Add directory="../../../src" />
+					<Add directory="../../../libraries/include" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -57,8 +50,16 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="../../../include/cncclient.h" />
+		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
+		<Unit filename="../../../include/cncserver.h" />
+		<Unit filename="../../../include/millisleep.h" />
+		<Unit filename="../../../include/timer.h" />
+		<Unit filename="../../../src/cncclient.cpp" />
+		<Unit filename="../../../src/cnccomms.cpp" />
 		<Unit filename="../../../src/cncplugin.cpp" />
+		<Unit filename="../../../src/cncstatebuf.pb.cc" />
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />

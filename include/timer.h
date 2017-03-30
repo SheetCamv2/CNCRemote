@@ -3,43 +3,73 @@
 
 #include <time.h>
 
-class TestTimer
+/* microsecond timer*/
+class UTimer
 {
 public:
-    TestTimer(const string& msg)
+    UTimer()
     {
-		m_msg = msg;
 #ifdef _USING_WINDOWS
-		m_time = timeGetTime();
-#else
-        clock_gettime(CLOCK_MONOTONIC, &m_time);
+        QueryPerformanceFrequency(&m_frequency);
 #endif
-		m_lastTime = 0;
+        Restart();
     }
 
-    void Start()
+    void Restart()
     {
 #ifdef _USING_WINDOWS
-		m_time = timeGetTime();
+		QueryPerformanceCounter(&m_time);
 #else
         clock_gettime(CLOCK_MONOTONIC, &m_time);
 #endif
 	}
 
-    void Check()
+    uint64_t GetElapsed(const bool restart = false)
     {
 #ifdef _USING_WINDOWS
-		unsigned long diff = 0;
-		DWORD time = timeGetTime();
-		diff = time - m_time;
+		LARGE_INTEGER now;
+		QueryPerformanceCounter(&now);
+		LARGE_INTEGER ret;
+		ret.QuadPart = now.QuadPart - m_time.QuadPart;
+		ret.QuadPart *= 1000000;
+        ret.QuadPart /= m_frequency.QuadPart;
+        if(restart) m_time = now;
+        return ret.QuadPart;
 #else
-        timespec time;
-        clock_gettime(CLOCK_MONOTONIC, &time);
-        uint64_t t1 = (time.tv_nsec / 1000) + (time.tv_sec * 1000000);
+        timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        uint64_t t1 = (now.tv_nsec / 1000) + (now.tv_sec * 1000000);
         uint64_t t2 = (m_time.tv_nsec / 1000) + (m_time.tv_sec * 1000000);
-        unsigned long diff = (t1 - t2);
+        if(restart) m_time = now;
+        return (t1 - t2);
 #endif
-		if(abs((long int)(diff - m_lastTime)) > 500)
+
+    }
+
+private:
+#ifdef _USING_WINDOWS
+    LARGE_INTEGER m_frequency;
+    LARGE_INTEGER m_time;
+#else
+    timespec m_time;
+#endif
+};
+
+
+class TestTimer : public UTimer
+{
+public:
+    TestTimer(const string& msg)
+    {
+		m_msg = msg;
+		m_lastTime = 0;
+    }
+
+
+    void Check()
+    {
+        uint64_t diff = GetElapsed(true);
+        if(diff > 200)
         {
             m_lastTime = diff;
             printf("%s = %f ms\n", m_msg.c_str(), (float)diff / 1000);
@@ -47,11 +77,6 @@ public:
     }
 
 private:
-#ifdef _USING_WINDOWS
-	DWORD m_time;
-#else
-    timespec m_time;
-#endif
 	unsigned long m_lastTime;
     string m_msg;
 };

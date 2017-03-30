@@ -12,7 +12,7 @@
 #include "timer.hh"             // etime()
 #include "shcom.hh"             // NML Messaging functions
 
-#include "shcom.cc" //this way we can use the include search path to find shcom.cc
+//#include "shcom.cc" //this way we can use the include search path to find shcom.cc
 
 #define LINUXCNCVER 27
 
@@ -24,60 +24,9 @@ LinuxCnc::LinuxCnc()
     m_nextTime = 0;
     m_connected = false;
 
-//    IniFile inifile;
-//    const char *inistring;
     m_maxSpeedLin = 4000;
     m_maxSpeedAng = 100;
-/*
-    // open it
-    if (inifile.Open(emc_inifile) == false)
-    {
-        return;
-    }
-    float tmp = 0;
-    if (NULL != (inistring = inifile.Find("MAX_LINEAR_VELOCITY", "DISPLAY")))
-    {
-        // copy to global
-        if (1 != sscanf(inistring, "%f", &tmp))
-        {
-            tmp = 0;
-        }
-    }
-    if (tmp == 0 && NULL != (inistring = inifile.Find("MAX_LINEAR_VELOCITY", "TRAJ")))
-    {
-        // copy to global
-        if (1 != sscanf(inistring, "%f", &tmp))
-        {
-            tmp = 0;
-        }
-    }
-    if(tmp != 0)
-    {
-        m_maxSpeedLin = tmp;
-    }
 
-    tmp = 0;
-    if (NULL != (inistring = inifile.Find("MAX_ANGULAR_VELOCITY", "DISPLAY")))
-    {
-        // copy to global
-        if (1 != sscanf(inistring, "%f", &tmp))
-        {
-            tmp = 0;
-        }
-    }
-    if (tmp == 0 && NULL != (inistring = inifile.Find("MAX_ANGULAR_VELOCITY", "TRAJ")))
-    {
-        // copy to global
-        if (1 != sscanf(inistring, "%f", &tmp))
-        {
-            tmp = 0;
-        }
-    }
-    if(tmp != 0)
-    {
-        m_maxSpeedAng = tmp;
-    }
-    */
 }
 
 void LinuxCnc::ConnectLCnc()
@@ -102,8 +51,6 @@ void LinuxCnc::ConnectLCnc()
 
     m_maxSpeedLin = emcStatus->motion.traj.maxVelocity;
     m_maxSpeedAng = emcStatus->motion.traj.maxVelocity;
-
-
 
     emcCommandSerialNumber = emcStatus->echo_serial_number;
     m_heartbeat = emcStatus->task.heartbeat;

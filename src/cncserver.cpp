@@ -101,25 +101,6 @@ bool Server::Poll()
         {
             break;
         }
-/*        int id = -1;
-        for(unsigned int ct=0; ct < m_ids.size(); ct++)
-        {
-            if(m_ids[ct].name == ident)
-            {
-                id = ct;
-                break;
-            }
-        }
-        if(id <0)
-        {
-            Identity i;
-            i.name = "wed";//ident;
-            i.timeout = time(NULL) + CONN_TIMEOUT;
-            m_ids.push_back(i);
-        }else
-        {
-            m_ids[id].timeout = time(NULL) + CONN_TIMEOUT;
-        }*/
         m_curId = ident;
 
 		Packet pkt;
@@ -145,7 +126,7 @@ bool Server::Poll()
 
 		default:
 		{
-		    ttm.Start();
+		    ttm.Restart();
 			HandlePacket(pkt);
 			ttm.Check();
 
@@ -158,17 +139,6 @@ bool Server::Poll()
         UpdateState();
         SendState(m_curId);
     }
-/*    time_t t = time(NULL);
-    for(int ct=0; ct < m_ids.size(); ct++)
-    {
-        Identity & id = m_ids[ct];
-        if(t > id.timeout && false)
-        {
-printf("ID %s timed out\n", id.name.c_str());
-            m_ids.erase(m_ids.begin() + ct);
-            ct--;
-        }
-    }*/
 	return ret;
 }
 

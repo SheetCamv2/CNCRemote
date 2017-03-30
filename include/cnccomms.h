@@ -9,11 +9,11 @@
 #include "cncplugin.h"
 #include "zmq.h"
 
-
 using namespace std;
 
 namespace CncRemote {
-enum {CONN_TIMEOUT = 50};
+#define CONN_TIMEOUT (50)
+
 
 #define MAX_AXES 6
 
@@ -63,7 +63,7 @@ class Comms : public StateBuf
             cmdFRO,		//float
             cmdFILE,	//string
 			cmdCLOSEFILE, //none
-            cmdSTART,	//none	
+            cmdSTART,	//none
             cmdSTOP,	//none
             cmdPAUSE,	//none
             cmdBLOCKDEL,	//boolean

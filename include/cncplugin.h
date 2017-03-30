@@ -27,8 +27,6 @@
 extern "C" {
 #endif
 
-typedef enum{ctrlNONE, ctrlREMOTE, ctrlLOCAL} CONTROLSTATUS;
-
 #ifdef _CREATING_CLIENT
    #ifdef _USING_WINDOWS
       #define EXPORT_CNC __declspec(dllimport)
@@ -39,10 +37,11 @@ typedef enum{ctrlNONE, ctrlREMOTE, ctrlLOCAL} CONTROLSTATUS;
    #endif
 
 	typedef uint32_t (* CNCSTARTFUNC) ();
+	typedef void (* CNCSTOPFUNC) ();
     typedef const char * (* CNCGETNAMEFUNC)();
 	typedef void (* CNCQUITFUNC) ();
 	typedef void (* CNCPOLLFUNC) ();
-	typedef uint32_t (* CNCCONTROLEXISTSFUNC) ();
+	typedef uint32_t (* CNCCONTROLEXISTSFUNC) (const char * );
 
 #else
     #ifdef _USING_WINDOWS
@@ -58,18 +57,19 @@ typedef enum{ctrlNONE, ctrlREMOTE, ctrlLOCAL} CONTROLSTATUS;
 */
     EXPORT_CNC uint32_t Start();
 
+/*	Stop the server connection. Use this for instance to stop a local copy of the server.
+*/
+    EXPORT_CNC void Stop();
+
  /*	return a descriptive name for this plugin.
     The string should be a static pointer and should be encoded with UTF-8.
 */
     EXPORT_CNC const char * GetName();
 
-/* Check for the existence of the controller.
-    returns one of:
-    ctrlNONE: The control does not exist (only useful for controls that are on the same machine)
-    ctrlREMOTE: The control may be local or remote. System uses sockets for comms.
-    ctrlLOCAL: The control is local. System uses IPC for comms.
+/* Check for the existence of the controller. pluginDir is a UTF-8 encoded path to the plugin directory including a trailing slash.
+    returns true if the control exists on this machine
 */
-    EXPORT_CNC const uint32_t ControlExists();
+    EXPORT_CNC const uint32_t ControlExists(const char * pluginDir);
 
 /* Called just before the library is unloaded
 */
