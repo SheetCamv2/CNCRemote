@@ -6,7 +6,7 @@
 
 namespace CncRemote
 {
-
+#ifdef USE_PLUGINS
 struct Plugin
 {
     LIBHANDLE handle;
@@ -17,22 +17,26 @@ struct Plugin
     CNCPOLLFUNC Poll;
     CNCCONTROLEXISTSFUNC ControlExists;
 };
-
 class Client : public Comms, private Plugin
+#else
+class Client : public Comms
+#endif // USE_PLUGINS
+
 {
 public:
     Client();
 	virtual ~Client();
+#ifdef USE_PLUGINS
 	bool LoadPlugins(const CncString& pluginPath); //Load plugins from the given path. Note path should end with a trailing path delimiter. Returns false if plugins dir nor found.
-
-    bool Poll(); //Call at least as often as you need to send/receive data. Returns true if any data was received.
 	const vector<Plugin> GetPlugins(){return m_plugins;} //Get the available plugins
+#endif
+    bool Poll(); //Call at least as often as you need to send/receive data. Returns true if any data was received.
 	CncString GenerateTcpAddress(const CncString& ipAddress, const bool useLocal = false, const int port = DEFAULT_COMMS_PORT); //Generates a TCP address for Connect(). useLocal overrides the given IP address
 	bool Connect(const unsigned int index, const CncString& address); //Connect to server
 	void Disconnect(); //Disconnect (normally disconnection is automatic so you shouldn't need to call this)
  	bool IsConnected(){return m_isConnected;} //Is the server connected and running?
  	virtual void OnConnection(const bool state){}; //Override this if you want to be notfied of connection/disconnection. state=true if we have just connected
- 	bool Ping(int waitMs); //Ping the server. If there is no response withing waitMs milliseconds it returns false. Note unlike other functions this blocks while waiting
+ 	bool Ping(int waitMs); //Ping the server. If there is no response within waitMs milliseconds it returns false. Note unlike other functions this blocks while waiting
 
     //Avoid adding functions that are specific to a certain control software.
     //If you add functions you must also update Comms::CMDTYPE
@@ -56,8 +60,10 @@ protected:
 private:
 	bool m_isConnected;
 	bool m_wasConnected;
+#ifdef USE_PLUGINS
     vector<Plugin> m_plugins;
     Plugin * m_plugin;
+#endif
 	CncString m_address;
 	unsigned int m_repTimeout;
 	bool m_pingResp;

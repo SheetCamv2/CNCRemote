@@ -19,11 +19,15 @@ Client::Client()
     m_isConnected = false;
     m_wasConnected = false;
     m_repTimeout = 0;
+#ifdef USE_PLUGINS
     m_plugin = NULL;
+#endif
 }
 
 Client::~Client()
 {
+#ifdef USE_PLUGINS
+
     for(size_t ct=0; ct < m_plugins.size(); ct++)
     {
         Plugin &plg = m_plugins[ct];
@@ -34,7 +38,11 @@ Client::~Client()
         dlclose(plg.handle);
 #endif
     }
+#endif
 }
+
+
+#ifdef USE_PLUGINS
 
 bool Client::LoadPlugins(const CncString& path)
 {
@@ -103,6 +111,11 @@ bool Client::LoadPlugins(const CncString& path)
     do
     {
         Plugin plg;
+        if(strcmp(file->d_name, ".") == 0 ||
+           strcmp(file->d_name, "..") == 0)
+        {
+            continue;
+        }
         string dllName = path + "/" + file->d_name;
         plg.handle = dlopen(dllName.c_str(), RTLD_LAZY);
         if(!plg.handle) continue;
@@ -132,7 +145,7 @@ bool Client::LoadPlugins(const CncString& path)
 #endif
     return true;
 }
-
+#endif
 
 void Client::HandlePacket(const Packet & pkt)
 {
@@ -152,9 +165,10 @@ void Client::HandlePacket(const Packet & pkt)
 bool Client::Poll()
 {
     if(m_socket == NULL) return false;
+#ifdef USE_PLUGINS
     if(m_plugin) m_plugin->Poll();
+#endif
     bool ret = false;
-    char *buf = NULL;
     while(1)
     {
 
@@ -227,11 +241,13 @@ CncString Client::GenerateTcpAddress(const CncString& ipAddress, const bool useL
 
 bool Client::Connect(const unsigned int index, const CncString& address)
 {
+#ifdef USE_PLUGINS
     if(m_plugin)
     {
         m_plugin->Stop();
         m_plugin = NULL;
     }
+#endif
     m_address.clear();
     if(m_socket)
     {
@@ -243,22 +259,28 @@ bool Client::Connect(const unsigned int index, const CncString& address)
         OnConnection(false);
     }
     m_wasConnected = false;
+#ifdef USE_PLUGINS
     if(index > 0)
     {
         if(index > m_plugins.size()) return false;
         m_plugin = &m_plugins[index];
     }
+#endif
     m_socket = zmq_socket(m_context, ZMQ_DEALER);
     if(!m_socket)
     {
+#ifdef USE_PLUGINS
         m_plugin = NULL;
+#endif
         return false;
     }
     int opt = 0;
     zmq_setsockopt(m_socket, ZMQ_LINGER, &opt, sizeof(opt));
     if(zmq_connect(m_socket, to_utf8(address).c_str()) < 0)
     {
+#ifdef USE_PLUGINS
         m_plugin = NULL;
+#endif
         return false;
     }
     m_address = address;
@@ -277,11 +299,13 @@ void Client::Disconnect()
     {
         return;
     }
+#ifdef USE_PLUGINS
     if(m_plugin)
     {
         m_plugin->Stop();
         m_plugin = NULL;
     }
+#endif
     zmq_disconnect(m_socket, to_utf8(m_address).c_str());
     m_isConnected = false;
     OnConnection(false);
