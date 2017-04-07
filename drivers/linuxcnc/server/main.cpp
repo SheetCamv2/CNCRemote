@@ -25,6 +25,10 @@
 
 int port = DEFAULT_COMMS_PORT;
 
+
+string a = PACKAGE_VERSION;
+
+
 struct option longopts[] =
 {
     {"help", 0, NULL, 'h'},
@@ -162,7 +166,7 @@ int main(int argc, char * argv[])
 TestTimer tt("Main");
         while(1)
         {
-tt.Start();
+tt.Restart();
             if(!machine.Poll())
             {
                 break;

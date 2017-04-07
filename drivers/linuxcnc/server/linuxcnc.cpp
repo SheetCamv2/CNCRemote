@@ -12,7 +12,7 @@
 #include "timer.hh"             // etime()
 #include "shcom.hh"             // NML Messaging functions
 
-//#include "shcom.cc" //this way we can use the include search path to find shcom.cc
+#include "shcom.cc" //this way we can use the include search path to find shcom.cc
 
 #define LINUXCNCVER 27
 

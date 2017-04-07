@@ -12,7 +12,6 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-ini /home/plasma/linuxcnc/configs/scanything/scanything.ini" />
 				<Compiler>
 					<Add option="-std=c++11" />
 					<Add option="-g" />
@@ -24,8 +23,37 @@
 					<Add directory="../../../libraries/include" />
 				</Compiler>
 				<Linker>
-					<Add library="protobuf" />
-					<Add library="zmq" />
+					<Add library="linuxcncini" />
+					<Add library="linuxcnchal" />
+					<Add library="linuxcnc" />
+					<Add library="nml" />
+					<Add library="pthread" />
+					<Add library="protobuf-lite-3.1.0" />
+					<Add library="zmq-4.2.3" />
+					<Add directory="$(#LINUXCNC)/lib" />
+					<Add directory="../../../libraries/lib/i386-linux-gnu" />
+					<Add directory="../../../libraries/lib" />
+				</Linker>
+			</Target>
+			<Target title="Release-Linux">
+				<Option platforms="Unix;" />
+				<Option output="../../../bin/plugins/i386-linux-gnu/linuxcncserver/drv_`linuxcnc_var LINUXCNCVERSION`" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-std=c++11" />
+					<Add directory="$(#LINUXCNC)/src/emc/usr_intf" />
+					<Add directory="$(#LINUXCNC)/include" />
+					<Add directory="../../../include" />
+					<Add directory="../../../src" />
+					<Add directory="../../../libraries/include" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add library="protobuf-lite-3.1.0" />
+					<Add library="zmq-4.2.3" />
 					<Add library="linuxcncini" />
 					<Add library="linuxcnchal" />
 					<Add library="linuxcnc" />
@@ -34,19 +62,6 @@
 					<Add directory="$(#LINUXCNC)/lib" />
 					<Add directory="../../../libraries/lib/i386-linux-gnu" />
 					<Add directory="../../../libraries/lib" />
-				</Linker>
-			</Target>
-			<Target title="Release">
-				<Option platforms="Unix;" />
-				<Option output="bin/Release/linuxcncserver" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Release/" />
-				<Option type="1" />
-				<Option compiler="gcc" />
-				<Compiler>
-					<Add option="-O2" />
-				</Compiler>
-				<Linker>
-					<Add option="-s" />
 				</Linker>
 			</Target>
 		</Build>
