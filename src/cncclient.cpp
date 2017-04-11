@@ -131,7 +131,7 @@ bool Client::LoadPlugins(const CncString& path)
                 !plg.Quit ||
                 !plg.Poll ||
                 !plg.ControlExists ||
-                plg.ControlExists(path.c_str()) == false)
+                plg.ControlExists((path + "/").c_str()) == false)
         {
             dlclose(plg.handle);
         }
@@ -263,7 +263,7 @@ bool Client::Connect(const unsigned int index, const CncString& address)
     if(index > 0)
     {
         if(index > m_plugins.size()) return false;
-        m_plugin = &m_plugins[index];
+        m_plugin = &m_plugins[index - 1];
     }
 #endif
     m_socket = zmq_socket(m_context, ZMQ_DEALER);
@@ -283,6 +283,12 @@ bool Client::Connect(const unsigned int index, const CncString& address)
 #endif
         return false;
     }
+#ifdef USE_PLUGINS
+    if(m_plugin)
+    {
+        m_plugin->Start();
+    }
+#endif
     m_address = address;
     const char* identity = "sheetcam";
     zmq_setsockopt (m_socket, ZMQ_IDENTITY, identity, strlen (identity));

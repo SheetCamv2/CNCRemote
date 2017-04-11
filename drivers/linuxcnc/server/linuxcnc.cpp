@@ -13,8 +13,7 @@
 #include "shcom.hh"             // NML Messaging functions
 
 #include "shcom.cc" //this way we can use the include search path to find shcom.cc
-
-#define LINUXCNCVER 27
+#include "version.h"
 
 
 LinuxCnc::LinuxCnc()
@@ -44,7 +43,7 @@ void LinuxCnc::ConnectLCnc()
 
     if(emcStatus->size != sizeof(EMC_STAT))
     {
-        printf("Wrong LinuxCNC version");
+        printf("Wrong LinuxCNC version\n");
         exit(0);
     }
 
@@ -56,10 +55,7 @@ void LinuxCnc::ConnectLCnc()
     m_heartbeat = emcStatus->task.heartbeat;
     m_nextTime = time(NULL) + 1; //check every second
     m_connected = true;
-#if LINUXCNCVER < 28
 #define EMC_WAIT_NONE (EMC_WAIT_TYPE) 1
-#endif // LINUXCNCVER
-    emcWaitType = EMC_WAIT_NONE;
 }
 
 #include "timer.h"
@@ -85,7 +81,7 @@ void LinuxCnc::UpdateState()
         return;
     }
     CncRemote::Axes& axes = *mutable_abs_pos();
-#if LINUXCNCVER < 28
+#if MAJOR_VER <= 2 && MINOR_VER <=8
     axes.set_x(emcStatus->motion.traj.actualPosition.tran.x / emcStatus->motion.axis[0].units);
     axes.set_y(emcStatus->motion.traj.actualPosition.tran.y / emcStatus->motion.axis[1].units);
     axes.set_z(emcStatus->motion.traj.actualPosition.tran.z / emcStatus->motion.axis[2].units);
@@ -137,8 +133,13 @@ void LinuxCnc::UpdateState()
 
     case 3:
         set_paused(emcStatus->task.task_paused);
+#if MAJOR_VER <= 2 && MINOR_VER <=8
         set_max_feed_lin((m_maxSpeedLin * 60) / emcStatus->motion.axis[0].units);
         set_max_feed_ang((m_maxSpeedAng * 60) / emcStatus->motion.axis[0].units);
+#else
+        set_max_feed_lin((m_maxSpeedLin * 60) / emcStatus->motion.joint[0].units);
+        set_max_feed_ang((m_maxSpeedAng * 60) / emcStatus->motion.joint[0].units);
+#endif
         break;
 
     case 4:
@@ -188,7 +189,7 @@ void LinuxCnc::UpdateState()
     case 8:
     {
         CncRemote::Axes& axes = *mutable_offset_fixture();
-#if LINUXCNCVER < 28
+#if MAJOR_VER <= 2 && MINOR_VER <=8
         axes.set_x(emcStatus->task.g5x_offset.tran.x / emcStatus->motion.axis[0].units);
         axes.set_y(emcStatus->task.g5x_offset.tran.y / emcStatus->motion.axis[1].units);
         axes.set_z(emcStatus->task.g5x_offset.tran.z / emcStatus->motion.axis[2].units);
@@ -209,7 +210,7 @@ void LinuxCnc::UpdateState()
     case 9:
     {
         CncRemote::Axes& axes = *mutable_offset_work();
-#if LINUXCNCVER < 28
+#if MAJOR_VER <= 2 && MINOR_VER <=8
         axes.set_x(emcStatus->task.g92_offset.tran.x / emcStatus->motion.axis[0].units);
         axes.set_y(emcStatus->task.g92_offset.tran.y / emcStatus->motion.axis[1].units);
         axes.set_z(emcStatus->task.g92_offset.tran.z / emcStatus->motion.axis[2].units);
@@ -230,7 +231,7 @@ void LinuxCnc::UpdateState()
     case 10:
     {
         CncRemote::BoolAxes& axes = *mutable_homed();
-#if LINUXCNCVER < 28
+#if MAJOR_VER <= 2 && MINOR_VER <=8
         axes.set_x(emcStatus->motion.axis[0].homed);
         axes.set_y(emcStatus->motion.axis[1].homed);
         axes.set_z(emcStatus->motion.axis[2].homed);
@@ -271,15 +272,33 @@ inline void LinuxCnc::SendJog(const int axis, const double vel)
 //printf("Jog %f\n", vel);
     if(vel != 0)
     {
+#if MAJOR_VER <= 2 && MINOR_VER <=8
+
         EMC_AXIS_JOG emc_axis_jog_msg;
         emc_axis_jog_msg.axis = axis;
         emc_axis_jog_msg.vel = vel;
         emcCommandSend(emc_axis_jog_msg);
+#else
+        EMC_JOG_CONT emc_jog_cont_msg;
+        emc_jog_cont_msg.jjogmode = JOGTELEOP;
+        emc_jog_cont_msg.joint_or_axis = axis;
+        emc_jog_cont_msg.vel = vel;
+        emcCommandSend(emc_jog_cont_msg);
+#endif
+
     }else
     {
+#if MAJOR_VER <= 2 && MINOR_VER <=8
+
         EMC_AXIS_ABORT emc_axis_abort_msg;
         emc_axis_abort_msg.axis = axis;
         emcCommandSend(emc_axis_abort_msg);
+#else
+        EMC_JOG_STOP emc_jog_stop_msg;
+        emc_jog_stop_msg.jjogmode = JOGTELEOP;
+        emc_jog_stop_msg.joint_or_axis = axis;
+        emcCommandSend(emc_jog_stop_msg);
+#endif
     }
     m_jogAxes[axis] = vel;
 }
@@ -291,7 +310,10 @@ void LinuxCnc::ZeroJog()
 
 int LinuxCnc::SendJogVel(const double x, const double y, const double z, const double a, const double b, const double c)
 {
-    if (emcStatus->motion.traj.mode != EMC_TRAJ_MODE_TELEOP)
+
+printf("Jog %f %f %f\n", x,y,z);
+
+//    if (emcStatus->motion.traj.mode != EMC_TRAJ_MODE_TELEOP)
     {
         SendJog(0,x * m_maxSpeedLin);
         SendJog(1,y * m_maxSpeedLin);
@@ -302,10 +324,11 @@ int LinuxCnc::SendJogVel(const double x, const double y, const double z, const d
         return 0;
     }
 
+/*
+#if MAJOR_VER <= 2 && MINOR_VER <=8
 
     EMC_TRAJ_SET_TELEOP_VECTOR emc_set_teleop_vector;
     ZERO_EMC_POSE(emc_set_teleop_vector.vector);
-#if LINUXCNCVER < 28
     emc_set_teleop_vector.vector.tran.x = x * m_maxSpeedLin;
     emc_set_teleop_vector.vector.tran.y = y * m_maxSpeedLin;
     emc_set_teleop_vector.vector.tran.z = z * m_maxSpeedLin;
@@ -324,21 +347,15 @@ int LinuxCnc::SendJogVel(const double x, const double y, const double z, const d
 
     emcCommandSend(emc_set_teleop_vector);
 
-//    if (emcWaitType == EMC_WAIT_RECEIVED)
-    {
-//        return emcCommandWaitReceived();
-    }
-/*    else if (emcWaitType == EMC_WAIT_DONE)
-    {
-        return emcCommandWaitDone();
-    }*/
+*/
 
     return 0;
     /*
 
 
 
-    #if LINUXCNCVER < 28
+    #if MAJOR_VER <= 2 && MINOR_VER <=8
+
         sendJogCont(axis, val * emcStatus->motion.axis[axis].units);
     #else
         if(emcStatus->motion.joint[axis].jointType == EMC_LINEAR)
@@ -351,16 +368,17 @@ int LinuxCnc::SendJogVel(const double x, const double y, const double z, const d
 
 void LinuxCnc::SendJogStep(const int axis, const double val)
 {
-#if LINUXCNCVER < 28
+#if MAJOR_VER <= 2 && MINOR_VER <=8
+
     if(emcStatus->motion.axis[axis].axisType == EMC_AXIS_LINEAR)
-        sendJogIncr(axis, val * emcStatus->motion.axis[0].units, m_maxSpeedLin);
+        sendJogIncr(axis, val * emcStatus->motion.axis[axis].units, m_maxSpeedLin);
     else
-        sendJogIncr(axis, val * emcStatus->motion.axis[0].units, m_maxSpeedAng);
+        sendJogIncr(axis, val * emcStatus->motion.axis[axis].units, m_maxSpeedAng);
 #else
     if(emcStatus->motion.joint[axis].jointType == EMC_LINEAR)
-        sendJogIncr(axis,JOGTELEOP, val * emcStatus->motion.joint[0].units, m_maxSpeedLin);
+        sendJogIncr(axis,JOGTELEOP, val * emcStatus->motion.joint[axis].units, m_maxSpeedLin);
     else
-        sendJogIncr(axis,JOGTELEOP, val * emcStatus->motion.joint[0].units, m_maxSpeedAng);
+        sendJogIncr(axis,JOGTELEOP, val * emcStatus->motion.joint[axis].units, m_maxSpeedAng);
 #endif
 }
 

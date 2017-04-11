@@ -15,9 +15,15 @@
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
-					<Add option="-g" />
+					<Add option="-O3" />
 					<Add directory="../../../include" />
 				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add library="protobuf-lite-3.1.0" />
+					<Add library="libzmq-4.2.3" />
+					<Add directory="../../../libraries/lib/i386-linux-gnu" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option platforms="Windows;" />
@@ -42,6 +48,7 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
+					<Add option="-D_DEBUG" />
 					<Add directory="../../../include" />
 				</Compiler>
 				<Linker>

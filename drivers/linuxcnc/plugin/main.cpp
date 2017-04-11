@@ -44,7 +44,8 @@ int execute(const char * path, const char * arg, const bool waitExit)
 EXPORT_CNC uint32_t Start()
 {
     CncRemote::Client client;
-    if(!client.Connect(0,"localhost:" _STRINGIFY(DEFAULT_COMMS_PORT))) return false;
+    CncString tmp;
+    if(!client.Connect(0, client.GenerateTcpAddress(tmp,true))) return false;
 
     if(client.Ping(100)) return true; //server is already running
     if(g_serverPath.size() == 0) //no server available
@@ -64,41 +65,24 @@ EXPORT_CNC void Stop()
 
 EXPORT_CNC const char * GetName()
 {
+#ifdef _DEBUG
+    return ("LinuxCNC (debug)");
+#else
     return ("LinuxCNC");
+#endif
 }
 
 EXPORT_CNC const uint32_t ControlExists(const char * pluginDir)
 {
     string path = pluginDir;
-    path += "LinuxCNC";
-    DIR* dir = opendir((path).c_str());
-    if (dir == NULL)
+    path += "linuxcncserver/cncremote.sh";
+    int status = execute(path.c_str(), "-c", true);
+    if(status == 0)
     {
-        return false;
+        g_serverPath = path;
+        return true;
     }
-    dirent * file = readdir(dir);
-    if(file == NULL)
-    {
-        return false;
-    }
-    do
-    {
-        if(strcmp(file->d_name, ".") == 0 ||
-                strcmp(file->d_name, "..") ==0)
-        {
-            continue;
-        }
-        string srvName = path + "/" + file->d_name;
-        int status = execute(srvName.c_str(), "-c", true);
-        if(status == 1)
-        {
-            g_serverPath = srvName;
-            break;
-        }
-    }
-    while((file = readdir(dir)) != NULL);
-    closedir(dir);
-    return(g_serverPath.size() > 0);
+    return false;
 }
 
 EXPORT_CNC void Quit()

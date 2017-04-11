@@ -13,12 +13,16 @@ EXPORT_CNC void Stop()
 
 EXPORT_CNC const char * GetName()
 {
+#ifdef _DEBUG
+    return ("Simulator (debug)");
+#else
     return ("Simulator");
+#endif
 }
 
 EXPORT_CNC const uint32_t ControlExists(const char * pluginDir)
 {
-    return(true); //this could be running on a remote machine so we don't know if it exists
+    return(true);
 }
 
 EXPORT_CNC void Quit()
