@@ -311,7 +311,7 @@ void LinuxCnc::ZeroJog()
 int LinuxCnc::SendJogVel(const double x, const double y, const double z, const double a, const double b, const double c)
 {
 
-printf("Jog %f %f %f\n", x,y,z);
+//printf("Jog %f %f %f\n", x,y,z);
 
 //    if (emcStatus->motion.traj.mode != EMC_TRAJ_MODE_TELEOP)
     {

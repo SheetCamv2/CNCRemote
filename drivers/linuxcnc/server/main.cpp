@@ -160,8 +160,9 @@ int main(int argc, char * argv[])
     {
         // get configuration information
 //        iniLoad(emc_inifile);
+        printf("Waiting for LinuxCNC\n");
         machine.ConnectLCnc();
-
+        printf("Connected to LinuxCNC\n");
 
 TestTimer tt("Main");
         while(1)

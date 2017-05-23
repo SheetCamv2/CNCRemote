@@ -72,7 +72,7 @@
 					<Add after="./copy.sh $(LINUXCNC) $(TARGET_OUTPUT_FILE)" />
 				</ExtraCommands>
 				<Environment>
-					<Variable name="LINUXCNC" value="/home/gw/Documents/src/linuxcnc" />
+					<Variable name="LINUXCNC" value="/home/plasma/Documents/src/linuxcnc" />
 				</Environment>
 			</Target>
 		</Build>
