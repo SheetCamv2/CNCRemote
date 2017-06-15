@@ -212,8 +212,11 @@ bool Client::Poll()
         m_wasConnected = m_isConnected;
         if(!m_isConnected)
         {
+printf("Connection timed out\n");
             SendCommand(cmdSTATE); //queue a state message to wake up the server when we connect
         }
+else
+printf("Regained connection\n");
         OnConnection(m_isConnected);
     }
     return ret;
@@ -255,6 +258,7 @@ bool Client::Connect(const unsigned int index, const CncString& address)
     }
     if(m_isConnected)
     {
+printf("Connection failed\n");
         m_isConnected = false;
         OnConnection(false);
     }
@@ -300,6 +304,7 @@ bool Client::Connect(const unsigned int index, const CncString& address)
 
 void Client::Disconnect()
 {
+printf("Disconnect\n");
     if(!m_socket ||
             m_address.empty())
     {

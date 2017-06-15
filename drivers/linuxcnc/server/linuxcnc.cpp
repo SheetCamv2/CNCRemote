@@ -25,6 +25,8 @@ LinuxCnc::LinuxCnc()
 
     m_maxSpeedLin = 4000;
     m_maxSpeedAng = 100;
+    halId = -1;
+    ZeroJog();
 
 }
 
@@ -47,18 +49,27 @@ void LinuxCnc::ConnectLCnc()
         exit(0);
     }
 
-
-    m_maxSpeedLin = emcStatus->motion.traj.maxVelocity;
-    m_maxSpeedAng = emcStatus->motion.traj.maxVelocity;
-
     emcCommandSerialNumber = emcStatus->echo_serial_number;
     m_heartbeat = emcStatus->task.heartbeat;
     m_nextTime = time(NULL) + 1; //check every second
     m_connected = true;
+
+    halId = hal_init("CNCRemote");
+    if(halId < 0)
+    {
+        printf("Failed to connect to HAL\n");
+    }else
+    {
+        for(int ct=0; ct < MAX_AXES; ct++)
+        {
+            LoadAxis(ct);
+        }
+        hal_ready(halId);
+    }
+
 #define EMC_WAIT_NONE (EMC_WAIT_TYPE) 1
 }
 
-#include "timer.h"
 
 bool LinuxCnc::Poll()
 {
@@ -68,7 +79,33 @@ bool LinuxCnc::Poll()
         Disconnect();
         return false;
     }
+    if(emcStatus->motion.traj.maxVelocity < 1e17)
+    {
+        m_maxSpeedLin = emcStatus->motion.traj.maxVelocity;
+        m_maxSpeedAng = emcStatus->motion.traj.maxVelocity;
+    }
     Server::Poll();
+    if(m_halAxes[0].counts)
+    {
+        hal_float_t time = (double)m_jogTimer.GetElapsed(true) / 1000000.0; //elapsed time in seconds since last poll
+        time *= 10000; //axis is scaled at 1000 counts per unit
+        bool found = false;
+        double vel;
+        for(int ct=0; ct < MAX_AXES; ct++)
+        {
+            vel = m_jogAxes[ct];
+            if(vel != 0)
+            {
+                if(m_halAxes[ct].counts)
+                {
+                    *m_halAxes[ct].counts += time * vel;
+                }
+            }
+        }
+    }
+
+
+
     return m_connected;
 }
 
@@ -268,8 +305,20 @@ void LinuxCnc::UpdateState()
 
 inline void LinuxCnc::SendJog(const int axis, const double vel)
 {
+
     if(vel == m_jogAxes[axis]) return;
-//printf("Jog %f\n", vel);
+    if(m_halAxes[axis].counts)
+    {
+         m_jogAxes[axis] = vel;
+        *m_halAxes[axis].enable = true;
+        *m_halAxes[axis].velMode = true;
+        *m_halAxes[axis].scale = 1/10000.0f;
+        return;
+    }
+    if(m_halAxes[0].counts) return; //using HAL but we don't have this axis in the config
+
+
+
     if(vel != 0)
     {
 #if MAJOR_VER <= 2 && MINOR_VER <=8
@@ -311,18 +360,13 @@ void LinuxCnc::ZeroJog()
 int LinuxCnc::SendJogVel(const double x, const double y, const double z, const double a, const double b, const double c)
 {
 
-//printf("Jog %f %f %f\n", x,y,z);
-
-//    if (emcStatus->motion.traj.mode != EMC_TRAJ_MODE_TELEOP)
-    {
-        SendJog(0,x * m_maxSpeedLin);
-        SendJog(1,y * m_maxSpeedLin);
-        SendJog(2,z * m_maxSpeedLin);
-        SendJog(3,a * m_maxSpeedAng);
-        SendJog(4,b * m_maxSpeedAng);
-        SendJog(5,c * m_maxSpeedAng);
-        return 0;
-    }
+    SendJog(0,x * m_maxSpeedLin);
+    SendJog(1,y * m_maxSpeedLin);
+    SendJog(2,z * m_maxSpeedLin);
+    SendJog(3,a * m_maxSpeedAng);
+    SendJog(4,b * m_maxSpeedAng);
+    SendJog(5,c * m_maxSpeedAng);
+    return 0;
 
 /*
 #if MAJOR_VER <= 2 && MINOR_VER <=8
@@ -571,6 +615,99 @@ void LinuxCnc::SetMode(const int mode)
     case EMC_TASK_MODE_MDI:
         sendMdi();
         break;
+    }
+}
+
+
+hal_data_u * LinuxCnc::FindPin(const char * name, hal_type_t type)
+{
+    rtapi_mutex_get(&(hal_data->mutex));
+    int ptr = hal_data->pin_list_ptr;
+    hal_pin_t * pin = NULL;
+    while (ptr)
+    {
+        hal_pin_t *p = (hal_pin_t *)SHMPTR(ptr);
+        if(strcmp(p->name, name) == 0)
+        {
+           pin = p;
+           break;
+        }
+        ptr = p->next_ptr;
+    }
+    rtapi_mutex_give(&(hal_data->mutex));
+    if(pin)
+    {
+        printf("Found pin %s\n", name);
+    }else
+    {
+        printf("Pin %s not found\n", name);
+        return NULL;
+    }
+    if(pin->type != type)
+    {
+        printf("Pin %s incorrect type\n", name);
+    }
+
+    if(pin->signal == 0)
+    {
+        return &pin->dummysig;
+    }
+    hal_sig_t * sig = (hal_sig_t * )SHMPTR(pin->signal);
+    return ((hal_data_u *)SHMPTR(sig->data_ptr));
+}
+
+void LinuxCnc::LoadAxis(const int index)
+{
+    JOGAXIS& axis = m_halAxes[index];
+    char buf[256];
+/*
+
+                int o = m_halAxes[ct].counts->type;
+                hal_sig_t *sig = (hal_sig_t *)SHMPTR(m_halAxes[ct].counts->signal);
+                hal_float_t * ptr = (hal_float_t *)SHMPTR(sig->data_ptr);*/
+    sprintf(buf,"axis.%i.jog-counts", index);
+    hal_data_u * dat = FindPin(buf, HAL_S32);
+    bool err = false;
+    if(dat) //sanity check
+    {
+        axis.counts = &dat->s;
+    }else
+    {
+        err = true;
+    }
+
+    sprintf(buf,"axis.%i.jog-enable", index);
+    dat = FindPin(buf, HAL_BIT);
+    if(dat)
+    {
+        axis.enable = &dat->b;//(char *)SHMPTR(sig->data_ptr);
+    }else
+    {
+        err = true;
+    }
+
+    sprintf(buf,"axis.%i.jog-scale", index);
+    dat = FindPin(buf, HAL_FLOAT);
+    if(dat) //sanity check
+    {
+        axis.scale = &dat->f;//(hal_float_t *)SHMPTR(sig->data_ptr);
+    }else
+    {
+        err = true;
+    }
+
+    sprintf(buf,"axis.%i.jog-vel-mode", index);
+    dat = FindPin(buf, HAL_BIT);
+    if(dat)
+    {
+        axis.velMode = &dat->b;//(char *)SHMPTR(sig->data_ptr);
+    }else
+    {
+        err = true;
+    }
+    if(err)
+    {
+        memset(&axis, 0, sizeof(JOGAXIS));
     }
 }
 

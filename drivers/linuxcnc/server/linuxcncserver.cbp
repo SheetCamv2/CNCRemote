@@ -16,6 +16,7 @@
 					<Add option="-std=c++11" />
 					<Add option="-g" />
 					<Add option="-O0" />
+					<Add option="-DULAPI" />
 					<Add directory="$(LINUXCNC)/src/emc/usr_intf" />
 					<Add directory="$(LINUXCNC)/include" />
 					<Add directory="../../../include" />
@@ -48,6 +49,7 @@
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-std=c++11" />
+					<Add option="-DULAPI" />
 					<Add directory="$(LINUXCNC)/src/emc/usr_intf" />
 					<Add directory="$(LINUXCNC)/include" />
 					<Add directory="../../../include" />
@@ -72,7 +74,7 @@
 					<Add after="./copy.sh $(LINUXCNC) $(TARGET_OUTPUT_FILE)" />
 				</ExtraCommands>
 				<Environment>
-					<Variable name="LINUXCNC" value="/home/plasma/Documents/src/linuxcnc" />
+					<Variable name="LINUXCNC" value="/home/gw/Documents/src/linuxcnc" />
 				</Environment>
 			</Target>
 		</Build>

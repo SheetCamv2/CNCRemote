@@ -24,8 +24,6 @@
 #include "shcom.hh"
 
 int port = DEFAULT_COMMS_PORT;
-
-
 string a = PACKAGE_VERSION;
 
 
@@ -64,6 +62,7 @@ static void Disconnect()
 
 static void sigQuit(int sig)
 {
+
     Disconnect();
     exit(0);
 }
@@ -87,6 +86,7 @@ static void initMain()
     operator_display_string[LINELEN-1] = 0;
     programStartLine = 0;
 }
+
 
 static void usage(char* pname)
 {

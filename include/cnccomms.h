@@ -12,7 +12,7 @@
 using namespace std;
 
 namespace CncRemote {
-#define CONN_TIMEOUT (50)
+#define CONN_TIMEOUT (2)
 
 
 #define MAX_AXES 6
