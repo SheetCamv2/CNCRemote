@@ -151,15 +151,13 @@ int main(int argc, char * argv[])
 
 
     LinuxCnc machine;
-    if(machine.Connect(machine.GenerateTcpAddress(port)) != CncRemote::Comms::errOK)
+    if(machine.Bind(port) != CncRemote::errOK)
     {
         printf("Failed to bind port %d. Is another server already running on that port?\n", port);
         return -1;
     }
     while(1)
     {
-        // get configuration information
-//        iniLoad(emc_inifile);
         printf("Waiting for LinuxCNC\n");
         machine.ConnectLCnc();
         printf("Connected to LinuxCNC\n");
@@ -173,7 +171,6 @@ tt.Restart();
                 break;
             }
 tt.Check();
-            sleep_ms(2);
         }
 printf("Disconnected from LinuxCNC\n");
         Disconnect();

@@ -2,55 +2,59 @@
 #define Comms_H
 #if defined(_WIN32) | defined(_WIN64)
     #include <winsock2.h>
+    #include "winpthreads.h"
 #endif
 
 #include <time.h>
 #include "cncstatebuf.pb.h"
 #include "cncplugin.h"
-#include "zmq.h"
+#include "PassiveSocket.h"
 
 using namespace std;
 
 namespace CncRemote {
 #define CONN_TIMEOUT (2)
 
+#define MAX_PACKET_SIZE 2048
 
 #define MAX_AXES 6
 
+#define pktESCAPE 0xFF
+
 #define DEFAULT_COMMS_PORT 5080
 
-class Comms : public StateBuf
+class Server;
+
+struct Packet
+{
+    uint16_t cmd;
+    string data;
+};
+
+enum COMERROR{
+    errOK, //no error
+    errSOCKET, //Failed to create socket
+    errBIND, //Failed to bind socket (server only)
+    errCONNECT, //Lost connection
+    errNOSOCKET, //No valid socket
+    errFAILED, //Failed to send data
+    errNODATA, //no data was received. This is not an error. Simply no data was available to be processed.
+    errTHREAD, //Failed to create thread
+    errRUNNING, //Thread is already running
+    errNOTHREAD, //Unable to create thread
+};
+
+
+class Comms// : public StateBuf
 {
     public:
-		enum COMERROR{errOK, //no error
-			errSOCKET, //Failed to create socket
-			errBIND, //Failed to bind socket (server only)
-			errCONNECT, //Failed to create connection (client only)
-			errNOSOCKET, //No valid socket
-			errFAILED, //Failed to send data
-		};
-
-        Comms();
+        Comms(CActiveSocket *socket, Server * server = NULL);
         virtual ~Comms();
 
-    protected:
-		struct Packet
-		{
-			uint16_t cmd;
-			string data;
-		};
+        COMERROR Poll(); //Call on a regular basis
+        void SetTimeout(float seconds); //Set timeout for data send/receive. If set to 0 send/receive are non-blocking
 
-		bool SendCommand(const uint16_t cmd);
-		bool SendCommand(const uint16_t cmd, const bool state);
-		bool SendCommand(const uint16_t cmd, const double value);
-		bool SendCommand(const uint16_t cmd, const string value);
-        bool SendCommand(const uint16_t command, const CmdBuf& data);
-        void CheckConn();
-		int RecvString(string& data);
-		bool SendPacket(const Packet &packet);
-		bool RecvPacket(Packet &packet);
-
-        virtual void HandlePacket(const Packet & pkt) = 0;
+        void Close(); //Close the connection
 
         enum CMDTYPE { //it is safe to add to this list but entries must not be deleted or rearranged
             cmdNULL,
@@ -80,10 +84,33 @@ class Comms : public StateBuf
 			cmdMAX, //this should always be the last entry. Note your code should always be able to handle command numbers past this.
         };
 
-        void *m_socket;
-		void *m_context;
-		time_t m_timeout;
+
+    protected:
+
+        static void * Entry(void * t);
+        void * Entry();
+		bool SendCommand(const uint16_t cmd);
+		bool SendCommand(const uint16_t cmd, const bool state);
+		bool SendCommand(const uint16_t cmd, const double value);
+		bool SendCommand(const uint16_t cmd, const string value);
+        bool SendCommand(const uint16_t command, const CmdBuf& data);
+        void CheckConn();
+		int RecvString(string& data);
+		bool SendPacket(const Packet &packet);
+//		bool RecvPacket(Packet &packet);
+        void CobsEncode(const uint8_t *ptr, size_t length, uint8_t *dst);
+        void CobsDecode(const uint8_t *ptr, size_t length);
+        void OnData();
+
+        virtual void HandlePacket(const Packet & pkt) = 0;
+        virtual void OnPacketError(){};
+
+        CActiveSocket *m_socket;
+        Server * m_server;
+
     private:
+        Packet m_packet;
+
 };
 
 } //namespace CncRemote

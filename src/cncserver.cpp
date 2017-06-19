@@ -1,31 +1,126 @@
 #include "cncserver.h"
 #include <sstream>
 
+//#include "millisleep.h"
+#include "timer.h"
+
 namespace CncRemote
 {
 
 Server::Server()
 {
+    m_timeout = CONN_TIMEOUT;
+    m_socket = new CPassiveSocket(CSimpleSocket::SocketTypeTcp);
+    m_socket->Initialize();
+    SetTimeout(0);
+    m_listening = false;
+    pthread_mutex_init(&m_stateLock, NULL);
+    pthread_mutex_init(&m_syncLock, NULL);
+    pthread_mutex_lock(&m_syncLock);
+    m_statePacket.cmd = Comms::cmdNULL;
 }
 
-Server::~Server()
+void Server::SetTimeout(const float seconds)
 {
+   m_timeout = seconds;
+   SetTimeout();
 }
 
-CncString Server::GenerateTcpAddress(const int port)
+void Server::SetTimeout()
 {
-#ifdef _USING_WINDOWS
-	wstringstream stream;
-#define _TT(n) L##n
-#else
-	stringstream stream;
-#define _TT(n) n
-#endif
-	stream <<  _TT("tcp://*:") << port;
-	return stream.str();
+    if(m_timeout > 0.000001)
+    {
+        float seconds = m_timeout;
+        m_socket->SetBlocking();
+        int32_t s = (int)seconds;
+        seconds -= s;
+        int32_t us = seconds * 1000000;
+        m_socket->SetReceiveTimeout(s,us);
+        m_socket->SetSendTimeout(s,us);
+        m_socket->SetConnectTimeout(s, us);
+    }else
+    {
+        m_socket->SetNonblocking();
+    }
 }
 
-Comms::COMERROR Server::Connect(const CncString address)
+COMERROR Server::Bind(const uint32_t port)
+{
+    if(!m_socket->Listen(NULL, port))
+    {
+        return errBIND;
+    }
+    return errOK;
+}
+
+COMERROR Server::Poll()
+{
+    CActiveSocket * client = m_socket->Accept();
+    if(client)
+    {
+        client->DisableNagleAlgoritm();
+        Connection * conn = CreateConnection(client, this);
+        if(conn->Run() != errOK)
+        {
+            printf("Failed to create thread\n");
+            delete conn;
+            return errTHREAD;
+        }
+        m_conns.push_back(conn);
+    }
+    pthread_mutex_unlock(&m_syncLock);
+    pthread_mutex_lock(&m_syncLock);
+    return errOK;
+}
+
+
+void Server::RemoveConn(Connection * conn)
+{
+    for(size_t ct=0; ct < m_conns.size(); ct++)
+    {
+        if(m_conns[ct] == conn)
+        {
+            m_conns.erase(m_conns.begin() + ct);
+            return;
+        }
+    }
+}
+
+Packet Server::GetState()
+{
+    Packet ret;
+    pthread_mutex_lock(&m_stateLock);
+    ret = m_statePacket;
+    pthread_mutex_unlock(&m_stateLock);
+    return ret;
+}
+
+void Server::UpdateState()
+{
+    pthread_mutex_lock(&m_stateLock);
+    m_state.SerializeToString(&m_packet.data);
+    m_packet.cmd = Comms::cmdSTATE;
+    pthread_mutex_unlock(&m_stateLock);
+}
+
+Connection::Connection(CActiveSocket * socket, Server * server) : Comms(socket, server)
+{
+    m_socket = socket;
+    m_server = server;
+    m_thread = 0;
+    m_closing = false;
+//    m_socket->SetReceiveTimeout(1,0);
+//    m_socket->SetSendTimeout(1,0);
+}
+
+Connection::~Connection()
+{
+    delete m_socket;
+    m_server->RemoveConn(this);
+}
+
+/*
+COMERROR Connection::Connect(const CncString address)
 {
     Disconnect();
     int ok;
@@ -39,108 +134,76 @@ Comms::COMERROR Server::Connect(const CncString address)
         return errBIND;
     }
     return errOK;
-}
+}*/
 
-void Server::Disconnect()
-{
-
-}
-
-
-
-Comms::COMERROR Server::SendState(const string& id)
+/*
+COMERROR Connection::SendState(const string& id)
 {
     if(!m_socket)
     {
         return errNOSOCKET;
     }
-/*    if(m_ids.empty()) //nothing to do
-    {
-        return(errOK);
-    }*/
-
-    string s;
-    SerializeToString(&s);
-    zmq_msg_t payload;
-    zmq_msg_init_size (&payload, s.size() + 1);
-	uint8_t * ptr = (uint8_t *)zmq_msg_data (&payload);
-	*ptr++ = cmdSTATE;
-    memcpy (ptr, s.c_str(), s.size());
-
-    int rc = zmq_send (m_socket,id.data(), id.size(), ZMQ_SNDMORE | ZMQ_DONTWAIT);
-    if(rc < 0)
-    {
-        return errFAILED;
-    }
-    rc = zmq_send (m_socket, NULL, 0, ZMQ_SNDMORE | ZMQ_DONTWAIT); //delimiter
-    if(rc < 0)
-    {
-        return errFAILED;
-    }
-
-    rc = zmq_msg_send (&payload, m_socket, ZMQ_DONTWAIT);
-    if(rc < 0)
+    if(!SendCommand(cmdSTATE, this))
     {
         return errFAILED;
     }
     return errOK;
-}
+}*/
+
+
+
 
 #include "timer.h"
 TestTimer ttm("packet");
-bool Server::Poll()
+COMERROR Connection::Poll()
 {
-    if(m_socket == NULL) return false;
-    bool ret = false;
-	bool needState = false;
-	while(1)
-	{
-		string ident;
-        int ret = RecvString(ident);
-        if(ret < 0)
-        {
-            break;
-        }
-        m_curId = ident;
-
-		Packet pkt;
-		if(!RecvPacket(pkt))
-		{
-			break;
-		}
-//        m_ids[id].needState = true;
-        needState = true;
-		switch(pkt.cmd)
-		{
-		case cmdNULL:
-			break;
-
-        case cmdSTATE:
-            break;
-
-		case cmdSENDFILE: //TODO: File handling
-			break;
-
-		case cmdREQFILE: //TODO: File handling
-			break;
-
-		default:
-		{
-		    ttm.Restart();
-			HandlePacket(pkt);
-			ttm.Check();
-
-		}
-		}
-        ret = true;
-    }
-    if(needState)
-    {
-        UpdateState();
-        SendState(m_curId);
-    }
+    COMERROR ret = Comms::Poll();
+    if(ret != errOK) return ret;
+    UpdateState();
 	return ret;
 }
+
+void Connection::UpdateState()
+{
+    Packet pkt = m_server->GetState();
+    SendPacket(pkt);
+}
+
+COMERROR Connection::Run()
+{
+    if(m_thread)
+    {
+        return errRUNNING;
+    }
+    SetTimeout(CONN_TIMEOUT);
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    int rc = pthread_create(&m_thread, &attr, Entry, (void *)this);
+    if(rc)
+    {
+        return errNOTHREAD;
+    }
+    return errOK;
+}
+
+void * Connection::Entry(void * param)
+{
+    Connection * c = (Connection *) param;
+    return(c->Entry());
+}
+
+void * Connection::Entry()
+{
+    while(!m_closing && Poll() != errCONNECT)
+    {
+    }
+    m_server->RemoveConn(this);
+    return NULL;
+}
+
+
 
 
 } //namespace CncRemote

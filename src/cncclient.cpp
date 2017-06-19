@@ -9,7 +9,7 @@
 #endif
 
 #include <sstream>
-#include "millisleep.h"
+//#include "millisleep.h"
 
 namespace CncRemote
 {
@@ -221,7 +221,7 @@ printf("Regained connection\n");
     }
     return ret;
 }
-
+/*
 CncString Client::GenerateTcpAddress(const CncString& ipAddress, const bool useLocal, const int port)
 {
 #ifdef _USING_WINDOWS
@@ -240,7 +240,7 @@ CncString Client::GenerateTcpAddress(const CncString& ipAddress, const bool useL
         stream <<  _TT("tcp://") << ipAddress << _TT(":") << port;
     }
     return stream.str();
-}
+}*/
 
 bool Client::Connect(const unsigned int index, const CncString& address)
 {
