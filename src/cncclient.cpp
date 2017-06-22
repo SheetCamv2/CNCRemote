@@ -9,19 +9,18 @@
 #endif
 
 #include <sstream>
-//#include "millisleep.h"
+#include "millisleep.h"
 
 namespace CncRemote
 {
 
 Client::Client()
 {
-    m_isConnected = false;
-    m_wasConnected = false;
-    m_repTimeout = 0;
+    m_timeout = 0;
 #ifdef USE_PLUGINS
     m_plugin = NULL;
 #endif
+    SetSocket(new CActiveSocket());
 }
 
 Client::~Client()
@@ -151,11 +150,15 @@ void Client::HandlePacket(const Packet & pkt)
 {
     switch(pkt.cmd)
     {
+    case cmdNULL:
+        break;
+
     case cmdSTATE:
     {
         StateBuf buf;
         buf.ParseFromString(pkt.data);
-        MergeFrom(buf);
+int a = pkt.data.size();
+        m_state.MergeFrom(buf);
     }
     break;
     }
@@ -164,10 +167,34 @@ void Client::HandlePacket(const Packet & pkt)
 
 bool Client::Poll()
 {
-    if(m_socket == NULL) return false;
 #ifdef USE_PLUGINS
     if(m_plugin) m_plugin->Poll();
 #endif
+
+    COMERROR ret = Comms::Poll();
+    switch(ret)
+    {
+    case errNODATA:
+//        m_isConnected = (m_timeout > time(NULL));
+        break;
+
+    case errOK:
+        m_timeout = time(NULL) + CONN_TIMEOUT;
+        break;
+
+    }
+
+//    if(m_isConnected)
+    {
+        SendCommand(cmdSTATE);
+    }
+    return ret == errOK;
+}
+
+
+
+/*
+
     bool ret = false;
     while(1)
     {
@@ -242,7 +269,7 @@ CncString Client::GenerateTcpAddress(const CncString& ipAddress, const bool useL
     return stream.str();
 }*/
 
-bool Client::Connect(const unsigned int index, const CncString& address)
+bool Client::Connect(const unsigned int index, const CncString& address, const uint32_t port)
 {
 #ifdef USE_PLUGINS
     if(m_plugin)
@@ -250,66 +277,21 @@ bool Client::Connect(const unsigned int index, const CncString& address)
         m_plugin->Stop();
         m_plugin = NULL;
     }
-#endif
-    m_address.clear();
-    if(m_socket)
-    {
-        zmq_close(m_socket);
-    }
-    if(m_isConnected)
-    {
-printf("Connection failed\n");
-        m_isConnected = false;
-        OnConnection(false);
-    }
-    m_wasConnected = false;
-#ifdef USE_PLUGINS
     if(index > 0)
     {
         if(index > m_plugins.size()) return false;
         m_plugin = &m_plugins[index - 1];
-    }
-#endif
-    m_socket = zmq_socket(m_context, ZMQ_DEALER);
-    if(!m_socket)
-    {
-#ifdef USE_PLUGINS
-        m_plugin = NULL;
-#endif
-        return false;
-    }
-    int opt = 0;
-    zmq_setsockopt(m_socket, ZMQ_LINGER, &opt, sizeof(opt));
-    if(zmq_connect(m_socket, to_utf8(address).c_str()) < 0)
-    {
-#ifdef USE_PLUGINS
-        m_plugin = NULL;
-#endif
-        return false;
-    }
-#ifdef USE_PLUGINS
-    if(m_plugin)
-    {
         m_plugin->Start();
     }
 #endif
-    m_address = address;
-    const char* identity = "sheetcam";
-    zmq_setsockopt (m_socket, ZMQ_IDENTITY, identity, strlen (identity));
-    Packet pkt;
-    pkt.cmd = cmdSTATE;
-    SendPacket(pkt);
+
+    Comms::Connect(address,port);
     return true;
 }
 
 void Client::Disconnect()
 {
 printf("Disconnect\n");
-    if(!m_socket ||
-            m_address.empty())
-    {
-        return;
-    }
 #ifdef USE_PLUGINS
     if(m_plugin)
     {
@@ -317,9 +299,7 @@ printf("Disconnect\n");
         m_plugin = NULL;
     }
 #endif
-    zmq_disconnect(m_socket, to_utf8(m_address).c_str());
-    m_isConnected = false;
-    OnConnection(false);
+    Close();
 }
 
 bool Client::Ping(int waitMs)

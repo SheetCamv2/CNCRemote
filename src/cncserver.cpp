@@ -20,6 +20,11 @@ Server::Server()
     m_statePacket.cmd = Comms::cmdNULL;
 }
 
+Server::~Server()
+{
+    delete m_socket;
+}
+
 void Server::SetTimeout(const float seconds)
 {
    m_timeout = seconds;
@@ -58,7 +63,7 @@ COMERROR Server::Poll()
     CActiveSocket * client = m_socket->Accept();
     if(client)
     {
-        client->DisableNagleAlgoritm();
+        printf("Accepting connection from %s\n", client->GetClientAddr());
         Connection * conn = CreateConnection(client, this);
         if(conn->Run() != errOK)
         {
@@ -67,6 +72,14 @@ COMERROR Server::Poll()
             return errTHREAD;
         }
         m_conns.push_back(conn);
+    }
+    if(m_conns.size() > 0)
+    {
+        UpdateState();
+        pthread_mutex_lock(&m_stateLock);
+        m_state.SerializeToString(&m_statePacket.data);
+        m_statePacket.cmd = Comms::cmdSTATE;
+        pthread_mutex_unlock(&m_stateLock);
     }
     pthread_mutex_unlock(&m_syncLock);
     pthread_mutex_lock(&m_syncLock);
@@ -95,14 +108,6 @@ Packet Server::GetState()
     return ret;
 }
 
-void Server::UpdateState()
-{
-    pthread_mutex_lock(&m_stateLock);
-    m_state.SerializeToString(&m_packet.data);
-    m_packet.cmd = Comms::cmdSTATE;
-    pthread_mutex_unlock(&m_stateLock);
-}
-
 Connection::Connection(CActiveSocket * socket, Server * server) : Comms(socket, server)
 {
     m_socket = socket;
@@ -115,7 +120,6 @@ Connection::Connection(CActiveSocket * socket, Server * server) : Comms(socket, 
 
 Connection::~Connection()
 {
-    delete m_socket;
     m_server->RemoveConn(this);
 }
 
@@ -191,7 +195,9 @@ COMERROR Connection::Run()
 void * Connection::Entry(void * param)
 {
     Connection * c = (Connection *) param;
-    return(c->Entry());
+    void * ret = c->Entry();
+    delete c;
+    return(ret);
 }
 
 void * Connection::Entry()
@@ -199,7 +205,6 @@ void * Connection::Entry()
     while(!m_closing && Poll() != errCONNECT)
     {
     }
-    m_server->RemoveConn(this);
     return NULL;
 }
 

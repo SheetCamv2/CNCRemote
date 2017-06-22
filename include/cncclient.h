@@ -32,10 +32,8 @@ public:
 #endif
     bool Poll(); //Call at least as often as you need to send/receive data. Returns true if any data was received.
 //	CncString GenerateTcpAddress(const CncString& ipAddress, const bool useLocal = false, const int port = DEFAULT_COMMS_PORT); //Generates a TCP address for Connect(). useLocal overrides the given IP address
-	bool Connect(const unsigned int index, const CncString& address); //Connect to server. if index == 0, use a remote server else use the selected plugin (1 = first plugin and so on)
+	bool Connect(const unsigned int index, const CncString& address, const uint32_t port); //Connect to server. if index == 0, use a remote server else use the selected plugin (1 = first plugin and so on)
 	void Disconnect(); //Disconnect (normally disconnection is automatic so you shouldn't need to call this)
- 	bool IsConnected(){return m_isConnected;} //Is the server connected and running?
- 	virtual void OnConnection(const bool state){}; //Override this if you want to be notfied of connection/disconnection. state=true if we have just connected
  	bool Ping(int waitMs); //Ping the server. If there is no response within waitMs milliseconds it returns false. Note unlike other functions this blocks while waiting
 
     //Avoid adding functions that are specific to a certain control software.
@@ -56,16 +54,14 @@ public:
 
 protected:
 	virtual void HandlePacket(const Packet & pkt);
+	StateBuf m_state;
 
 private:
-	bool m_isConnected;
-	bool m_wasConnected;
 #ifdef USE_PLUGINS
     vector<Plugin> m_plugins;
     Plugin * m_plugin;
 #endif
-	CncString m_address;
-	unsigned int m_repTimeout;
+	time_t m_timeout;
 	bool m_pingResp;
 };
 

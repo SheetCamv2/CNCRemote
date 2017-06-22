@@ -49,7 +49,14 @@ class Comms// : public StateBuf
 {
     public:
         Comms(CActiveSocket *socket, Server * server = NULL);
+        Comms();
         virtual ~Comms();
+
+        void SetSocket(CActiveSocket *socket){m_socket = socket;}
+        void Connect(const CncString& address, const uint32_t port); //Connect to a server. Note the connection will only be attempted on the next Poll()
+       	bool IsConnected(){return m_isConnected;} //Is the server connected and running?
+  	 	virtual void OnConnection(const bool state){}; //Override this if you want to be notfied of connection/disconnection. state=true if we have just connected
+
 
         COMERROR Poll(); //Call on a regular basis
         void SetTimeout(float seconds); //Set timeout for data send/receive. If set to 0 send/receive are non-blocking
@@ -98,18 +105,25 @@ class Comms// : public StateBuf
 		int RecvString(string& data);
 		bool SendPacket(const Packet &packet);
 //		bool RecvPacket(Packet &packet);
-        void CobsEncode(const uint8_t *ptr, size_t length, uint8_t *dst);
+        size_t CobsEncode(const uint8_t *ptr, size_t length, uint8_t *dst);
         void CobsDecode(const uint8_t *ptr, size_t length);
         void OnData();
 
         virtual void HandlePacket(const Packet & pkt) = 0;
         virtual void OnPacketError(){};
 
+    private:
         CActiveSocket *m_socket;
         Server * m_server;
+        uint32_t m_port;
+        CncString m_address;
 
     private:
+        void Connected(const bool state);
         Packet m_packet;
+        bool m_isConnected;
+        float m_timeout;
+        string m_rxData;
 
 };
 

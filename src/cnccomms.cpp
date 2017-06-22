@@ -10,32 +10,85 @@ Comms::Comms(CActiveSocket *socket, Server * server)
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
     m_socket = socket;
+    m_socket->DisableNagleAlgoritm();
+    m_isConnected = true;
+}
+
+Comms::Comms()
+{
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+    m_socket = NULL;
+    m_isConnected = false;
 }
 
 Comms::~Comms()
 {
-    Close();
+    if(m_socket)
+    {
+        delete m_socket;
+    }
 }
 #define RX_BUFFER_SIZE 1024
 
+void Comms::Connect(const CncString& address, const uint32_t port)
+{
+    m_rxData.clear();
+    m_address = address;
+    m_port = port;
+    if(!m_socket) return;
+    m_socket->Close();
+    Connected(false);
+}
+
+
 COMERROR Comms::Poll()
 {
+    if(!m_socket) return errNOSOCKET;
+    if(!m_isConnected && !m_server && !m_address.empty()) //try to auto reconnect
+    {
+        m_socket->Close();
+        m_socket->Initialize();
+        SetTimeout(m_timeout);
+        bool ok = m_socket->Open(m_address.c_str(), m_port);
+        Connected(ok);
+        if(!m_isConnected)
+        {
+            return errCONNECT;
+        }
+        m_socket->DisableNagleAlgoritm();
+    }
     uint8_t buf[RX_BUFFER_SIZE];
     int bytes = m_socket->Receive(RX_BUFFER_SIZE, buf);
     if(bytes <= 0) // error
     {
-        if(m_socket->GetSocketError() == CSimpleSocket::SocketEwouldblock)
+        CSimpleSocket::CSocketError e = m_socket->GetSocketError();
+        if(e== CSimpleSocket::SocketEwouldblock ||
+           e == CSimpleSocket::SocketInterrupted)
         {
             return errNODATA;
         }
+        m_rxData.clear();
+        Connected(false);
         return errCONNECT;
     }
-    CobsDecode(buf,bytes);
+    uint8_t * ptr = buf;
+    for(int ct = bytes; ct >0; ct--)
+    {
+        char c = (char)(*ptr++);
+        if(c == 0)
+        {
+            CobsDecode((const uint8_t *)m_rxData.data(), m_rxData.size());
+            m_rxData.clear();
+            continue;
+        }
+        m_rxData += c;
+    }
     return errOK;
 }
 
 void Comms::SetTimeout(float seconds)
 {
+    m_timeout = seconds;
     if(!m_socket) return;
     if(seconds > 0.000001)
     {
@@ -45,6 +98,7 @@ void Comms::SetTimeout(float seconds)
         int32_t us = seconds * 1000000;
         m_socket->SetReceiveTimeout(s,us);
         m_socket->SetSendTimeout(s,us);
+        m_socket->SetConnectTimeout(s,us);
     }
     else
     {
@@ -57,6 +111,7 @@ void Comms::Close()
     if(m_socket)
     {
         m_socket->Close();
+        m_socket->Initialize();
     }
 }
 
@@ -163,74 +218,55 @@ printf("Regained connection\n");
 
 #define FinishBlock(X) (*code_ptr = (X), code_ptr = dst++, code = 0x01)
 
-void Comms::CobsEncode(const uint8_t *ptr, size_t length, uint8_t *dst)
+size_t Comms::CobsEncode(const uint8_t *ptr, size_t length, uint8_t *dst)
 {
+
+    const uint8_t * dsts = dst;
     uint8_t *code_ptr = dst++;
     uint8_t code = 0x01;
-    while(length > 0)
+    const uint8_t *end = ptr + length;
+    while (ptr < end)
     {
-        const uint8_t *end = ptr;
-        if(length > 254)
-        {
-            length -= 254;
-            end += 254;
-        }
+        if (*ptr == 0)
+            FinishBlock(code);
         else
         {
-            end += length;
-            length = 0;
-        }
-        while (ptr < end)
-        {
-            if (*ptr == 0)
+            *dst++ = *ptr;
+            if (++code == 0xFF)
                 FinishBlock(code);
-            else
-            {
-                *dst++ = *ptr;
-                if (++code == 0xFF)
-                    FinishBlock(code);
-            }
-            ptr++;
         }
-        FinishBlock(code);
+        ptr++;
     }
+    FinishBlock(code);
+
+    return((dst - dsts) - 1);
 }
 
 void Comms::CobsDecode(const uint8_t *ptr, size_t length)
 {
+    m_packet.data.clear();
     const uint8_t *end = ptr + length;
     while (ptr < end)
     {
         int code = *ptr++;
-        while(code == 0 && ptr < end) //end of packet
-        {
-            if(m_packet.data.size() < sizeof(m_packet.cmd))
-            {
-               OnPacketError();
-            }
-            memcpy(&m_packet.cmd, &m_packet.data[0], sizeof(m_packet.cmd));
-            m_packet.data.erase(0, sizeof(m_packet.cmd));
-            HandlePacket(m_packet);
-            m_packet.data.clear();
-            code = *ptr++;
-        }
         for (int i = 1; i < code; i++)
         {
-            if(*ptr == 0 //Unexpected end of packet marker.
-               || ptr >= end) //malformed data
+            if(ptr >= end) //malformed data
             {
                 OnPacketError();
-                code = 0xFF;
-                break;
+                return;
             }
             else
             {
                 m_packet.data.push_back(*ptr++);
             }
         }
-        if (code < 0xFF)
-            m_packet.data.push_back(0);
+        if (code < 0xFF && ptr != end)
+            m_packet.data.push_back((char)0);
     }
+    memcpy(&m_packet.cmd, m_packet.data.data(), sizeof(m_packet.cmd));
+    m_packet.data.erase(0, sizeof(m_packet.cmd));
+    HandlePacket(m_packet);
 }
 
 
@@ -283,18 +319,53 @@ void Comms::ProcessByte(const uint8_t byte)
 
 bool Comms::SendPacket(const Packet &packet)
 {
-    if(!m_socket) return false;
+    if(!m_socket || !m_isConnected) return false;
+/*
+for(int g = 0; g < 100000000; g++)
+{
+string s;
+int r = rand() % 2000;
+for(int c = 0; c < r; c++)
+{
+    s += (char)rand();
+}
+int si = s.size() + (s.size() / 254) + 1;
+uint8_t sd[si + 10];
+memset(sd,1,si + 10);
+int siz = CobsEncode((const uint8_t *)s.data(), s.size(), sd);
+sd[siz] = 0;
+m_packet.data.clear();
+CobsDecode(sd, siz);
+if(m_packet.data != s)
+{
+    int a=m_packet.data.size();
+    int b=s.size();
+    for(int ct=0; ct < a; ct++)
+    {
+        if(m_packet.data[ct] != s[ct])
+        {
+            int g=1;
+        }
+    }
+}
+}
+*/
+
 
     string s;
     s.append((char *)&packet.cmd, sizeof(packet.cmd));
     s += packet.data;
-    int size = s.size() + (s.size() / 254) + 2;
+    int size = s.size() + (s.size() / 254) + 2; //maximum data size after encoding plus zero endo of packet
     uint8_t d[size];
-    CobsEncode((const uint8_t *)s.data(), s.size(), d);
-    d[size-1] = 0;
+    size = CobsEncode((const uint8_t *)s.data(), s.size(), d);
+    d[size++] = 0;
     int sent = m_socket->Send(d, size);
     if(sent <=0 || sent != size)
     {
+        if(m_socket->GetSocketError() == CSimpleSocket::SocketInvalidSocket)
+        {
+            m_isConnected = false;
+        }
         return false;
     }
     return true;
@@ -394,6 +465,17 @@ bool Comms::SendCommand(const uint16_t command, const CmdBuf& data)
     packet.cmd = command;
     return SendPacket(packet);
 }
+
+void Comms::Connected(const bool state)
+{
+    bool last = m_isConnected;
+    m_isConnected = state;
+    if(last != state)
+    {
+        OnConnection(state);
+    }
+}
+
 
 } //namespace CncRemote
 

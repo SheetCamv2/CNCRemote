@@ -23,7 +23,7 @@
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/include" />
-					<Add directory="../../../src/clsocket/src" />
+					<Add directory="../../../clsocket/src" />
 				</Compiler>
 				<Linker>
 					<Add library="protobuf-lite-3.1.0" />
@@ -200,17 +200,17 @@
 		<Unit filename="../../../../linuxcnc/src/hal/user_comps/huanyang-vfd/config-files/custom.hal" />
 		<Unit filename="../../../../linuxcnc/src/hal/user_comps/huanyang-vfd/config-files/custom_postgui.hal" />
 		<Unit filename="../../../../linuxcnc/src/hal/user_comps/vfs11_vfd/vfs11_vfd.hal" />
+		<Unit filename="../../../clsocket/src/ActiveSocket.cpp" />
+		<Unit filename="../../../clsocket/src/ActiveSocket.h" />
+		<Unit filename="../../../clsocket/src/Host.h" />
+		<Unit filename="../../../clsocket/src/PassiveSocket.cpp" />
+		<Unit filename="../../../clsocket/src/PassiveSocket.h" />
+		<Unit filename="../../../clsocket/src/SimpleSocket.cpp" />
+		<Unit filename="../../../clsocket/src/SimpleSocket.h" />
+		<Unit filename="../../../clsocket/src/StatTimer.h" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncserver.h" />
 		<Unit filename="../../../include/timer.h" />
-		<Unit filename="../../../src/clsocket/src/ActiveSocket.cpp" />
-		<Unit filename="../../../src/clsocket/src/ActiveSocket.h" />
-		<Unit filename="../../../src/clsocket/src/Host.h" />
-		<Unit filename="../../../src/clsocket/src/PassiveSocket.cpp" />
-		<Unit filename="../../../src/clsocket/src/PassiveSocket.h" />
-		<Unit filename="../../../src/clsocket/src/SimpleSocket.cpp" />
-		<Unit filename="../../../src/clsocket/src/SimpleSocket.h" />
-		<Unit filename="../../../src/clsocket/src/StatTimer.h" />
 		<Unit filename="../../../src/cnccomms.cpp" />
 		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncserver.cpp" />

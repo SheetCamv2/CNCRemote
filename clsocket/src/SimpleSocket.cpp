@@ -397,6 +397,7 @@ int32 CSimpleSocket::Send(const uint8 *pBuf, size_t bytesToSend)
             {
                 m_timer.Initialize();
                 m_timer.SetStartTime();
+                int32_t timeout = (m_stRecvTimeout.tv_sec * 1000000) + (m_stRecvTimeout.tv_usec / 1000);
 
                 //---------------------------------------------------------
                 // Check error condition and attempt to resend if call
@@ -406,7 +407,9 @@ int32 CSimpleSocket::Send(const uint8 *pBuf, size_t bytesToSend)
                 {
                     m_nBytesSent = SEND(m_socket, pBuf, bytesToSend, 0);
                     TranslateSocketError();
-                } while (GetSocketError() == CSimpleSocket::SocketInterrupted);
+                } while (false); /*while (m_bIsBlocking &&
+                         (GetSocketError() == CSimpleSocket::SocketInterrupted)
+                         && m_timer.GetMicroSeconds() < timeout);*/
 
                 m_timer.SetEndTime();
             }
@@ -441,7 +444,7 @@ int32 CSimpleSocket::Send(const uint8 *pBuf, size_t bytesToSend)
                     {
                         m_nBytesSent = SENDTO(m_socket, pBuf, bytesToSend, 0, (const sockaddr *)&m_stServerSockaddr, sizeof(m_stServerSockaddr));
                         TranslateSocketError();
-                    } while (GetSocketError() == CSimpleSocket::SocketInterrupted);
+                    } while (m_bIsBlocking &&  (GetSocketError() == CSimpleSocket::SocketInterrupted));
                 }
 
                 m_timer.SetEndTime();
@@ -501,7 +504,7 @@ int32 CSimpleSocket::SendTo(const uint8 *pBuf, size_t bytesToSend, const uint32 
                     {
                         m_nBytesSent = SENDTO(m_socket, pBuf, bytesToSend, 0, (const sockaddr *)&addr, sizeof(addr));
                         TranslateSocketError();
-                    } while (GetSocketError() == CSimpleSocket::SocketInterrupted);
+                    } while (m_bIsBlocking && (GetSocketError() == CSimpleSocket::SocketInterrupted));
                 }
 
                 m_timer.SetEndTime();
@@ -827,7 +830,7 @@ int32 CSimpleSocket::Receive(int32 nMaxBytes, uint8 * pBuffer )
             m_nBytesReceived = RECV(m_socket, (pWorkBuffer + m_nBytesReceived),
                                     nMaxBytes, m_nFlags);
             TranslateSocketError();
-        } while ((GetSocketError() == CSimpleSocket::SocketInterrupted));
+        } while (false); //(m_bIsBlocking && (GetSocketError() == CSimpleSocket::SocketInterrupted));
 
         break;
     }
@@ -844,7 +847,7 @@ int32 CSimpleSocket::Receive(int32 nMaxBytes, uint8 * pBuffer )
                 m_nBytesReceived = RECVFROM(m_socket, pWorkBuffer, nMaxBytes, 0,
                                             &m_stMulticastGroup, &srcSize);
                 TranslateSocketError();
-            } while (GetSocketError() == CSimpleSocket::SocketInterrupted);
+            } while (m_bIsBlocking && GetSocketError() == CSimpleSocket::SocketInterrupted);
         }
         else
         {
@@ -853,7 +856,7 @@ int32 CSimpleSocket::Receive(int32 nMaxBytes, uint8 * pBuffer )
                 m_nBytesReceived = RECVFROM(m_socket, pWorkBuffer, nMaxBytes, 0,
                                             &m_stClientSockaddr, &srcSize);
                 TranslateSocketError();
-            } while (GetSocketError() == CSimpleSocket::SocketInterrupted);
+            } while (m_bIsBlocking && GetSocketError() == CSimpleSocket::SocketInterrupted);
         }
 
         break;

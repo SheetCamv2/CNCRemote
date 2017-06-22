@@ -69,7 +69,7 @@ public:
     void Check()
     {
         uint64_t diff = GetElapsed(true);
-        if(abs((int64_t)diff - (int64_t)m_lastTime) > m_lastTime / 20)
+        if(abs((int64_t)diff - (int64_t)m_lastTime) > m_lastTime / 5)
         {
             m_lastTime = diff;
             printf("%s = %f ms\n", m_msg.c_str(), (float)diff / 1000);

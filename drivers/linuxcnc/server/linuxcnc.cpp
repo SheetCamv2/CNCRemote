@@ -40,6 +40,7 @@ public:
     virtual void HandlePacket(const Packet & pkt)
     {
         CncRemote::CmdBuf cmd;
+int a= pkt.data.size();
         if(pkt.data.size() > 0 &&
            !cmd.ParseFromString(pkt.data))
         {

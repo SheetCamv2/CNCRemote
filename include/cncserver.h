@@ -58,13 +58,14 @@ class Server
 {
 public:
     Server();
+    virtual ~Server();
     void SetTimeout(const float seconds);
     COMERROR Bind(const uint32_t port = DEFAULT_COMMS_PORT);
     COMERROR Poll();
     void RemoveConn(Connection * conn);
     virtual Connection * CreateConnection(CActiveSocket * client, Server * server)= 0;
     Packet GetState();
-    void UpdateState();
+    virtual void UpdateState(){};
     MutexLocker GetLock() {return (MutexLocker(&m_syncLock));} //Sync your thread to the main thread for as long as the MutexLocker object exists. Basically locks your thread to the server's Poll() loop
 
 protected:

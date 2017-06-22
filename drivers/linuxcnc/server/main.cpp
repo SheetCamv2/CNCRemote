@@ -165,12 +165,12 @@ int main(int argc, char * argv[])
 TestTimer tt("Main");
         while(1)
         {
-tt.Restart();
+//tt.Restart();
             if(!machine.Poll())
             {
                 break;
             }
-tt.Check();
+//tt.Check();
         }
 printf("Disconnected from LinuxCNC\n");
         Disconnect();
