@@ -4,6 +4,7 @@
 #include "cncserver.h"
 
 using namespace std;
+using namespace CncRemote;
 
 class Sim : public CncRemote::Server
 {

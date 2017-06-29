@@ -179,7 +179,7 @@ COMERROR Connection::Run()
     {
         return errRUNNING;
     }
-    SetTimeout(CONN_TIMEOUT);
+    SetTimeout(CONN_TIMEOUT / 2000000); //Half of CONN_TIMEOUT time. CONN_TIMEOUT is in microseconds.
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);

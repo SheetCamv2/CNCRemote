@@ -45,7 +45,7 @@ EXPORT_CNC uint32_t Start()
 {
     CncRemote::Client client;
     CncString tmp;
-    if(!client.Connect(0, client.GenerateTcpAddress(tmp,true))) return false;
+    if(!client.Connect(0, "localhost",DEFAULT_COMMS_PORT)) return false;
 
     if(client.Ping(100)) return true; //server is already running
     if(g_serverPath.size() == 0) //no server available

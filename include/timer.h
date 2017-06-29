@@ -1,53 +1,27 @@
-#ifndef DEBUG_TIMER_H_INCLUDED
-#define DEBUG_TIMER_H_INCLUDED
+#ifndef TIMER_H_INCLUDED
+#define TIMER_H_INCLUDED
 
 #include <time.h>
+#include <string>
+#include "pstdint.h"
+
+
+using namespace std;
+
+//Sleep for a given time in milliseconds
+void SleepMs(const unsigned int time);
+
 
 /* microsecond timer*/
 class UTimer
 {
 public:
-    UTimer()
-    {
-#ifdef _USING_WINDOWS
-        QueryPerformanceFrequency(&m_frequency);
-#endif
-        Restart();
-    }
-
-    void Restart()
-    {
-#ifdef _USING_WINDOWS
-		QueryPerformanceCounter(&m_time);
-#else
-        clock_gettime(CLOCK_MONOTONIC, &m_time);
-#endif
-	}
-
-    uint64_t GetElapsed(const bool restart = false)
-    {
-#ifdef _USING_WINDOWS
-		LARGE_INTEGER now;
-		QueryPerformanceCounter(&now);
-		LARGE_INTEGER ret;
-		ret.QuadPart = now.QuadPart - m_time.QuadPart;
-		ret.QuadPart *= 1000000;
-        ret.QuadPart /= m_frequency.QuadPart;
-        if(restart) m_time = now;
-        return ret.QuadPart;
-#else
-        timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        uint64_t t1 = (now.tv_nsec / 1000) + (now.tv_sec * 1000000);
-        uint64_t t2 = (m_time.tv_nsec / 1000) + (m_time.tv_sec * 1000000);
-        if(restart) m_time = now;
-        return (t1 - t2);
-#endif
-
-    }
+    UTimer();
+    void Restart(); //Restart the timer
+    uint64_t GetElapsed(const bool restart = false); //get elapsed time in us
 
 private:
-#ifdef _USING_WINDOWS
+#ifndef _LINUX
     LARGE_INTEGER m_frequency;
     LARGE_INTEGER m_time;
 #else
@@ -56,25 +30,14 @@ private:
 };
 
 
+//used for debug timing
 class TestTimer : public UTimer
 {
 public:
-    TestTimer(const string& msg)
-    {
-		m_msg = msg;
-		m_lastTime = 0;
-    }
+    TestTimer(const string& msg); //Show this message along with the time
 
 
-    void Check()
-    {
-        uint64_t diff = GetElapsed(true);
-        if(abs((int64_t)diff - (int64_t)m_lastTime) > m_lastTime / 5)
-        {
-            m_lastTime = diff;
-            printf("%s = %f ms\n", m_msg.c_str(), (float)diff / 1000);
-        }
-    }
+    void Check(); //If elapsed time since the last call to Check has changed display it.
 
 private:
 	unsigned long m_lastTime;

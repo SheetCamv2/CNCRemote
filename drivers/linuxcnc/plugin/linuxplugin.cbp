@@ -16,9 +16,11 @@
 					<Add option="-g" />
 					<Add option="-fvisibility=hidden" />
 					<Add option="-D_DEBUG" />
+					<Add option="-D_LINUX" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/include" />
+					<Add directory="../../../clsocket/src" />
 				</Compiler>
 				<Linker>
 					<Add option="-fvisibility=hidden" />
@@ -36,9 +38,11 @@
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-fvisibility=hidden" />
+					<Add option="-D_LINUX" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/include" />
+					<Add directory="../../../clsocket/src" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -52,6 +56,14 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="../../../clsocket/src/ActiveSocket.cpp" />
+		<Unit filename="../../../clsocket/src/ActiveSocket.h" />
+		<Unit filename="../../../clsocket/src/Host.h" />
+		<Unit filename="../../../clsocket/src/PassiveSocket.cpp" />
+		<Unit filename="../../../clsocket/src/PassiveSocket.h" />
+		<Unit filename="../../../clsocket/src/SimpleSocket.cpp" />
+		<Unit filename="../../../clsocket/src/SimpleSocket.h" />
+		<Unit filename="../../../clsocket/src/StatTimer.h" />
 		<Unit filename="../../../include/cncclient.h" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
@@ -62,6 +74,7 @@
 		<Unit filename="../../../src/cnccomms.cpp" />
 		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncstatebuf.pb.cc" />
+		<Unit filename="../../../src/timer.cpp" />
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />

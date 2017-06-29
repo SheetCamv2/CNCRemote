@@ -9,14 +9,13 @@
 #endif
 
 #include <sstream>
-#include "millisleep.h"
+#include "timer.h"
 
 namespace CncRemote
 {
 
 Client::Client()
 {
-    m_timeout = 0;
 #ifdef USE_PLUGINS
     m_plugin = NULL;
 #endif
@@ -116,8 +115,13 @@ bool Client::LoadPlugins(const CncString& path)
             continue;
         }
         string dllName = path + "/" + file->d_name;
-        plg.handle = dlopen(dllName.c_str(), RTLD_LAZY);
-        if(!plg.handle) continue;
+        plg.handle = dlopen(dllName.c_str(), RTLD_NOW);
+        if(!plg.handle)
+        {
+            char * msg = dlerror();
+            printf("%s\n", msg);
+            continue;
+        }
         plg.Start = (CNCSTARTFUNC) dlsym(plg.handle,"Start");
         plg.Stop = (CNCSTOPFUNC) dlsym(plg.handle,"Stop");
         plg.GetName = (CNCGETNAMEFUNC) dlsym(plg.handle,"GetName");
@@ -172,17 +176,18 @@ bool Client::Poll()
 #endif
 
     COMERROR ret = Comms::Poll();
-    switch(ret)
+    /*switch(ret)
     {
     case errNODATA:
 //        m_isConnected = (m_timeout > time(NULL));
         break;
 
     case errOK:
-        m_timeout = time(NULL) + CONN_TIMEOUT;
+//        m_timeout = time(NULL) + CONN_TIMEOUT;
         break;
 
-    }
+    default:
+    }*/
 
 //    if(m_isConnected)
     {
@@ -191,83 +196,6 @@ bool Client::Poll()
     return ret == errOK;
 }
 
-
-
-/*
-
-    bool ret = false;
-    while(1)
-    {
-
-        Packet pkt;
-        if(!RecvPacket(pkt))
-        {
-            break;
-        }
-        switch(pkt.cmd)
-        {
-        case cmdNULL:
-            break;
-
-        case cmdSENDFILE: //TODO: File handling
-            break;
-
-        case cmdREQFILE: //TODO: File handling
-            break;
-
-        case cmdPING:
-            m_pingResp = true;
-            break;
-
-        default:
-            HandlePacket(pkt);
-        }
-        ret = true;
-    }
-    if(ret)
-    {
-        m_timeout = time(NULL) + CONN_TIMEOUT;
-    }
-
-    m_isConnected = (m_timeout > time(NULL));
-    if(m_isConnected)
-    {
-        SendCommand(cmdSTATE);
-    }
-    if(m_isConnected != m_wasConnected)
-    {
-        m_wasConnected = m_isConnected;
-        if(!m_isConnected)
-        {
-printf("Connection timed out\n");
-            SendCommand(cmdSTATE); //queue a state message to wake up the server when we connect
-        }
-else
-printf("Regained connection\n");
-        OnConnection(m_isConnected);
-    }
-    return ret;
-}
-/*
-CncString Client::GenerateTcpAddress(const CncString& ipAddress, const bool useLocal, const int port)
-{
-#ifdef _USING_WINDOWS
-    wstringstream stream;
-#define _TT(n) L##n
-#else
-    stringstream stream;
-#define _TT(n) n
-#endif
-    if(useLocal)
-    {
-        stream <<  _TT("tcp://localhost:") << DEFAULT_COMMS_PORT;
-    }
-    else
-    {
-        stream <<  _TT("tcp://") << ipAddress << _TT(":") << port;
-    }
-    return stream.str();
-}*/
 
 bool Client::Connect(const unsigned int index, const CncString& address, const uint32_t port)
 {
@@ -282,7 +210,8 @@ bool Client::Connect(const unsigned int index, const CncString& address, const u
         if(index > m_plugins.size()) return false;
         m_plugin = &m_plugins[index - 1];
         m_plugin->Start();
-    }
+        Comms::Connect("localhost",port);
+    }else
 #endif
 
     Comms::Connect(address,port);
@@ -308,7 +237,7 @@ bool Client::Ping(int waitMs)
     SendCommand(cmdPING);
     while (!m_pingResp && waitMs >= 0)
     {
-        sleep_ms(10);
+        SleepMs(10);
         if(!Poll()) return false;
         waitMs -= 10;
     }

@@ -10,7 +10,6 @@
 
 #include "getopt.h"
 #include "linuxcnc.h"
-#include "millisleep.h"
 
 #include "rcs.hh"
 #include "posemath.h"		// PM_POSE, TO_RAD

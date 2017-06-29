@@ -61,7 +61,7 @@ private:
     vector<Plugin> m_plugins;
     Plugin * m_plugin;
 #endif
-	time_t m_timeout;
+//	time_t m_timeout;
 	bool m_pingResp;
 };
 

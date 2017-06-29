@@ -15,16 +15,17 @@
 #include "shcom.cc" //this way we can use the include search path to find shcom.cc
 #include "version.h"
 
-
+/*
 struct JOGAXIS
 {
     hal_s32_t *counts;
     hal_bit_t *enable;
     hal_float_t *scale;
     hal_bit_t *velMode;
+    hal_float_t *position;
 };
 
-JOGAXIS g_halAxes[MAX_AXES];
+JOGAXIS g_halAxes[MAX_AXES];*/
 double g_jogAxes[MAX_AXES];
 double g_maxSpeedLin = 1;
 double g_maxSpeedAng = 1;
@@ -37,12 +38,20 @@ public:
         SetTimeout(1);
     }
 
+    virtual void OnConnection(const CONNSTATE state)
+    {
+printf("Connection state = %d\n", state);
+
+        MutexLocker l = m_server->GetLock();
+        LinuxCnc::ZeroJog(); //make sure we stop jogging if we lose connection
+    }
+
     virtual void HandlePacket(const Packet & pkt)
     {
         CncRemote::CmdBuf cmd;
-int a= pkt.data.size();
+        int a= pkt.data.size();
         if(pkt.data.size() > 0 &&
-           !cmd.ParseFromString(pkt.data))
+                !cmd.ParseFromString(pkt.data))
         {
             OnPacketError();
             return;
@@ -227,22 +236,10 @@ int a= pkt.data.size();
         }
     }
 
-    inline void SendJog(const int axis, const double vel)
+    static inline void SendJog(const int axis, const double vel)
     {
 
         if(vel == g_jogAxes[axis]) return;
-        if(g_halAxes[axis].counts)
-        {
-            g_jogAxes[axis] = vel;
-            *g_halAxes[axis].enable = true;
-            *g_halAxes[axis].velMode = true;
-            *g_halAxes[axis].scale = 1/10000.0f;
-            return;
-        }
-        if(g_halAxes[0].counts) return; //using HAL but we don't have this axis in the config
-
-
-
         if(vel != 0)
         {
 #if MAJOR_VER <= 2 && MINOR_VER <=8
@@ -275,11 +272,6 @@ int a= pkt.data.size();
 #endif
         }
         g_jogAxes[axis] = vel;
-    }
-
-    static void ZeroJog()
-    {
-        memset(g_jogAxes, 0, sizeof(g_jogAxes));
     }
 
     int SendJogVel(const double x, const double y, const double z, const double a, const double b, const double c)
@@ -384,8 +376,9 @@ LinuxCnc::LinuxCnc()
     g_maxSpeedLin = 4000;
     g_maxSpeedAng = 100;
     halId = -1;
-    LinuxConnection::ZeroJog();
     SetTimeout(0.005);
+    memset(g_jogAxes, 0, sizeof(g_jogAxes));
+
 }
 
 void LinuxCnc::ConnectLCnc()
@@ -412,7 +405,7 @@ void LinuxCnc::ConnectLCnc()
     m_nextTime = time(NULL) + 1; //check every second
     m_connected = true;
 
-    halId = hal_init("CNCRemote");
+/*    halId = hal_init("CNCRemote");
     if(halId < 0)
     {
         printf("Failed to connect to HAL\n");
@@ -424,7 +417,7 @@ void LinuxCnc::ConnectLCnc()
             LoadAxis(ct);
         }
         hal_ready(halId);
-    }
+    }*/
 
 #define EMC_WAIT_NONE (EMC_WAIT_TYPE) 1
 }
@@ -444,7 +437,7 @@ bool LinuxCnc::Poll()
         g_maxSpeedAng = emcStatus->motion.traj.maxVelocity;
     }
     Server::Poll();
-    if(g_halAxes[0].counts)
+/*    if(g_halAxes[0].counts)
     {
         hal_float_t time = (double)m_jogTimer.GetElapsed(true) / 1000000.0; //elapsed time in seconds since last poll
         time *= 10000; //axis is scaled at 1000 counts per unit
@@ -460,7 +453,7 @@ bool LinuxCnc::Poll()
                 }
             }
         }
-    }
+    }*/
     return m_connected;
 }
 
@@ -502,7 +495,7 @@ void LinuxCnc::UpdateState()
         bool state = emcStatus->task.state == EMC_TASK_STATE_ON;
         if(state != prevState)
         {
-            LinuxConnection::ZeroJog();
+            ZeroJog();
             prevState = state;
         }
         m_state.set_control_on(state);
@@ -555,7 +548,7 @@ void LinuxCnc::UpdateState()
         bool state = emcStatus->task.interpState != EMC_TASK_INTERP_IDLE;
         if(state != prevState)
         {
-            LinuxConnection::ZeroJog();
+            ZeroJog();
             prevState = state;
         }
         m_state.set_running(state);
@@ -664,102 +657,10 @@ void LinuxCnc::UpdateState()
 }
 
 
-hal_data_u * LinuxCnc::FindPin(const char * name, hal_type_t type)
+void LinuxCnc::ZeroJog()
 {
-    rtapi_mutex_get(&(hal_data->mutex));
-    int ptr = hal_data->pin_list_ptr;
-    hal_pin_t * pin = NULL;
-    while (ptr)
+    for(int ct=0; ct < MAX_AXES; ct++)
     {
-        hal_pin_t *p = (hal_pin_t *)SHMPTR(ptr);
-        if(strcmp(p->name, name) == 0)
-        {
-            pin = p;
-            break;
-        }
-        ptr = p->next_ptr;
-    }
-    rtapi_mutex_give(&(hal_data->mutex));
-    if(pin)
-    {
-        printf("Found pin %s\n", name);
-    }
-    else
-    {
-        printf("Pin %s not found\n", name);
-        return NULL;
-    }
-    if(pin->type != type)
-    {
-        printf("Pin %s incorrect type\n", name);
-    }
-
-    if(pin->signal == 0)
-    {
-        return &pin->dummysig;
-    }
-    hal_sig_t * sig = (hal_sig_t * )SHMPTR(pin->signal);
-    return ((hal_data_u *)SHMPTR(sig->data_ptr));
-}
-
-void LinuxCnc::LoadAxis(const int index)
-{
-    JOGAXIS& axis = g_halAxes[index];
-    char buf[256];
-    /*
-
-                    int o = g_halAxes[ct].counts->type;
-                    hal_sig_t *sig = (hal_sig_t *)SHMPTR(g_halAxes[ct].counts->signal);
-                    hal_float_t * ptr = (hal_float_t *)SHMPTR(sig->data_ptr);*/
-    sprintf(buf,"axis.%i.jog-counts", index);
-    hal_data_u * dat = FindPin(buf, HAL_S32);
-    bool err = false;
-    if(dat) //sanity check
-    {
-        axis.counts = &dat->s;
-    }
-    else
-    {
-        err = true;
-    }
-
-    sprintf(buf,"axis.%i.jog-enable", index);
-    dat = FindPin(buf, HAL_BIT);
-    if(dat)
-    {
-        axis.enable = &dat->b;//(char *)SHMPTR(sig->data_ptr);
-    }
-    else
-    {
-        err = true;
-    }
-
-    sprintf(buf,"axis.%i.jog-scale", index);
-    dat = FindPin(buf, HAL_FLOAT);
-    if(dat) //sanity check
-    {
-        axis.scale = &dat->f;//(hal_float_t *)SHMPTR(sig->data_ptr);
-    }
-    else
-    {
-        err = true;
-    }
-
-    sprintf(buf,"axis.%i.jog-vel-mode", index);
-    dat = FindPin(buf, HAL_BIT);
-    if(dat)
-    {
-        axis.velMode = &dat->b;//(char *)SHMPTR(sig->data_ptr);
-    }
-    else
-    {
-        err = true;
-    }
-    if(err)
-    {
-        memset(&axis, 0, sizeof(JOGAXIS));
+        LinuxConnection::SendJog(ct, 0);
     }
 }
-
-
-

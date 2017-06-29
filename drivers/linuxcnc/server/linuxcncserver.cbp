@@ -52,11 +52,13 @@
 					<Add option="-O2" />
 					<Add option="-std=c++11" />
 					<Add option="-DULAPI" />
+					<Add option="-D_LINUX" />
 					<Add directory="$(LINUXCNC)/src/emc/usr_intf" />
 					<Add directory="$(LINUXCNC)/include" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/include" />
+					<Add directory="../../../clsocket/src" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -218,6 +220,7 @@
 		<Unit filename="../../../src/cncstatebuf.proto">
 			<Option weight="0" />
 		</Unit>
+		<Unit filename="../../../src/timer.cpp" />
 		<Unit filename="linuxcnc.cpp" />
 		<Unit filename="linuxcnc.h" />
 		<Unit filename="main.cpp" />

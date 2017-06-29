@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#define CONN_RETRY_START  5000 //first connection retry after 5ms
+#define CONN_RETRY_MAX 1000000 //maximum retry interval
+
 namespace CncRemote
 {
 
@@ -11,14 +14,15 @@ Comms::Comms(CActiveSocket *socket, Server * server)
     GOOGLE_PROTOBUF_VERIFY_VERSION;
     m_socket = socket;
     m_socket->DisableNagleAlgoritm();
-    m_isConnected = true;
+    m_connState = (CONNSTATE)-1;
 }
 
 Comms::Comms()
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
     m_socket = NULL;
-    m_isConnected = false;
+    m_connState = (CONNSTATE)-1;
+    m_connTime = CONN_RETRY_START;
 }
 
 Comms::~Comms()
@@ -37,25 +41,34 @@ void Comms::Connect(const CncString& address, const uint32_t port)
     m_port = port;
     if(!m_socket) return;
     m_socket->Close();
-    Connected(false);
+    Connected(connNONE);
 }
 
 
 COMERROR Comms::Poll()
 {
     if(!m_socket) return errNOSOCKET;
-    if(!m_isConnected && !m_server && !m_address.empty()) //try to auto reconnect
+    if(m_connState == connNONE && !m_server && !m_address.empty()) //try to auto reconnect
     {
+        if(m_connTimer.GetElapsed() < m_connTime) return errCONNECT;
+        m_connTimer.Restart();
+        m_connTime *= 2; //increase retry time
+        if(m_connTime > CONN_RETRY_MAX)
+        {
+            m_connTime = CONN_RETRY_MAX;
+        }
         m_socket->Close();
         m_socket->Initialize();
-        SetTimeout(m_timeout);
+        SetTimeout(m_socketTimeout);
         bool ok = m_socket->Open(m_address.c_str(), m_port);
-        Connected(ok);
-        if(!m_isConnected)
+        if(!ok)
         {
+            Connected(connNONE);
             return errCONNECT;
         }
         m_socket->DisableNagleAlgoritm();
+        m_connTimer.Restart();
+        Connected(connNETWORK);
     }
     uint8_t buf[RX_BUFFER_SIZE];
     int bytes = m_socket->Receive(RX_BUFFER_SIZE, buf);
@@ -65,12 +78,18 @@ COMERROR Comms::Poll()
         if(e== CSimpleSocket::SocketEwouldblock ||
            e == CSimpleSocket::SocketInterrupted)
         {
+            if(m_connTimer.GetElapsed() > CONN_TIMEOUT)
+            {
+                Connected(connNETWORK);
+            }
             return errNODATA;
         }
         m_rxData.clear();
-        Connected(false);
+        Connected(connNONE);
         return errCONNECT;
     }
+    m_connTimer.Restart();
+    Connected(connDATA);
     uint8_t * ptr = buf;
     for(int ct = bytes; ct >0; ct--)
     {
@@ -88,7 +107,7 @@ COMERROR Comms::Poll()
 
 void Comms::SetTimeout(float seconds)
 {
-    m_timeout = seconds;
+    m_socketTimeout = seconds;
     if(!m_socket) return;
     if(seconds > 0.000001)
     {
@@ -113,6 +132,7 @@ void Comms::Close()
         m_socket->Close();
         m_socket->Initialize();
     }
+    m_connTime = CONN_RETRY_START;
 }
 
 /*
@@ -319,7 +339,7 @@ void Comms::ProcessByte(const uint8_t byte)
 
 bool Comms::SendPacket(const Packet &packet)
 {
-    if(!m_socket || !m_isConnected) return false;
+    if(!m_socket || m_connState == connNONE) return false;
 /*
 for(int g = 0; g < 100000000; g++)
 {
@@ -364,7 +384,7 @@ if(m_packet.data != s)
     {
         if(m_socket->GetSocketError() == CSimpleSocket::SocketInvalidSocket)
         {
-            m_isConnected = false;
+            Connected(connNONE);
         }
         return false;
     }
@@ -466,12 +486,15 @@ bool Comms::SendCommand(const uint16_t command, const CmdBuf& data)
     return SendPacket(packet);
 }
 
-void Comms::Connected(const bool state)
+void Comms::Connected(const CONNSTATE state)
 {
-    bool last = m_isConnected;
-    m_isConnected = state;
-    if(last != state)
+    if(m_connState != state)
     {
+        if(m_connState == connDATA) //was connected so short retry interval
+        {
+            m_connTime = CONN_RETRY_START;
+        }
+        m_connState = state;
         OnConnection(state);
     }
 }

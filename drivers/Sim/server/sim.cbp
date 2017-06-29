@@ -41,9 +41,11 @@
 					<Add option="-march=i686" />
 					<Add option="-g" />
 					<Add option="-std=c++11" />
+					<Add option="-D_LINUX" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/include" />
+					<Add directory="../../../clsocket/src" />
 				</Compiler>
 				<Linker>
 					<Add library="protobuf-lite-3.1.0" />
@@ -63,9 +65,11 @@
 					<Add option="-march=i686" />
 					<Add option="-O3" />
 					<Add option="-std=c++11" />
+					<Add option="-D_LINUX" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/include" />
+					<Add directory="../../../clsocket/src" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
