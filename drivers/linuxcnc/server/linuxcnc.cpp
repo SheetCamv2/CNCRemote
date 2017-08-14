@@ -433,8 +433,8 @@ bool LinuxCnc::Poll()
     }
     if(emcStatus->motion.traj.maxVelocity < 1e17)
     {
-        g_maxSpeedLin = emcStatus->motion.traj.maxVelocity;
-        g_maxSpeedAng = emcStatus->motion.traj.maxVelocity;
+        g_maxSpeedLin = emcStatus->motion.traj.maxVelocity / 60;
+        g_maxSpeedAng = emcStatus->motion.traj.maxVelocity / 60;
     }
     Server::Poll();
 /*    if(g_halAxes[0].counts)
