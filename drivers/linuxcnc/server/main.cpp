@@ -107,7 +107,6 @@ static void usage(char* pname)
 
 int main(int argc, char * argv[])
 {
-    int opt;
 
     initMain();
     // process local command line args

@@ -586,6 +586,13 @@ class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   double max_feed_ang() const;
   void set_max_feed_ang(double value);
 
+  // optional double gcode_units = 25;
+  bool has_gcode_units() const;
+  void clear_gcode_units();
+  static const int kGcodeUnitsFieldNumber = 25;
+  double gcode_units() const;
+  void set_gcode_units(double value);
+
   // @@protoc_insertion_point(class_scope:CncRemote.StateBuf)
  private:
   inline void set_has_abs_pos();
@@ -632,6 +639,8 @@ class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   inline void clear_has_max_feed_lin();
   inline void set_has_max_feed_ang();
   inline void clear_has_max_feed_ang();
+  inline void set_has_gcode_units();
+  inline void clear_has_gcode_units();
 
   ::google::protobuf::internal::ArenaStringPtr _unknown_fields_;
   ::google::protobuf::Arena* _arena_ptr_;
@@ -659,6 +668,7 @@ class StateBuf : public ::google::protobuf::MessageLite /* @@protoc_insertion_po
   double spindle_speed_;
   double max_feed_lin_;
   double max_feed_ang_;
+  double gcode_units_;
   bool flood_;
   friend void  protobuf_InitDefaults_cncstatebuf_2eproto_impl();
   friend void  protobuf_AddDesc_cncstatebuf_2eproto_impl();
@@ -1825,6 +1835,30 @@ inline void StateBuf::set_max_feed_ang(double value) {
   set_has_max_feed_ang();
   max_feed_ang_ = value;
   // @@protoc_insertion_point(field_set:CncRemote.StateBuf.max_feed_ang)
+}
+
+// optional double gcode_units = 25;
+inline bool StateBuf::has_gcode_units() const {
+  return (_has_bits_[0] & 0x00400000u) != 0;
+}
+inline void StateBuf::set_has_gcode_units() {
+  _has_bits_[0] |= 0x00400000u;
+}
+inline void StateBuf::clear_has_gcode_units() {
+  _has_bits_[0] &= ~0x00400000u;
+}
+inline void StateBuf::clear_gcode_units() {
+  gcode_units_ = 0;
+  clear_has_gcode_units();
+}
+inline double StateBuf::gcode_units() const {
+  // @@protoc_insertion_point(field_get:CncRemote.StateBuf.gcode_units)
+  return gcode_units_;
+}
+inline void StateBuf::set_gcode_units(double value) {
+  set_has_gcode_units();
+  gcode_units_ = value;
+  // @@protoc_insertion_point(field_set:CncRemote.StateBuf.gcode_units)
 }
 
 inline const StateBuf* StateBuf::internal_default_instance() {

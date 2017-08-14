@@ -218,7 +218,11 @@
 		<Unit filename="../../../src/cncserver.cpp" />
 		<Unit filename="../../../src/cncstatebuf.pb.cc" />
 		<Unit filename="../../../src/cncstatebuf.proto">
+			<Option compile="1" />
 			<Option weight="0" />
+			<Option compiler="gcc" use="1" buildCommand="../../../libraries/bin/protoc --cpp_out=$file_dir --proto_path=$file_dir $file" />
+			<Option compiler="null" use="1" buildCommand="../../../libraries/bin/protoc $file" />
+			<Option target="Debug-Linux" />
 		</Unit>
 		<Unit filename="../../../src/timer.cpp" />
 		<Unit filename="linuxcnc.cpp" />

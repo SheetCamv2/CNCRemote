@@ -1185,6 +1185,7 @@ const int StateBuf::kErrorMsgFieldNumber;
 const int StateBuf::kDisplayMsgFieldNumber;
 const int StateBuf::kMaxFeedLinFieldNumber;
 const int StateBuf::kMaxFeedAngFieldNumber;
+const int StateBuf::kGcodeUnitsFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 StateBuf::StateBuf()
@@ -1303,8 +1304,8 @@ void StateBuf::Clear() {
     ZR_(current_line_, spindle_speed_);
     flood_ = false;
   }
-  if (_has_bits_[16 / 32] & 4128768u) {
-    ZR_(max_feed_lin_, max_feed_ang_);
+  if (_has_bits_[16 / 32] & 8323072u) {
+    ZR_(max_feed_lin_, gcode_units_);
     if (has_homed()) {
       if (homed_ != NULL) homed_->::CncRemote::BoolAxes::Clear();
     }
@@ -1653,6 +1654,21 @@ bool StateBuf::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(201)) goto parse_gcode_units;
+        break;
+      }
+
+      // optional double gcode_units = 25;
+      case 25: {
+        if (tag == 201) {
+         parse_gcode_units:
+          set_has_gcode_units();
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   double, ::google::protobuf::internal::WireFormatLite::TYPE_DOUBLE>(
+                 input, &gcode_units_)));
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -1799,6 +1815,11 @@ void StateBuf::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteDouble(24, this->max_feed_ang(), output);
   }
 
+  // optional double gcode_units = 25;
+  if (has_gcode_units()) {
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(25, this->gcode_units(), output);
+  }
+
   output->WriteRaw(unknown_fields().data(),
                    static_cast<int>(unknown_fields().size()));
   // @@protoc_insertion_point(serialize_end:CncRemote.StateBuf)
@@ -1902,7 +1923,7 @@ size_t StateBuf::ByteSizeLong() const {
     }
 
   }
-  if (_has_bits_[16 / 32] & 4128768u) {
+  if (_has_bits_[16 / 32] & 8323072u) {
     // optional .CncRemote.BoolAxes homed = 19;
     if (has_homed()) {
       total_size += 2 +
@@ -1938,6 +1959,11 @@ size_t StateBuf::ByteSizeLong() const {
 
     // optional double max_feed_ang = 24;
     if (has_max_feed_ang()) {
+      total_size += 2 + 8;
+    }
+
+    // optional double gcode_units = 25;
+    if (has_gcode_units()) {
       total_size += 2 + 8;
     }
 
@@ -2040,6 +2066,9 @@ void StateBuf::UnsafeMergeFrom(const StateBuf& from) {
     if (from.has_max_feed_ang()) {
       set_max_feed_ang(from.max_feed_ang());
     }
+    if (from.has_gcode_units()) {
+      set_gcode_units(from.gcode_units());
+    }
   }
   if (!from.unknown_fields().empty()) {
     mutable_unknown_fields()->append(from.unknown_fields());
@@ -2085,6 +2114,7 @@ void StateBuf::InternalSwap(StateBuf* other) {
   display_msg_.Swap(&other->display_msg_);
   std::swap(max_feed_lin_, other->max_feed_lin_);
   std::swap(max_feed_ang_, other->max_feed_ang_);
+  std::swap(gcode_units_, other->gcode_units_);
   std::swap(_has_bits_[0], other->_has_bits_[0]);
   _unknown_fields_.Swap(&other->_unknown_fields_);
   std::swap(_cached_size_, other->_cached_size_);
@@ -2788,6 +2818,30 @@ void StateBuf::set_max_feed_ang(double value) {
   set_has_max_feed_ang();
   max_feed_ang_ = value;
   // @@protoc_insertion_point(field_set:CncRemote.StateBuf.max_feed_ang)
+}
+
+// optional double gcode_units = 25;
+bool StateBuf::has_gcode_units() const {
+  return (_has_bits_[0] & 0x00400000u) != 0;
+}
+void StateBuf::set_has_gcode_units() {
+  _has_bits_[0] |= 0x00400000u;
+}
+void StateBuf::clear_has_gcode_units() {
+  _has_bits_[0] &= ~0x00400000u;
+}
+void StateBuf::clear_gcode_units() {
+  gcode_units_ = 0;
+  clear_has_gcode_units();
+}
+double StateBuf::gcode_units() const {
+  // @@protoc_insertion_point(field_get:CncRemote.StateBuf.gcode_units)
+  return gcode_units_;
+}
+void StateBuf::set_gcode_units(double value) {
+  set_has_gcode_units();
+  gcode_units_ = value;
+  // @@protoc_insertion_point(field_set:CncRemote.StateBuf.gcode_units)
 }
 
 inline const StateBuf* StateBuf::internal_default_instance() {

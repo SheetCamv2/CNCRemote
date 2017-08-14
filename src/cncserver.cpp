@@ -18,6 +18,7 @@ Server::Server()
     pthread_mutex_init(&m_syncLock, NULL);
     pthread_mutex_lock(&m_syncLock);
     m_statePacket.cmd = Comms::cmdNULL;
+    m_state.set_gcode_units(1);
 }
 
 Server::~Server()

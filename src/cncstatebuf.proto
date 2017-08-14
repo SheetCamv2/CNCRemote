@@ -54,6 +54,7 @@ message StateBuf {
     optional string display_msg = 22; //string. Contains any text that should be displayed to the user
     optional double max_feed_lin = 23;
     optional double max_feed_ang = 24;
+    optional double gcode_units = 25; //Convert mm to the currently selected g-code linear units
 }
 
 //used for commands and responses

@@ -639,6 +639,9 @@ void LinuxCnc::UpdateState()
     }
     break;
 
+    case 11:
+        m_state.set_gcode_units(convertLinearUnits(emcStatus->motion.traj.linearUnits));
+
     default:
         if(time(NULL) > m_nextTime)
         {
