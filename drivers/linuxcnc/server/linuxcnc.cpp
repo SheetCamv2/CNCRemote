@@ -7,7 +7,7 @@
 #include "canon.hh"		// CANON_UNITS, CANON_UNITS_INCHES,MM,CM
 #include "emcglb.h"		// EMC_NMLFILE, TRAJ_MAX_VELOCITY, etc.
 #include "emccfg.h"		// DEFAULT_TRAJ_MAX_VELOCITY
-//#include "inifile.hh"		// INIFILE
+#include "inifile.hh"		// INIFILE
 #include "rcs_print.hh"
 #include "timer.hh"             // etime()
 #include "shcom.hh"             // NML Messaging functions
@@ -36,6 +36,11 @@ public:
     LinuxConnection(CActiveSocket * client, Server * server) : Connection(client, server)
     {
         SetTimeout(1);
+    }
+
+    virtual ~LinuxConnection()
+    {
+        LinuxCnc::ZeroJog(); //make sure we stop jogging if we lose connection
     }
 
     virtual void OnConnection(const CONNSTATE state)
@@ -433,8 +438,8 @@ bool LinuxCnc::Poll()
     }
     if(emcStatus->motion.traj.maxVelocity < 1e17)
     {
-        g_maxSpeedLin = emcStatus->motion.traj.maxVelocity / 60;
-        g_maxSpeedAng = emcStatus->motion.traj.maxVelocity / 60;
+        g_maxSpeedLin = emcStatus->motion.traj.maxVelocity;
+        g_maxSpeedAng = emcStatus->motion.traj.maxVelocity;
     }
     Server::Poll();
 /*    if(g_halAxes[0].counts)
@@ -524,11 +529,11 @@ void LinuxCnc::UpdateState()
     case 3:
         m_state.set_paused(emcStatus->task.task_paused);
 #if MAJOR_VER <= 2 && MINOR_VER <=8
-        m_state.set_max_feed_lin((g_maxSpeedLin * 60) / emcStatus->motion.axis[0].units);
-        m_state.set_max_feed_ang((g_maxSpeedAng * 60) / emcStatus->motion.axis[0].units);
+        m_state.set_max_feed_lin((g_maxSpeedLin * 60) / emcStatus->motion.traj.linearUnits);
+        m_state.set_max_feed_ang((g_maxSpeedAng * 60) / emcStatus->motion.traj.angularUnits);
 #else
-        set_max_feed_lin((g_maxSpeedLin * 60) / emcStatus->motion.joint[0].units);
-        set_max_feed_ang((g_maxSpeedAng * 60) / emcStatus->motion.joint[0].units);
+        set_max_feed_lin((g_maxSpeedLin * 60) / emcStatus->motion.traj.linearUnits);
+        set_max_feed_ang((g_maxSpeedAng * 60) / emcStatus->motion.traj.angularUnits);
 #endif
         break;
 
@@ -641,6 +646,7 @@ void LinuxCnc::UpdateState()
 
     case 11:
         m_state.set_gcode_units(convertLinearUnits(emcStatus->motion.traj.linearUnits));
+    break;
 
     default:
         if(time(NULL) > m_nextTime)
