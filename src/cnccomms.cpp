@@ -1,3 +1,24 @@
+/****************************************************************
+CNCRemote communications
+Copyright 2017 Stable Design <les@sheetcam.com>
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the Mozilla Public License Version 2.0 or later
+as published by the Mozilla foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+Mozilla Public License for more details.
+
+You should have received a copy of the Mozilla Public License
+along with this program; if not, you can obtain a copy from mozilla.org
+******************************************************************/
+
+
+
+
 #include "cnccomms.h"
 #include <stdio.h>
 #include <string.h>
@@ -48,7 +69,7 @@ void Comms::Connect(const CncString& address, const uint32_t port)
 COMERROR Comms::Poll()
 {
     if(!m_socket) return errNOSOCKET;
-    if(m_connState == connNONE && !m_server && !m_address.empty()) //try to auto reconnect
+    if(m_connState == connNONE && !m_address.empty()) //try to auto reconnect if client
     {
         if(m_connTimer.GetElapsed() < m_connTime) return errCONNECT;
         m_connTimer.Restart();
@@ -71,6 +92,7 @@ COMERROR Comms::Poll()
         Connected(connNETWORK);
     }
     uint8_t buf[RX_BUFFER_SIZE];
+
     int bytes = m_socket->Receive(RX_BUFFER_SIZE, buf);
     if(bytes <= 0) // error
     {
@@ -135,107 +157,6 @@ void Comms::Close()
     m_connTime = CONN_RETRY_START;
 }
 
-/*
-COMERROR Comms::Run()
-{
-    if(m_thread)
-    {
-        return errRRUNNING;
-    }
-    SetTimeout(CONN_TIMEOUT);
-
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    int rc = pthread_create(&m_thread, &attr, Entry, (void *)this);
-    if(rc)
-    {
-        return errNOTHREAD;
-    }
-    return errOK;
-}
-
-static void * Comms::Entry(void * t)
-{
-    return (Comms *)t->Entry();
-}
-
-void * Comms::Entry()
-{
-    void * ret = NULL;
-    while(!m_closing)
-    {
-        if(Poll() != errOK)
-        {
-            return ((void *)1);
-        }
-    }
-    return NULL;
-}
-
-bool Comms::Poll()
-{
-    if(!m_socket) return;
-
-#ifdef USE_PLUGINS
-    if(m_plugin) m_plugin->Poll();
-#endif
-    bool ret = false;
-    while(1)
-    {
-
-        Packet pkt;
-        if(!RecvPacket(pkt))
-        {
-            break;
-        }
-        switch(pkt.cmd)
-        {
-        case cmdNULL:
-            break;
-
-        case cmdSENDFILE: //TODO: File handling
-            break;
-
-        case cmdREQFILE: //TODO: File handling
-            break;
-
-        case cmdPING:
-            m_pingResp = true;
-            break;
-
-        default:
-            HandlePacket(pkt);
-        }
-        ret = true;
-    }
-    if(ret)
-    {
-        m_timeout = time(NULL) + CONN_TIMEOUT;
-    }
-
-    m_isConnected = (m_timeout > time(NULL));
-    if(m_isConnected)
-    {
-        SendCommand(cmdSTATE);
-    }
-    if(m_isConnected != m_wasConnected)
-    {
-        m_wasConnected = m_isConnected;
-        if(!m_isConnected)
-        {
-printf("Connection timed out\n");
-            SendCommand(cmdSTATE); //queue a state message to wake up the server when we connect
-        }
-else
-printf("Regained connection\n");
-        OnConnection(m_isConnected);
-    }
-    return ret;
-}
-*/
-
-
 #define FinishBlock(X) (*code_ptr = (X), code_ptr = dst++, code = 0x01)
 
 size_t Comms::CobsEncode(const uint8_t *ptr, size_t length, uint8_t *dst)
@@ -289,88 +210,9 @@ void Comms::CobsDecode(const uint8_t *ptr, size_t length)
     HandlePacket(m_packet);
 }
 
-
-/*
-void Comms::ProcessByte(const uint8_t byte)
-{
-    if(byte == pktESCAPE)
-    {
-        if(!m_wasEscape)
-        {
-            m_wasEscape = true;
-            return;
-        }
-    }
-    if(m_wasEscape) //start of packet or escape char
-    {
-        m_wasEscape = false;
-        if(byte != pktESCAPE) //start of packet
-        {
-            if(m_rxCount != 0)
-            {
-                printf("Last packet was invalid\n"));
-            }
-            m_rxCount = 0;
-            m_header.bytes = 0;
-            m_packet.data.clear();
-        }
-    }
-
-    if(m_rxCount < sizeof(m_header))
-    {
-        char * ptr = (char *)&m_header;
-        ptr[m_rxCount] = byte;
-        m_rxCount++;
-        return;
-    }
-    if(m_rxCount >= MAX_PACKET_SIZE)
-    {
-        return;
-    }
-    m_rxCount++;
-    m_packet.data.push_back(byte);
-    if(m_rxCount == m_header.bytes)
-    {
-        m_packet.cmd = m_header.cmd;
-
-    }
-}
-*/
-
 bool Comms::SendPacket(const Packet &packet)
 {
     if(!m_socket || m_connState == connNONE) return false;
-/*
-for(int g = 0; g < 100000000; g++)
-{
-string s;
-int r = rand() % 2000;
-for(int c = 0; c < r; c++)
-{
-    s += (char)rand();
-}
-int si = s.size() + (s.size() / 254) + 1;
-uint8_t sd[si + 10];
-memset(sd,1,si + 10);
-int siz = CobsEncode((const uint8_t *)s.data(), s.size(), sd);
-sd[siz] = 0;
-m_packet.data.clear();
-CobsDecode(sd, siz);
-if(m_packet.data != s)
-{
-    int a=m_packet.data.size();
-    int b=s.size();
-    for(int ct=0; ct < a; ct++)
-    {
-        if(m_packet.data[ct] != s[ct])
-        {
-            int g=1;
-        }
-    }
-}
-}
-*/
-
 
     string s;
     s.append((char *)&packet.cmd, sizeof(packet.cmd));
@@ -390,62 +232,6 @@ if(m_packet.data != s)
     }
     return true;
 }
-
-/*
-#define DELIMSIZE 10
-
-bool Comms::RecvPacket(Packet &packet)
-{
-    char buf[DELIMSIZE];
-    int ret = zmq_recv (m_socket, buf, DELIMSIZE, ZMQ_DONTWAIT);
-    size_t bufSize = DELIMSIZE;
-    if(ret < 0 ||
-            zmq_getsockopt(m_socket, ZMQ_RCVMORE, buf, &bufSize) < 0 ||
-            buf[0] == 0)
-    {
-        return false;
-    }
-
-    zmq_msg_t msg;
-    zmq_msg_init (&msg);
-    ret = zmq_msg_recv (&msg, m_socket, ZMQ_DONTWAIT);
-    if(ret < 0)
-    {
-        zmq_msg_close (&msg);
-        return false;
-    }
-    bufSize = zmq_msg_size (&msg);
-    char * ptr = (char *)zmq_msg_data(&msg);
-    bool r = false;
-    if(bufSize > 0)
-    {
-        packet.cmd = *ptr++;
-        bufSize--;
-        packet.data=string(ptr, bufSize);
-        r = true;
-    }
-    else
-    {
-        packet.cmd = cmdNULL;
-    }
-    zmq_msg_close (&msg);
-    return r;
-}
-
-
-int Comms::RecvString(string& data)
-{
-    zmq_msg_t msg;
-    zmq_msg_init (&msg);
-    int ret = zmq_msg_recv (&msg, m_socket, ZMQ_NOBLOCK);
-    if(ret >= 0)
-    {
-        string sret((char *)zmq_msg_data (&msg), zmq_msg_size (&msg));
-        data = sret;
-    }
-    zmq_msg_close (&msg);
-    return ret;
-}*/
 
 bool Comms::SendCommand(const uint16_t cmd)
 {

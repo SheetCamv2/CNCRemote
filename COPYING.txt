@@ -1,0 +1,9 @@
+CNCRemote is covered under the Mozilla Public License V2.0 (see mplv3.txt). Portions of the code are covered by other licenses. See the license files supplied with this source distribution.
+
+If you don't wish to read the full license details, here is a quick summary.
+
+What you can do: Use this library in both modified and unmodified forms in both open source and closed source applications. Note where this code is linked with code using a more restrictive license the whole program is then covered under that license's rules. For example the LinuxCNC server links with LinuxCNC which is GPLV2 so it is covered under GPLV2 rules. However in that case you can still connect to the LinuxCNC server using a closed source CNCRemote client.
+
+What you must do: Include copies of the respective licenses with both source code and compiled binaries.
+
+What you cannot do: Pass this code or any portion of it off as your own or change the license to a more restrictive one.

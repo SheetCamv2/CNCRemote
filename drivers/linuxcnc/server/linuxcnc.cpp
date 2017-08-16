@@ -1,3 +1,22 @@
+/****************************************************************
+LinuxCNC server
+Copyright 2017 Stable Design <les@sheetcam.com>
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the Mozilla Public License Version 2.0 or later
+as published by the Mozilla foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+Mozilla Public License for more details.
+
+You should have received a copy of the Mozilla Public License
+along with this program; if not, you can obtain a copy from mozilla.org
+******************************************************************/
+
+
 #include "linuxcnc.h"
 
 
@@ -45,8 +64,6 @@ public:
 
     virtual void OnConnection(const CONNSTATE state)
     {
-printf("Connection state = %d\n", state);
-
         MutexLocker l = m_server->GetLock();
         LinuxCnc::ZeroJog(); //make sure we stop jogging if we lose connection
     }
@@ -54,7 +71,6 @@ printf("Connection state = %d\n", state);
     virtual void HandlePacket(const Packet & pkt)
     {
         CncRemote::CmdBuf cmd;
-        int a= pkt.data.size();
         if(pkt.data.size() > 0 &&
                 !cmd.ParseFromString(pkt.data))
         {
@@ -289,46 +305,6 @@ printf("Connection state = %d\n", state);
         SendJog(4,b * g_maxSpeedAng);
         SendJog(5,c * g_maxSpeedAng);
         return 0;
-
-        /*
-        #if MAJOR_VER <= 2 && MINOR_VER <=8
-
-            EMC_TRAJ_SET_TELEOP_VECTOR emc_set_teleop_vector;
-            ZERO_EMC_POSE(emc_set_teleop_vector.vector);
-            emc_set_teleop_vector.vector.tran.x = x * g_maxSpeedLin;
-            emc_set_teleop_vector.vector.tran.y = y * g_maxSpeedLin;
-            emc_set_teleop_vector.vector.tran.z = z * g_maxSpeedLin;
-            emc_set_teleop_vector.vector.a = a * g_maxSpeedAng;
-            emc_set_teleop_vector.vector.b = b * g_maxSpeedAng;
-            emc_set_teleop_vector.vector.c = c * g_maxSpeedAng;
-        #else
-            emc_set_teleop_vector.vector.tran.x = x * scale * emcStatus->motion.joint[0].units;
-            emc_set_teleop_vector.vector.tran.y = y * scale * emcStatus->motion.joint[1].units;
-            emc_set_teleop_vector.vector.tran.z = z * scale * emcStatus->motion.joint[2].units;
-            emc_set_teleop_vector.vector.a = a * scale * emcStatus->motion.joint[3].units;
-            emc_set_teleop_vector.vector.b = b * scale * emcStatus->motion.joint[4].units;
-            emc_set_teleop_vector.vector.c = c * scale * emcStatus->motion.joint[5].units;
-        #endif
-
-
-            emcCommandSend(emc_set_teleop_vector);
-
-        */
-
-        return 0;
-        /*
-
-
-
-        #if MAJOR_VER <= 2 && MINOR_VER <=8
-
-            sendJogCont(axis, val * emcStatus->motion.axis[axis].units);
-        #else
-            if(emcStatus->motion.joint[axis].jointType == EMC_LINEAR)
-                sendJogCont(axis,JOGTELEOP, val * emcStatus->motion.joint[axis].units);
-            else
-                sendJogCont(axis,JOGTELEOP, val * emcStatus->motion.joint[axis].units);
-        #endif*/
     }
 
 
@@ -410,20 +386,6 @@ void LinuxCnc::ConnectLCnc()
     m_nextTime = time(NULL) + 1; //check every second
     m_connected = true;
 
-/*    halId = hal_init("CNCRemote");
-    if(halId < 0)
-    {
-        printf("Failed to connect to HAL\n");
-    }
-    else
-    {
-        for(int ct=0; ct < MAX_AXES; ct++)
-        {
-            LoadAxis(ct);
-        }
-        hal_ready(halId);
-    }*/
-
 #define EMC_WAIT_NONE (EMC_WAIT_TYPE) 1
 }
 
@@ -442,23 +404,6 @@ bool LinuxCnc::Poll()
         g_maxSpeedAng = emcStatus->motion.traj.maxVelocity;
     }
     Server::Poll();
-/*    if(g_halAxes[0].counts)
-    {
-        hal_float_t time = (double)m_jogTimer.GetElapsed(true) / 1000000.0; //elapsed time in seconds since last poll
-        time *= 10000; //axis is scaled at 1000 counts per unit
-        double vel;
-        for(int ct=0; ct < MAX_AXES; ct++)
-        {
-            vel = g_jogAxes[ct];
-            if(vel != 0)
-            {
-                if(g_halAxes[ct].counts)
-                {
-                    *g_halAxes[ct].counts += time * vel;
-                }
-            }
-        }
-    }*/
     return m_connected;
 }
 

@@ -1,7 +1,25 @@
+/****************************************************************
+CNCRemote server
+Copyright 2017 Stable Design <les@sheetcam.com>
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the Mozilla Public License Version 2.0 or later
+as published by the Mozilla foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+Mozilla Public License for more details.
+
+You should have received a copy of the Mozilla Public License
+along with this program; if not, you can obtain a copy from mozilla.org
+******************************************************************/
+
+
 #include "cncserver.h"
 #include <sstream>
 
-//#include "millisleep.h"
 #include "timer.h"
 
 namespace CncRemote
@@ -61,7 +79,9 @@ COMERROR Server::Bind(const uint32_t port)
 
 COMERROR Server::Poll()
 {
+    pthread_mutex_unlock(&m_syncLock);
     CActiveSocket * client = m_socket->Accept();
+    pthread_mutex_lock(&m_syncLock);
     if(client)
     {
         printf("Accepting connection from %s\n", client->GetClientAddr());
@@ -82,8 +102,6 @@ COMERROR Server::Poll()
         m_statePacket.cmd = Comms::cmdSTATE;
         pthread_mutex_unlock(&m_stateLock);
     }
-    pthread_mutex_unlock(&m_syncLock);
-    pthread_mutex_lock(&m_syncLock);
     return errOK;
 }
 
@@ -115,8 +133,6 @@ Connection::Connection(CActiveSocket * socket, Server * server) : Comms(socket, 
     m_server = server;
     m_thread = 0;
     m_closing = false;
-//    m_socket->SetReceiveTimeout(1,0);
-//    m_socket->SetSendTimeout(1,0);
 }
 
 Connection::~Connection()

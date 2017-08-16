@@ -1,3 +1,22 @@
+/****************************************************************
+LinuxCNC server main loop
+Copyright 2017 Stable Design <les@sheetcam.com>
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the Mozilla Public License Version 2.0 or later
+as published by the Mozilla foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+Mozilla Public License for more details.
+
+You should have received a copy of the Mozilla Public License
+along with this program; if not, you can obtain a copy from mozilla.org
+******************************************************************/
+
+
 #include <iostream>
 #include <cstdint>
 #include <time.h>
@@ -97,7 +116,7 @@ static void usage(char* pname)
            "         --path       <path>         (default=%s)\n"
 //           "LinuxCNC_Options:\n"
 //           "         -ini        <inifile>      (default=%s)\n"
-           ,pname,port,defaultPath,emc_inifile
+           ,pname,port,defaultPath
           );
 }
 
@@ -160,17 +179,14 @@ int main(int argc, char * argv[])
         machine.ConnectLCnc();
         printf("Connected to LinuxCNC\n");
 
-TestTimer tt("Main");
         while(1)
         {
-//tt.Restart();
             if(!machine.Poll())
             {
                 break;
             }
-//tt.Check();
         }
-printf("Disconnected from LinuxCNC\n");
+        printf("Disconnected from LinuxCNC\n");
         Disconnect();
     }
     return 0;

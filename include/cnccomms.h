@@ -1,3 +1,24 @@
+/****************************************************************
+CNCRemote communications
+Copyright 2017 Stable Design <les@sheetcam.com>
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the Mozilla Public License Version 2.0 or later
+as published by the Mozilla foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+Mozilla Public License for more details.
+
+You should have received a copy of the Mozilla Public License
+along with this program; if not, you can obtain a copy from mozilla.org
+******************************************************************/
+
+
+
+
 #ifndef Comms_H
 #define Comms_H
 #if defined(_WIN32) | defined(_WIN64)
@@ -55,7 +76,7 @@ enum CONNSTATE
 };
 
 
-class Comms// : public StateBuf
+class Comms
 {
 public:
     Comms(CActiveSocket *socket, Server * server = NULL);
@@ -130,7 +151,6 @@ protected:
 
 private:
     CActiveSocket *m_socket;
-    Server * m_server;
     uint32_t m_port;
     CncString m_address;
 
