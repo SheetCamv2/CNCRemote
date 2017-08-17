@@ -30,7 +30,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
     #include "windows.h"
 	typedef std::wstring CncString; //wide string on Windows
 #if defined _MSC_VER && _MSC_VER < 1600 //some versions of MSVC don't include stdint
-	typedef unsigned __int32 uint32_t;
+	#include "pstdint.h"
 #else
     #include <stdint.h>
 #endif

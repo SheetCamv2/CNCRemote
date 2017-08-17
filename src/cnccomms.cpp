@@ -81,7 +81,7 @@ COMERROR Comms::Poll()
         m_socket->Close();
         m_socket->Initialize();
         SetTimeout(m_socketTimeout);
-        bool ok = m_socket->Open(m_address.c_str(), m_port);
+        bool ok = m_socket->Open(to_utf8(m_address).c_str(), m_port);
         if(!ok)
         {
             Connected(connNONE);
@@ -218,10 +218,11 @@ bool Comms::SendPacket(const Packet &packet)
     s.append((char *)&packet.cmd, sizeof(packet.cmd));
     s += packet.data;
     int size = s.size() + (s.size() / 254) + 2; //maximum data size after encoding plus zero endo of packet
-    uint8_t d[size];
+    uint8_t * d = new uint8_t[size];
     size = CobsEncode((const uint8_t *)s.data(), s.size(), d);
     d[size++] = 0;
     int sent = m_socket->Send(d, size);
+	delete d;
     if(sent <=0 || sent != size)
     {
         if(m_socket->GetSocketError() == CSimpleSocket::SocketInvalidSocket)

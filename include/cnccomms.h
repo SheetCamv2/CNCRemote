@@ -23,7 +23,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #define Comms_H
 #if defined(_WIN32) | defined(_WIN64)
 #include <winsock2.h>
-#include "winpthreads.h"
+//#include "winpthreads.h"
 #endif
 
 #include <time.h>

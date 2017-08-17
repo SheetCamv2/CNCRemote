@@ -105,7 +105,7 @@ bool Client::LoadPlugins(const CncString& path)
                 !plg.Quit ||
                 !plg.Poll ||
                 !plg.ControlExists ||
-                plg.ControlExists() == false)
+                plg.ControlExists(to_utf8(path).c_str()) == false)
         {
             FreeLibrary(plg.handle);
         }
@@ -231,11 +231,11 @@ bool Client::Connect(const unsigned int index, const CncString& address, const u
         if(index > m_plugins.size()) return false;
         m_plugin = &m_plugins[index - 1];
         m_plugin->Start();
-        Comms::Connect("localhost",port);
+        Comms::Connect(L"localhost", port);
     }else
 #endif
 
-    Comms::Connect(address,port);
+    Comms::Connect(address, port);
     return true;
 }
 

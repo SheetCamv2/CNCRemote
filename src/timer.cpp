@@ -49,7 +49,7 @@ void SleepMs(const unsigned int time)
 
 UTimer::UTimer()
 {
-#ifdef _USING_WINDOWS
+#if (_WIN32 || _WIN64)
     QueryPerformanceFrequency(&m_frequency);
 #endif
     Restart();
@@ -57,7 +57,7 @@ UTimer::UTimer()
 
 void UTimer::Restart()
 {
-#ifdef _USING_WINDOWS
+#if (_WIN32 || _WIN64)
     QueryPerformanceCounter(&m_time);
 #else
     clock_gettime(CLOCK_MONOTONIC, &m_time);
@@ -66,7 +66,7 @@ void UTimer::Restart()
 
 uint64_t UTimer::GetElapsed(const bool restart)
 {
-#ifdef _USING_WINDOWS
+#if (_WIN32 || _WIN64)
     LARGE_INTEGER now;
     QueryPerformanceCounter(&now);
     LARGE_INTEGER ret;

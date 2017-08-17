@@ -77,6 +77,7 @@
 #include <io.h>
 #include <winsock2.h>
 #include <Ws2tcpip.h>
+#include "pstdint.h"
 
 #define IPTOS_LOWDELAY  0x10
 

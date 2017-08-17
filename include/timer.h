@@ -26,6 +26,9 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include <string>
 #include "pstdint.h"
 
+#if (_WIN32 || _WIN64)
+#include <windows.h>
+#endif
 
 using namespace std;
 
