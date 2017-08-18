@@ -13,4 +13,20 @@ IFS='.'; arr=($ver); unset IFS;
 echo "#define MAJOR_VER ${arr[0]}" >> version.h
 echo "#define MINOR_VER ${arr[1]}" >> version.h
 
+cd "$1"
+branch=`git rev-parse --short HEAD`
+targ="$home/../../../bin/plugins/i386-linux-gnu/linuxcncserver/how-to-build-cncremote-linuxcnc_$ver.txt"
+echo "To download the source files for LinuxCNC:" > $targ
+echo "git clone https://github.com/LinuxCNC/linuxcnc.git linuxcnc" >> $targ
+echo "cd linuxcnc" >> $targ
+echo "git checkout $branch" >> $targ
+echo "Follow the build instructions at <http://linuxcnc.org/docs/devel/html/code/building-linuxcnc.html>" >> $targ
+cd "$home"
+branch=`git rev-parse --short HEAD`
+echo "git clone https://github.com/sheetcam/CNCRemote.git cncremote" >> $targ
+echo "cd cncremote" >> $targ
+echo "git checkout $branch" >> $targ
+echo "Install CodeBlocks <www.codeblocks.org>" >> $targ
+echo "Using CodeBlocks open cncremote/drivers/linuxcnc/server/linuxcncserver.cbp and build it." >> $targ
+echo "For more information on building CNCRemote see cncremote/README.txt" >> $targ
 exit 0
