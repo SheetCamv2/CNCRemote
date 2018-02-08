@@ -231,7 +231,7 @@ bool Client::Connect(const unsigned int index, const CncString& address, const u
         if(index > m_plugins.size()) return false;
         m_plugin = &m_plugins[index - 1];
         m_plugin->Start();
-        Comms::Connect(L"localhost", port);
+        Comms::Connect("localhost", port);
     }else
 #endif
 
