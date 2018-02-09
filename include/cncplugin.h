@@ -26,18 +26,20 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include <string>
 
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
     #include "windows.h"
+	#include <tchar.h>
 	typedef std::wstring CncString; //wide string on Windows
+	typedef wchar_t CncChar;
 #if defined _MSC_VER && _MSC_VER < 1600 //some versions of MSVC don't include stdint
-	typedef unsigned __int32 uint32_t;
+	#include "pstdint.h"
 #else
     #include <stdint.h>
 #endif
-    #define _USING_WINDOWS
     #define LIBHANDLE HMODULE
 #else
 	typedef std::string CncString; //UTF-8 on Linux
+	typedef wchar CncChar;
     #include <stdint.h>
     #define LIBHANDLE void *
 #endif
@@ -48,7 +50,7 @@ extern "C" {
 #endif
 
 #ifdef _CREATING_CLIENT
-   #ifdef _USING_WINDOWS
+   #ifdef _WIN32
       #define EXPORT_CNC __declspec(dllimport)
       #define IMPORT_CNC __declspec(dllexport)
    #else
@@ -61,10 +63,10 @@ extern "C" {
     typedef const char * (* CNCGETNAMEFUNC)();
 	typedef void (* CNCQUITFUNC) ();
 	typedef void (* CNCPOLLFUNC) ();
-	typedef uint32_t (* CNCCONTROLEXISTSFUNC) (const char * );
+	typedef uint32_t (* CNCCONTROLEXISTSFUNC) (const CncChar * path);
 
 #else
-    #ifdef _USING_WINDOWS
+    #ifdef _WIN32
       #define EXPORT_CNC __declspec(dllexport)
       #define IMPORT_CNC __declspec(dllimport)
     #else
@@ -105,7 +107,7 @@ extern "C" {
 #endif
 
 
-#ifdef _USING_WINDOWS
+#ifdef _WIN32
 /* Convert UTF8 to Windows WCHAR
 */
 CncString from_utf8(const char * string);

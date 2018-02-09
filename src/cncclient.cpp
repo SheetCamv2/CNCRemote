@@ -22,7 +22,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include "cncclient.h"
 #include <time.h>
 
-#ifdef _USING_WINDOWS
+#ifdef _WIN32
 #include "Shlwapi.h"
 #else
 #include <dlfcn.h>
@@ -51,7 +51,7 @@ Client::~Client()
     {
         Plugin &plg = m_plugins[ct];
         plg.Quit();
-#ifdef _USING_WINDOWS
+#ifdef _WIN32
         FreeLibrary(plg.handle);
 #else
         dlclose(plg.handle);
@@ -67,7 +67,7 @@ bool Client::LoadPlugins(const CncString& path)
 {
     if(m_plugins.size() > 0) return true; //Only enumerate plugins once
 
-#ifdef _USING_WINDOWS
+#ifdef _WIN32
     /*
     	WCHAR buf[MAX_PATH];
         DWORD length = GetModuleFileNameW( NULL, buf, MAX_PATH );
@@ -105,7 +105,7 @@ bool Client::LoadPlugins(const CncString& path)
                 !plg.Quit ||
                 !plg.Poll ||
                 !plg.ControlExists ||
-                plg.ControlExists() == false)
+                plg.ControlExists(path.c_str()) == false)
         {
             FreeLibrary(plg.handle);
         }
@@ -231,7 +231,7 @@ bool Client::Connect(const unsigned int index, const CncString& address, const u
         if(index > m_plugins.size()) return false;
         m_plugin = &m_plugins[index - 1];
         m_plugin->Start();
-        Comms::Connect("localhost",port);
+        Comms::Connect(_T("localhost"),port);
     }else
 #endif
 

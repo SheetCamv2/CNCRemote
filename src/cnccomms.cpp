@@ -34,6 +34,7 @@ Comms::Comms(CActiveSocket *socket, Server * server)
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
     m_socket = socket;
+	m_socketTimeout = 0;
     m_socket->DisableNagleAlgoritm();
     m_connState = (CONNSTATE)-1;
 }
@@ -42,6 +43,7 @@ Comms::Comms()
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
     m_socket = NULL;
+	m_socketTimeout = 0;
     m_connState = (CONNSTATE)-1;
     m_connTime = CONN_RETRY_START;
 }
@@ -54,6 +56,13 @@ Comms::~Comms()
     }
 }
 #define RX_BUFFER_SIZE 1024
+
+
+bool Comms::IsLocal()
+{
+	if(!m_socket) return true;
+	return(m_socket->GetClientAddrRaw() == 0x100007E);
+}
 
 void Comms::Connect(const CncString& address, const uint32_t port)
 {
@@ -69,7 +78,7 @@ void Comms::Connect(const CncString& address, const uint32_t port)
 COMERROR Comms::Poll()
 {
     if(!m_socket) return errNOSOCKET;
-    if(m_connState == connNONE && !m_address.empty()) //try to auto reconnect if client
+    if(m_connState == connNONE && !m_address.empty()) //try to auto reconnect if client disconnects
     {
         if(m_connTimer.GetElapsed() < m_connTime) return errCONNECT;
         m_connTimer.Restart();
@@ -81,7 +90,8 @@ COMERROR Comms::Poll()
         m_socket->Close();
         m_socket->Initialize();
         SetTimeout(m_socketTimeout);
-        bool ok = m_socket->Open(m_address.c_str(), m_port);
+		m_socket->SetConnectTimeout(0,5000); //5ms timeout
+        bool ok = m_socket->Open(to_utf8(m_address).c_str(), m_port);
         if(!ok)
         {
             Connected(connNONE);
@@ -98,7 +108,8 @@ COMERROR Comms::Poll()
     {
         CSimpleSocket::CSocketError e = m_socket->GetSocketError();
         if(e== CSimpleSocket::SocketEwouldblock ||
-           e == CSimpleSocket::SocketInterrupted)
+           e == CSimpleSocket::SocketInterrupted ||
+		   e == CSimpleSocket::SocketSuccess)
         {
             if(m_connTimer.GetElapsed() > CONN_TIMEOUT)
             {
@@ -217,11 +228,12 @@ bool Comms::SendPacket(const Packet &packet)
     string s;
     s.append((char *)&packet.cmd, sizeof(packet.cmd));
     s += packet.data;
-    int size = s.size() + (s.size() / 254) + 2; //maximum data size after encoding plus zero endo of packet
-    uint8_t d[size];
+    int size = s.size() + (s.size() / 254) + 2; //maximum data size after encoding plus null string terminator
+    uint8_t* d = new uint8_t[size];
     size = CobsEncode((const uint8_t *)s.data(), s.size(), d);
     d[size++] = 0;
     int sent = m_socket->Send(d, size);
+	delete d;
     if(sent <=0 || sent != size)
     {
         if(m_socket->GetSocketError() == CSimpleSocket::SocketInvalidSocket)

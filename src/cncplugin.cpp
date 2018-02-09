@@ -22,7 +22,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include <string.h>
 #include <string>
 
-#ifdef _USING_WINDOWS
+#ifdef _WIN32
 #include "Shlwapi.h"
 using namespace std;
 
@@ -76,7 +76,7 @@ std::string to_utf8(const CncString& string)
 
 FILE * ufopen(const char * file, const char * mode)
 {
-#ifdef _USING_WINDOWS
+#ifdef _WIN32
     FILE * ret = _wfopen(from_utf8(file).c_str(), from_utf8(mode).c_str());
     return ret;
 #else

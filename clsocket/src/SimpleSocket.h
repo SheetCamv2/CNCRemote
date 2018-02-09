@@ -77,7 +77,11 @@
 #include <io.h>
 #include <winsock2.h>
 #include <Ws2tcpip.h>
-
+#if defined _MSC_VER && _MSC_VER < 1600 //some versions of MSVC don't include stdint
+	#include "pstdint.h"
+#else
+    #include <stdint.h>
+#endif
 #define IPTOS_LOWDELAY  0x10
 
 #endif

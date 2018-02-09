@@ -896,7 +896,7 @@ bool CSimpleSocket::SetNonblocking(void)
 {
     int32  nCurFlags;
 
-#if WIN32
+#ifdef WIN32
     nCurFlags = 1;
 
     if (ioctlsocket(m_socket, FIONBIO, (ULONG *)&nCurFlags) != 0)
@@ -935,7 +935,7 @@ bool CSimpleSocket::SetBlocking(void)
 {
     int32 nCurFlags;
 
-#if WIN32
+#ifdef WIN32
     nCurFlags = 0;
 
     if (ioctlsocket(m_socket, FIONBIO, (ULONG *)&nCurFlags) != 0)

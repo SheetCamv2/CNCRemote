@@ -23,7 +23,6 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #define Comms_H
 #if defined(_WIN32) | defined(_WIN64)
 #include <winsock2.h>
-#include "winpthreads.h"
 #endif
 
 #include <time.h>
@@ -82,6 +81,8 @@ public:
     Comms(CActiveSocket *socket, Server * server = NULL);
     Comms();
     virtual ~Comms();
+
+	bool IsLocal(); //Returns true if the connection is to the local host
 
     void SetSocket(CActiveSocket *socket)
     {
