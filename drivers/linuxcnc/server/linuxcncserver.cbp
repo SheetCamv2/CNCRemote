@@ -63,7 +63,6 @@
 				<Linker>
 					<Add option="-s" />
 					<Add library="protobuf-lite-3.1.0" />
-					<Add library="zmq-4.2.3" />
 					<Add library="linuxcnchal" />
 					<Add library="linuxcnc" />
 					<Add library="nml" />

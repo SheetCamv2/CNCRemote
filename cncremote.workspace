@@ -5,5 +5,6 @@
 		<Project filename="drivers/linuxcnc/server/linuxcncserver.cbp" />
 		<Project filename="drivers/Sim/plugin/simplugin.cbp" />
 		<Project filename="drivers/Sim/server/sim.cbp" />
+		<Project filename="../scanything.cbp" />
 	</Workspace>
 </CodeBlocks_workspace_file>

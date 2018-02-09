@@ -235,7 +235,7 @@ bool Client::Connect(const unsigned int index, const CncString& address, const u
     }else
 #endif
 
-    Comms::Connect(address,port);
+    Comms::Connect(address, port);
     return true;
 }
 
