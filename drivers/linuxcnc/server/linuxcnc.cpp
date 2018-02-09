@@ -160,6 +160,12 @@ public:
             break;
 
         case cmdBLOCKDEL:
+            {
+                EMC_TASK_PLAN_SET_BLOCK_DELETE emc_task_plan_set_block_delete_msg;
+                emc_task_plan_set_block_delete_msg.state = cmd.state();
+                emcCommandSend(emc_task_plan_set_block_delete_msg);
+            }
+
             break;
 
         case cmdSINGLESTEP:

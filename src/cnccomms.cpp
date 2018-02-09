@@ -236,7 +236,7 @@ bool Comms::SendPacket(const Packet &packet)
 
 bool Comms::SendCommand(const uint16_t cmd)
 {
-    if(m_socket < 0) return false;
+    if(m_socket == NULL) return false;
     Packet packet;
     packet.cmd = cmd;
     return SendPacket(packet);
