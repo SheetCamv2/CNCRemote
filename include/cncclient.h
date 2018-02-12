@@ -59,9 +59,9 @@ public:
     //If you add functions you must also update Comms::CMDTYPE
     void DrivesOn(const bool state); //Turn drives/control on
     void JogVel(const Axes& velocities); //jog axes at the given rates. Use axis values of 0 to stop jogging.
-    void Mdi(const string line); //execute MDI command
+    void Mdi(const string& line); //execute MDI command
     void SetFRO(const double percent); //set feed rate override (1 = 100%)
-    void LoadFile(const string file); //load file
+    bool OpenFile(const string& file); //Open file. If server is remote, uploads file then opens it. Returns true if succeeded
 	void CloseFile(); //Close any loaded files (some controls lock the file they have open)
     void CycleStart(); //cycle start
     void Stop(); //Stop execution
@@ -70,6 +70,8 @@ public:
     void SingleStep(const bool state); //Turn single stepping on/off
     void OptionalStop(const bool state); //Turn optional stop stepping on/off
 
+
+	string FileName(const string& path); //Helper returns file name end extension extracted from path
 
 protected:
 	virtual void HandlePacket(const Packet & pkt);

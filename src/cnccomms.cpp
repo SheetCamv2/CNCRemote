@@ -60,6 +60,7 @@ Comms::~Comms()
 
 bool Comms::IsLocal()
 {
+return false;
 	if(!m_socket) return true;
 	return(m_socket->GetClientAddrRaw() == 0x100007E);
 }
@@ -109,7 +110,8 @@ COMERROR Comms::Poll()
         CSimpleSocket::CSocketError e = m_socket->GetSocketError();
         if(e== CSimpleSocket::SocketEwouldblock ||
            e == CSimpleSocket::SocketInterrupted ||
-		   e == CSimpleSocket::SocketSuccess)
+		   e == CSimpleSocket::SocketSuccess ||
+		   e == CSimpleSocket::SocketTimedout)
         {
             if(m_connTimer.GetElapsed() > CONN_TIMEOUT)
             {

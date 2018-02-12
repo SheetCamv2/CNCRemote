@@ -32,9 +32,9 @@ Server::Server()
     m_socket->Initialize();
     SetTimeout(0);
     m_listening = false;
-    pthread_mutex_init(&m_stateLock, NULL);
-    pthread_mutex_init(&m_syncLock, NULL);
-    pthread_mutex_lock(&m_syncLock);
+    MUTEX_CREATE(m_stateLock);
+    MUTEX_CREATE(m_syncLock);
+    MUTEX_LOCK(m_syncLock);
     m_statePacket.cmd = Comms::cmdNULL;
     m_state.set_gcode_units(1);
 }
@@ -79,9 +79,9 @@ COMERROR Server::Bind(const uint32_t port)
 
 COMERROR Server::Poll()
 {
-    pthread_mutex_unlock(&m_syncLock);
+    MUTEX_UNLOCK(&m_syncLock);
     CActiveSocket * client = m_socket->Accept();
-    pthread_mutex_lock(&m_syncLock);
+    MUTEX_LOCK(&m_syncLock);
     if(client)
     {
         printf("Accepting connection from %s\n", client->GetClientAddr());
@@ -97,10 +97,10 @@ COMERROR Server::Poll()
     if(m_conns.size() > 0)
     {
         UpdateState();
-        pthread_mutex_lock(&m_stateLock);
+        MUTEX_LOCK(&m_stateLock);
         m_state.SerializeToString(&m_statePacket.data);
         m_statePacket.cmd = Comms::cmdSTATE;
-        pthread_mutex_unlock(&m_stateLock);
+        MUTEX_UNLOCK(&m_stateLock);
     }
     return errOK;
 }
@@ -121,11 +121,12 @@ void Server::RemoveConn(Connection * conn)
 Packet Server::GetState()
 {
     Packet ret;
-    pthread_mutex_lock(&m_stateLock);
+    MUTEX_LOCK(&m_stateLock);
     ret = m_statePacket;
-    pthread_mutex_unlock(&m_stateLock);
+    MUTEX_UNLOCK(&m_stateLock);
     return ret;
 }
+
 
 Connection::Connection(CActiveSocket * socket, Server * server) : Comms(socket, server)
 {
@@ -133,46 +134,17 @@ Connection::Connection(CActiveSocket * socket, Server * server) : Comms(socket, 
     m_server = server;
     m_thread = 0;
     m_closing = false;
+	m_loadFile = NULL;
+	m_loadLength = 0;
+	m_loadCount = 0;
 }
 
 Connection::~Connection()
 {
-    m_server->RemoveConn(this);
+    RemoveTemp();
+	printf("%s disconnected\n", m_socket->GetClientAddr());
+	m_server->RemoveConn(this);
 }
-
-/*
-COMERROR Connection::Connect(const CncString address)
-{
-    Disconnect();
-    int ok;
-    m_socket = zmq_socket(m_context, ZMQ_ROUTER);
-    if(m_socket == NULL) return errSOCKET;
-    ok = zmq_bind(m_socket, to_utf8(address).c_str());
-    if(ok < 0)
-    {
-        zmq_close(m_socket);
-        m_socket = NULL;
-        return errBIND;
-    }
-    return errOK;
-}*/
-
-/*
-COMERROR Connection::SendState(const string& id)
-{
-    if(!m_socket)
-    {
-        return errNOSOCKET;
-    }
-    if(!SendCommand(cmdSTATE, this))
-    {
-        return errFAILED;
-    }
-    return errOK;
-}*/
-
-
-
 
 #include "timer.h"
 TestTimer ttm("packet");
@@ -198,6 +170,20 @@ COMERROR Connection::Run()
     }
     SetTimeout(CONN_TIMEOUT / 2000000); //Half of CONN_TIMEOUT time. CONN_TIMEOUT is in microseconds.
 
+#ifdef _WIN32
+    m_thread = CreateThread(
+        NULL,                   // default security attributes
+        0,                      // use default stack size
+        Entry,                  // thread function name
+        this,                   // argument to thread function
+        0,                      // use default creation flags
+        NULL);                  // returns the thread identifier
+
+    if(m_thread == NULL)
+    {
+        return errNOTHREAD;
+    }
+#else
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
@@ -206,26 +192,98 @@ COMERROR Connection::Run()
     {
         return errNOTHREAD;
     }
+#endif // _WIN32
     return errOK;
 }
 
+#ifdef _WIN32
+DWORD WINAPI Connection::Entry( LPVOID param )
+#else
 void * Connection::Entry(void * param)
+#endif // _WIN32
 {
     Connection * c = (Connection *) param;
-    void * ret = c->Entry();
+    c->Entry();
     delete c;
-    return(ret);
+    return(NULL);
 }
 
-void * Connection::Entry()
+void Connection::Entry()
 {
-    while(!m_closing && Poll() != errCONNECT)
+    SetTimeout(0.005);
+	while(!m_closing && Poll() != errCONNECT)
     {
     }
-    return NULL;
 }
 
+void Connection::RemoveTemp()
+{
+	if(m_loadFile) fclose(m_loadFile);
+	m_loadFile = NULL;
+	if(m_tempFileName.size() > 0)
+	{
+#ifdef _WIN32
+		_wremove(m_tempFileName.c_str());
+#else	
+		remove(m_tempFileName.c_str());
+#endif
+		m_tempFileName.clear();
+	}
+}
 
+void Connection::RecieveFileInit(const CmdBuf& cmd)
+{
+	RemoveTemp();
+#ifdef _WIN32
+	wchar_t buf[MAX_PATH];
+	if(GetEnvironmentVariableW(_T("TEMP"), buf, MAX_PATH) == 0)
+	{
+		printf("Failed to find temp directory");
+		return;
+	}
+	CncString path = buf;
+	path += _T("\\CNCRemote");
+	if(_wmkdir(path.c_str()) < 0 && errno != EEXIST)
+	{
+		printf("Failed to make temp directory");
+		return;
+	}
+	path += _T('\\');
+	path += from_utf8(cmd.string().c_str());
+	m_loadFile = _wfopen(path.c_str(), _T("wb"));
+	if(!m_loadFile)
+	{
+		printf("Failed to create temp file");
+		return;
+	}
+	m_tempFileName = path;
+	m_loadLength = cmd.intval();
+	m_loadCount = 0;
+#else
+#endif
+}
+
+void Connection::RecieveFileData(const CmdBuf& cmd)
+{
+	if(!m_loadFile)
+	{
+		printf("Unexpected file data");
+		return;
+	}
+	int len = cmd.string().size();
+	fwrite(cmd.string().data(), 1, len, m_loadFile);
+	m_loadCount += len;
+	if(m_loadCount < m_loadLength)
+	{
+		return;
+	}
+	fclose(m_loadFile);
+	m_loadFile = NULL;
+	if(m_loadCount != m_loadLength)
+	{
+		printf("Received file is wrong length");
+	}
+}
 
 
 } //namespace CncRemote

@@ -16,7 +16,7 @@ You should have received a copy of the Mozilla Public License
 along with this program; if not, you can obtain a copy from mozilla.org
 ******************************************************************/
 
-
+#define MAX_FILE_PACKET 1024
 
 
 #include "cncclient.h"
@@ -182,7 +182,6 @@ void Client::HandlePacket(const Packet & pkt)
     {
         StateBuf buf;
         buf.ParseFromString(pkt.data);
-int a = pkt.data.size();
         m_state.MergeFrom(buf);
     }
     break;
@@ -279,7 +278,7 @@ void Client::JogVel(const Axes& velocities)
     SendCommand(cmdJOGVEL, cmd);
 }
 
-void Client::Mdi(const string line)
+void Client::Mdi(const string& line)
 {
     CmdBuf cmd;
     cmd.set_string(line);
@@ -294,11 +293,50 @@ void Client::SetFRO(const double percent)
     SendCommand(cmdFRO, cmd);
 }
 
-void Client::LoadFile(const string file)
+string Client::FileName(const string& path)
 {
-    CmdBuf cmd;
-    cmd.set_string(file);
-    SendCommand(cmdFILE, cmd);
+#ifdef _WIN32
+	size_t idx = path.rfind(_T('\\')); 
+#else
+	size_t idx = path.rfind(_T('/')); 
+#endif
+	if(idx == std::string::npos)
+	{
+		idx = 0;
+	}else
+	{
+		idx++;
+	}
+	return path.substr(idx);
+}
+
+bool Client::OpenFile(const string& file)
+{
+	CmdBuf cmd;
+    if(IsLocal())
+	{
+		cmd.set_string(file);
+		SendCommand(cmdFILE, cmd);
+		return true;
+	}
+	FILE * fil = ufopen(file.c_str(), "rb");
+	if(!fil) return false;
+	fseek(fil, 0, SEEK_END);
+	cmd.set_intval(ftell(fil));
+	cmd.set_string(FileName(file));
+	if(! SendCommand(cmdSENDFILEINIT, cmd)) return false;
+	fseek(fil, 0, SEEK_SET);
+	char buf[MAX_FILE_PACKET];
+	size_t bytes = fread(buf, 1, MAX_FILE_PACKET, fil);
+	while(bytes)
+	{
+		cmd.set_string(buf, bytes);
+		bytes = fread(buf, 1, MAX_FILE_PACKET, fil);
+		SendCommand(cmdSENDFILEDATA, cmd);
+	}
+	cmd.set_string(file);
+	SendCommand(cmdFILE, cmd);
+	return true;
 }
 
 void Client::CloseFile()

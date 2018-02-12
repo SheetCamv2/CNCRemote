@@ -21,7 +21,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 #ifndef Comms_H
 #define Comms_H
-#if defined(_WIN32) | defined(_WIN64)
+#ifdef _WIN32
 #include <winsock2.h>
 #endif
 
@@ -30,6 +30,18 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include "cncplugin.h"
 #include "PassiveSocket.h"
 #include "timer.h"
+
+#ifdef _WIN32
+#define MUTEX HANDLE
+#define MUTEX_LOCK(mutex) WaitForSingleObject(mutex, INFINITE)
+#define MUTEX_UNLOCK(mutex) ReleaseMutex(mutex)
+#define MUTEX_CREATE(mutex) mutex = CreateMutex(NULL, false, NULL);
+#else
+#define MUTEX pthread_mutex_t
+#define MUTEX_LOCK(mutex) pthread_mutex_lock(&mutex)
+#define MUTEX_UNLOCK(mutex) pthread_mutex_unlock(&mutex)
+#define MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
+#endif // _WIN32
 
 using namespace std;
 
@@ -111,16 +123,16 @@ public:
         cmdJOGSTEP,  //Axes. Jog the given amount
         cmdMDI,		//string
         cmdFRO,		//float
-        cmdFILE,	//string
-        cmdCLOSEFILE, //none
+        cmdFILE,	//string. Open file. If the client and server are on different machines this path is relative to the temp folder.
+        cmdCLOSEFILE, //none. Close current file
         cmdSTART,	//none
         cmdSTOP,	//none
         cmdPAUSE,	//none
         cmdBLOCKDEL,	//boolean
         cmdSINGLESTEP,	//boolean
         cmdOPTSTOP,		//boolean
-        cmdSENDFILE,	//string
-        cmdREQFILE,
+        cmdSENDFILEINIT,	//string, intval. String is file name (note: just the file name excluding path), intval is the length
+        cmdSENDFILEDATA,	//raw file data in packets of up to 1024 bytes
         cmdFLOOD,		//boolean
         cmdMIST,		//boolean
         cmdSPINDLE, //integer: one of spinOFF,spinFWD,spinREV

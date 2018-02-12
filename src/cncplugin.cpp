@@ -20,7 +20,6 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include "cncplugin.h"
 #include <stdio.h>
 #include <string.h>
-#include <string>
 
 #ifdef _WIN32
 #include "Shlwapi.h"
