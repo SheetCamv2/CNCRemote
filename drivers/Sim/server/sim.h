@@ -24,15 +24,16 @@ along with this program; if not, you can obtain a copy from mozilla.org
 using namespace std;
 using namespace CncRemote;
 
+
 class Sim : public CncRemote::Server
 {
 public:
-    virtual void HandlePacket(const Packet & pkt);
+    Sim();
     virtual void UpdateState();
+    virtual Connection * CreateConnection(CActiveSocket * client, Server * server);
     bool Poll();
 
 private:
-    CncRemote::Axes m_jogVel;
 };
 
 #endif

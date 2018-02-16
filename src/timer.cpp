@@ -21,7 +21,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 #include "timer.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include "windows.h"
 #elif _POSIX_C_SOURCE >+ 199309L
 #include <time.h> //for nanosleep
@@ -34,7 +34,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 void SleepMs(const unsigned int time)
 {
-#ifdef WIN32
+#ifdef _WIN32
     Sleep(time);
 #elif _POSIX_C_SOURCE >+ 199309L
     struct timespec ts;

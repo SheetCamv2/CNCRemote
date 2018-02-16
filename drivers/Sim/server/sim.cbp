@@ -6,28 +6,34 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Debug-Windows">
+			<Target title="Debug-Windows-VC9">
 				<Option platforms="Windows;" />
 				<Option output="../../../bin/drivers/win32/$(PROJECT_NAME)d" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
-				<Option compiler="gcc" />
+				<Option compiler="msvc8" />
 				<Option use_console_runner="0" />
+				<Option projectCompilerOptionsRelation="1" />
+				<Option projectLinkerOptionsRelation="1" />
 				<Compiler>
-					<Add option="-march=i686" />
-					<Add option="-g" />
-					<Add option="-std=c++11" />
+					<Add option="/MDd" />
+					<Add option="/GA" />
+					<Add option="/fp:fast" />
+					<Add option="/Zi" />
+					<Add option="/EHsc" />
+					<Add option="/DUNICODE" />
+					<Add option="/D_DEBUG" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../../cncremote/libraries/include" />
+					<Add directory="../../../clsocket/src" />
 				</Compiler>
 				<Linker>
-					<Add option="-m32" />
-					<Add library="protobuf-lite-3_1_0-32" />
-					<Add library="zmq-4_2_1-32" />
-					<Add library="ws2_32" />
-					<Add library="IPHLPAPI" />
-					<Add directory="../../../libraries/lib/i386-linux-gnu" />
+					<Add option="/DEBUG" />
+					<Add library="libprotobuf-lite-3_1_0-32d.lib" />
+					<Add library="ws2_32.lib" />
+					<Add library="IPHLPAPI.lib" />
+					<Add directory="../../../libraries/lib/win32/vc9" />
 				</Linker>
 			</Target>
 			<Target title="Debug-Linux">
@@ -79,12 +85,44 @@
 					<Add directory="../../../libraries/lib/i386-linux-gnu" />
 				</Linker>
 			</Target>
+			<Target title="Debug-Windows-GCC">
+				<Option platforms="Windows;" />
+				<Option output="../../../bin/drivers/win32/$(PROJECT_NAME)_d" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-march=i686" />
+					<Add option="-g" />
+					<Add option="-std=gnu++98" />
+					<Add option="-D_WIN32" />
+					<Add directory="../../../include" />
+					<Add directory="../../../src" />
+					<Add directory="../../../libraries/include" />
+					<Add directory="../../../clsocket/src" />
+				</Compiler>
+				<Linker>
+					<Add library="protobuf-lite-3.1.0" />
+					<Add library="zmq-4.2.3" />
+					<Add library="pthread" />
+					<Add directory="../../../libraries/lib/i386-linux-gnu" />
+				</Linker>
+			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 			<Add option="-DZMQ_STATIC" />
 		</Compiler>
+		<Unit filename="../../../clsocket/src/ActiveSocket.cpp" />
+		<Unit filename="../../../clsocket/src/ActiveSocket.h" />
+		<Unit filename="../../../clsocket/src/Host.h" />
+		<Unit filename="../../../clsocket/src/PassiveSocket.cpp" />
+		<Unit filename="../../../clsocket/src/PassiveSocket.h" />
+		<Unit filename="../../../clsocket/src/SimpleSocket.cpp" />
+		<Unit filename="../../../clsocket/src/SimpleSocket.h" />
+		<Unit filename="../../../clsocket/src/StatTimer.h" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
 		<Unit filename="../../../include/cncserver.h" />
@@ -94,6 +132,7 @@
 		<Unit filename="../../../src/cncserver.cpp" />
 		<Unit filename="../../../src/cncstatebuf.pb.cc" />
 		<Unit filename="../../../src/cncstatebuf.pb.h" />
+		<Unit filename="../../../src/timer.cpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="main.h" />
 		<Unit filename="sim.cpp" />

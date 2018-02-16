@@ -19,12 +19,28 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include "sim.h"
 
 
+struct MACHINESTATE
+{
+    bool controlOn;
+    bool paused;
+    bool blockDelete;
+    bool optStop;
+    bool running;
+    bool step;
+    double fro;
+    int curLine;
+} g_machineState;
+
+CncRemote::Axes g_jogVel;
+CncRemote::Axes g_curPos;
+
 const char *g_cmdNames[]={
     "cmdNULL",
     "cmdPING",
     "cmdSTATE",
     "cmdDRIVESON",
     "cmdJOGVEL",
+    "cmdJOGSTEP",
     "cmdMDI",
     "cmdFRO",
     "cmdFILE",
@@ -35,105 +51,141 @@ const char *g_cmdNames[]={
     "cmdBLOCKDEL",
     "cmdSINGLESTEP",
     "cmdOPTSTOP",
-    "cmdSENDFILE",
-    "cmdREQFILE",
+    "cmdSENDFILEINIT",
+    "cmdSENDFILEDATA",
 	"cmdCOOLANT",
     "cmdMIST",
     "cmdSPINDLE",
     "cmdHOME",
 };
 
-
-void Sim::HandlePacket(const Packet & pkt)
+class SimConnection : public Connection
 {
-    if(pkt.cmd < cmdMAX)
+public:
+    SimConnection(CActiveSocket * client, Server * server) : Connection(client, server)
     {
-        printf("Command %d %s\n", pkt.cmd, g_cmdNames[pkt.cmd]);
+        SetTimeout(1);
     }
 
-    CncRemote::CmdBuf cmd;
-    cmd.ParseFromString(pkt.data);
-    switch(pkt.cmd)
+    virtual ~SimConnection()
     {
-    case cmdDRIVESON:
-        set_control_on(cmd.state());
-        break;
 
-    case cmdJOGVEL:
-        m_jogVel = cmd.axes();
-        break;
+    }
 
-    case cmdMDI:
-        printf("MDI:%s\n", cmd.string().c_str());
-        break;
+    virtual void OnConnection()
+    {
 
-    case cmdFRO:
-        set_feed_override(cmd.rate());
-        break;
+    }
 
-    case cmdFILE:
-        break;
-
-    case cmdCLOSEFILE:
-        break;
-
-    case cmdSTART:
-        if(paused())
+    virtual void HandlePacket(const Packet& pkt)
+    {
+        CncRemote::CmdBuf cmd;
+        if(pkt.data.size() > 0 &&
+            !cmd.ParseFromString(pkt.data))
         {
-            set_paused(false);
-            break;
+            OnPacketError();
+            return;
         }
-        set_running(true);
-        break;
+        if(pkt.cmd < cmdMAX && pkt.cmd != cmdSTATE)
+        {
+            printf("Command %d %s\n", pkt.cmd, g_cmdNames[pkt.cmd]);
+        }
+        switch(pkt.cmd)
+        {
+        case cmdDRIVESON:
+            g_machineState.controlOn = cmd.state();
+            break;
 
-    case cmdSTOP:
-        set_running(false);
-        break;
+        case cmdJOGVEL:
+            g_jogVel.CopyFrom(cmd.axes());
+            break;
 
-    case cmdPAUSE:
-        set_paused(true);
-        break;
+        case cmdMDI:
+            printf("MDI:%s\n", cmd.string().c_str());
+            break;
 
-    case cmdBLOCKDEL:
-        set_block_delete(cmd.state());
-        break;
+        case cmdFRO:
+            g_machineState.fro = cmd.rate();
+            break;
 
-    case cmdSINGLESTEP:
-        set_single_step(cmd.state());
-        break;
+        case cmdFILE:
+            break;
 
-    case cmdOPTSTOP:
-        set_optional_stop(cmd.state());
-        break;
+        case cmdCLOSEFILE:
+            break;
+
+        case cmdSTART:
+            if(g_machineState.paused)
+            {
+                g_machineState.paused = false;
+                break;
+            }
+            g_machineState.running = true;
+            break;
+
+        case cmdSTOP:
+            g_machineState.running = false;
+            break;
+
+        case cmdPAUSE:
+            g_machineState.paused = true;
+            break;
+
+        case cmdBLOCKDEL:
+            g_machineState.blockDelete = cmd.state();
+            break;
+
+        case cmdSINGLESTEP:
+            g_machineState.step = cmd.state();
+            break;
+
+        case cmdOPTSTOP:
+            g_machineState.optStop = cmd.state();
+            break;
+
+		case cmdSENDFILEINIT:
+			RecieveFileInit(cmd);
+			break;
+
+		case cmdSENDFILEDATA:
+			RecieveFileData(cmd);
+			break;
+        }
     }
+};
+
+
+Sim::Sim()
+{
+    memset(&g_machineState, 0, sizeof(g_machineState));
 }
 
 void Sim::UpdateState()
 {
-    set_machine_connected(true);
-    set_control_on(true);
-/*    CncRemote::Axes& axes = *mutable_max_feed();
-    axes.set_x(1);
-    axes.set_y(1);
-    axes.set_z(1);
-    axes.set_a(1);
-    axes.set_b(1);
-    axes.set_c(1);*/
+    m_state.set_machine_connected(true);
+    m_state.set_control_on(g_machineState.controlOn);
+    CncRemote::Axes& axes = *m_state.mutable_abs_pos();
+
+}
+
+Connection * Sim::CreateConnection(CActiveSocket * client, Server * server)
+{
+    return new SimConnection(client, server);
 }
 
 bool Sim::Poll()
 {
-    CncRemote::Axes& axes = *mutable_abs_pos();
-    axes.set_x(axes.x() + m_jogVel.x());
-    axes.set_y(axes.y() + m_jogVel.y());
-    axes.set_z(axes.z() + m_jogVel.z());
-    axes.set_a(axes.a() + m_jogVel.a());
-    axes.set_b(axes.b() + m_jogVel.b());
-    axes.set_c(axes.c() + m_jogVel.c());
-    if(running() && !paused())
+    CncRemote::Axes& axes = g_curPos;
+    axes.set_x(axes.x() + g_jogVel.x());
+    axes.set_y(axes.y() + g_jogVel.y());
+    axes.set_z(axes.z() + g_jogVel.z());
+    axes.set_a(axes.a() + g_jogVel.a());
+    axes.set_b(axes.b() + g_jogVel.b());
+    axes.set_c(axes.c() + g_jogVel.c());
+    if(g_machineState.running && !g_machineState.paused)
     {
-        set_current_line(current_line() + 1);
-        if(single_step()) set_paused(true);
+        g_machineState.curLine++;
+        if(g_machineState.step) g_machineState.paused = true;
     }
     return(Server::Poll());
 }

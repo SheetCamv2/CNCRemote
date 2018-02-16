@@ -43,36 +43,52 @@ public:
     COMERROR Run(); //Start this connection in a new thread. Returns immediately after the thread has been created.
 
 protected:
+	void RemoveTemp();
+	void RecieveFileInit(const CmdBuf& cmd); //Helper to handle cmdSENDFILEINIT
+	void RecieveFileData(const CmdBuf& cmd); //Helper to handle cmdSENDFILEDATA
+
 
     string m_curId;
     CActiveSocket * m_socket;
     Server * m_server;
+	FILE * m_loadFile;
+	int m_loadLength;
+	int m_loadCount;
+	CncString m_tempFileName;
 
 private:
+#ifdef _WIN32
+    static DWORD WINAPI Entry( LPVOID param );
+#else
     static void * Entry(void * param);
-    void * Entry();
+#endif // _WIN32
+    void Entry();
 
     bool m_closing;
+#ifdef _WIN32
+    HANDLE m_thread;
+#else
     pthread_t m_thread;
+#endif
 };
 
 //simple class to handle locking. Mutex remains locked for the lifetime of this object.
 class MutexLocker
 {
 public:
-    MutexLocker(pthread_mutex_t * mutex)
+    MutexLocker(MUTEX * mutex)
     {
         m_mutex = mutex;
-        pthread_mutex_lock(mutex);
+        MUTEX_LOCK(mutex);
     }
 
     ~MutexLocker()
     {
-        pthread_mutex_unlock(m_mutex);
+        MUTEX_UNLOCK(m_mutex);
     }
 
 private:
-    pthread_mutex_t * m_mutex;
+    MUTEX * m_mutex;
 };
 
 class Server
@@ -99,8 +115,8 @@ protected:
     StateBuf m_state;
     Packet m_packet;
     Packet m_statePacket;
-    pthread_mutex_t m_stateLock;
-    pthread_mutex_t m_syncLock;
+    MUTEX m_stateLock;
+    MUTEX m_syncLock;
 private:
 
 };
