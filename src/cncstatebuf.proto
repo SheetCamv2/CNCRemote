@@ -30,7 +30,7 @@ message BoolAxes {
 
 //this data is sent from the server to the client(s) whenever it is available
 message StateBuf {
-    required int32 heartbeat = 1; //Heartbeat count from last received command
+//    required int32 heartbeat = 1; //Heartbeat count from last received command
     optional Axes abs_pos = 2; //Axes in machine coordinates (in metric units)
     optional Axes offset_work = 3; //Work offsets (in metric units)
     optional Axes offset_fixture = 4; //Fixture offsets (in metric units)
@@ -61,7 +61,7 @@ message StateBuf {
 
 //used for commands and responses
 message CmdBuf{
-    required int32 heartbeat = 1; //Heartbeat count. Incremented once per command sent
+//    required int32 heartbeat = 1; //Heartbeat count. Incremented once per command sent
     optional string string = 2;
     optional bool state = 3;
     optional Axes axes = 4;

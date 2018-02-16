@@ -35,7 +35,6 @@ public:
 
     Connection(CActiveSocket * socket, Server * server);
     virtual ~Connection();
-//    COMERROR SendState(const string& id); //Send status to connected clients. Call after setting any status values. Should be called at least twice a second even if no new data is available.
     void Close();
     COMERROR Poll(); //Call at least as often as you need to send/receive data. Only needed if this connection isn't running in it's own thread
     virtual void UpdateState(); //Called just before state is sent out. Default code just grabs state from the server and sends it out. Override this if you need to add your own state data.
@@ -117,6 +116,7 @@ protected:
     Packet m_statePacket;
     MUTEX m_stateLock;
     MUTEX m_syncLock;
+	int32_t m_heartBeat;
 private:
 
 };

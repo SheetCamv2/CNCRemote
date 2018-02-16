@@ -216,8 +216,8 @@ void Comms::CobsDecode(const uint8_t *ptr, size_t length)
         if (code < 0xFF && ptr != end)
             m_packet.data.push_back((char)0);
     }
-    memcpy(&m_packet.cmd, m_packet.data.data(), sizeof(m_packet.cmd));
-    m_packet.data.erase(0, sizeof(m_packet.cmd));
+    memcpy(&m_packet.hdr, m_packet.data.data(), sizeof(m_packet.hdr));
+    m_packet.data.erase(0, sizeof(m_packet.hdr));
     HandlePacket(m_packet);
 }
 
@@ -226,7 +226,7 @@ bool Comms::SendPacket(const Packet &packet)
     if(!m_socket || m_connState == connNONE) return false;
 
     string s;
-    s.append((char *)&packet.cmd, sizeof(packet.cmd));
+    s.append((char *)&packet.hdr, sizeof(packet.hdr));
     s += packet.data;
     int size = s.size() + (s.size() / 254) + 2; //maximum data size after encoding plus null string terminator
     uint8_t* d = new uint8_t[size];

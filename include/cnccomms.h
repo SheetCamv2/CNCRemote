@@ -59,9 +59,21 @@ namespace CncRemote
 
 class Server;
 
+#ifdef __GNUC__
+#define PACKED( class_to_pack ) class_to_pack __attribute__((__packed__));
+#else
+#define PACKED( class_to_pack ) __pragma( pack(push, 1) ) class_to_pack __pragma( pack(pop) )
+#endif
+
 struct Packet
 {
-    uint16_t cmd;
+    PACKED(
+	struct
+	{
+		uint16_t cmd;
+		uint16_t heartBeat;
+	} hdr;
+	)
     string data;
 };
 
@@ -157,13 +169,14 @@ protected:
 
     virtual void HandlePacket(const Packet & pkt) = 0;
     virtual void OnPacketError() {};
+
+    Packet m_packet;
 private:
     CActiveSocket *m_socket;
     uint32_t m_port;
     CncString m_address;
 
     void Connected(const CONNSTATE state);
-    Packet m_packet;
     CONNSTATE m_connState;
     float m_socketTimeout;
     UTimer m_connTimer;

@@ -173,7 +173,14 @@ bool Client::LoadPlugins(const CncString& path)
 
 void Client::HandlePacket(const Packet & pkt)
 {
-    switch(pkt.cmd)
+    m_serverHeart = pkt.hdr.heartBeat;
+	if(m_busy &&
+		(m_busyHeart - m_serverHeart) < 0 )//We are in sync with machine state
+	{
+		m_busy = false;
+	}
+
+	switch(pkt.hdr.cmd)
     {
     case cmdNULL:
         break;
@@ -265,12 +272,7 @@ bool Client::Ping(int waitMs)
 
 bool Client::IsBusy()
 {
-	if((m_lastHeart - m_state.heartbeat() >= 0) && //Haven't received status update from machine yet
-		m_busy)
-	{
-		return true;
-	}
-	m_busy = false;
+	if(m_busy) return true;
 	return m_state.busy();
 }
 
@@ -434,9 +436,9 @@ void Client::HomeAll()
 bool Client::SendCommand(const uint16_t cmd)
 {
     CmdBuf buf;
-	
     Packet packet;
-    packet.cmd = cmd;
+	packet.hdr.heartBeat = ++m_heartBeat;
+    packet.hdr.cmd = cmd;
     return SendPacket(packet);
 }
 
@@ -464,10 +466,10 @@ bool Client::SendCommand(const uint16_t cmd, const string value)
 
 bool Client::SendCommand(const uint16_t command, CmdBuf& data)
 {
-	data.set_heartbeat(++m_heartBeat);
     Packet packet;
+	packet.hdr.heartBeat = ++m_heartBeat;
     data.SerializeToString(&packet.data);
-    packet.cmd = command;
+    packet.hdr.cmd = command;
     return SendPacket(packet);
 }
 

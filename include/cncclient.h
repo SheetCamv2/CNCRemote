@@ -78,7 +78,7 @@ public:
 
 protected:
 	virtual void HandlePacket(const Packet & pkt);
-	void SetBusy(){m_busy = true; m_lastHeart = m_heartBeat;} //Must be called if the last command sent may make the machine move
+	void SetBusy(){m_busy = true; m_busyHeart = m_heartBeat;} //Must be called if the last command sent may make the machine move
 	StateBuf m_state;
 
 private:
@@ -95,8 +95,9 @@ private:
 //	time_t m_timeout;
 	bool m_pingResp;
 	bool m_busy;
-	int32_t m_lastHeart;
-	int32_t m_heartBeat;
+	int16_t m_serverHeart;
+	int16_t m_busyHeart;
+	int16_t m_heartBeat;
 
 };
 

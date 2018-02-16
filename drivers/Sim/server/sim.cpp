@@ -29,6 +29,7 @@ struct MACHINESTATE
     bool step;
     double fro;
     int curLine;
+	int busy;
 } g_machineState;
 
 CncRemote::Axes g_jogVel;
@@ -86,11 +87,11 @@ public:
             OnPacketError();
             return;
         }
-        if(pkt.cmd < cmdMAX && pkt.cmd != cmdSTATE)
+        if(pkt.hdr.cmd < cmdMAX && pkt.hdr.cmd != cmdSTATE)
         {
-            printf("Command %d %s\n", pkt.cmd, g_cmdNames[pkt.cmd]);
+            printf("Command %d %s\n", pkt.hdr.cmd, g_cmdNames[pkt.hdr.cmd]);
         }
-        switch(pkt.cmd)
+        switch(pkt.hdr.cmd)
         {
         case cmdDRIVES_ON:
             g_machineState.controlOn = cmd.state();
@@ -101,6 +102,7 @@ public:
             break;
 
         case cmdMDI:
+			g_machineState.busy = 1000;
             printf("MDI:%s\n", cmd.string().c_str());
             break;
 
@@ -162,6 +164,15 @@ Sim::Sim()
 
 void Sim::UpdateState()
 {
+	m_state.set_busy(g_machineState.busy ||
+		g_machineState.running ||
+		g_jogVel.x() != 0 ||
+		g_jogVel.y() != 0 ||
+		g_jogVel.z() != 0 ||
+		g_jogVel.a() != 0 ||
+		g_jogVel.b() != 0 ||
+		g_jogVel.c() != 0);
+
     m_state.set_machine_connected(true);
     m_state.set_control_on(g_machineState.controlOn);
     CncRemote::Axes& axes = *m_state.mutable_abs_pos();
@@ -175,7 +186,12 @@ Connection * Sim::CreateConnection(CActiveSocket * client, Server * server)
 
 bool Sim::Poll()
 {
-    CncRemote::Axes& axes = g_curPos;
+    if(g_machineState.busy)
+	{
+		g_machineState.busy --;
+	}
+
+	CncRemote::Axes& axes = g_curPos;
     axes.set_x(axes.x() + g_jogVel.x());
     axes.set_y(axes.y() + g_jogVel.y());
     axes.set_z(axes.z() + g_jogVel.z());

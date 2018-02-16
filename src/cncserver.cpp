@@ -35,7 +35,7 @@ Server::Server()
     MUTEX_CREATE(m_stateLock);
     MUTEX_CREATE(m_syncLock);
     MUTEX_LOCK(m_syncLock);
-    m_statePacket.cmd = Comms::cmdNULL;
+    m_statePacket.hdr.cmd = Comms::cmdNULL;
     m_state.set_gcode_units(1);
 }
 
@@ -79,9 +79,9 @@ COMERROR Server::Bind(const uint32_t port)
 
 COMERROR Server::Poll()
 {
-    MUTEX_UNLOCK(&m_syncLock);
+    MUTEX_UNLOCK(m_syncLock);
     CActiveSocket * client = m_socket->Accept();
-    MUTEX_LOCK(&m_syncLock);
+    MUTEX_LOCK(m_syncLock);
     if(client)
     {
         printf("Accepting connection from %s\n", client->GetClientAddr());
@@ -96,11 +96,11 @@ COMERROR Server::Poll()
     }
     if(m_conns.size() > 0)
     {
+        MUTEX_LOCK(m_stateLock);
         UpdateState();
-        MUTEX_LOCK(&m_stateLock);
         m_state.SerializeToString(&m_statePacket.data);
-        m_statePacket.cmd = Comms::cmdSTATE;
-        MUTEX_UNLOCK(&m_stateLock);
+        m_statePacket.hdr.cmd = Comms::cmdSTATE;
+        MUTEX_UNLOCK(m_stateLock);
     }
     return errOK;
 }
@@ -121,9 +121,9 @@ void Server::RemoveConn(Connection * conn)
 Packet Server::GetState()
 {
     Packet ret;
-    MUTEX_LOCK(&m_stateLock);
+    MUTEX_LOCK(m_stateLock);
     ret = m_statePacket;
-    MUTEX_UNLOCK(&m_stateLock);
+    MUTEX_UNLOCK(m_stateLock);
     return ret;
 }
 
@@ -159,6 +159,7 @@ COMERROR Connection::Poll()
 void Connection::UpdateState()
 {
     Packet pkt = m_server->GetState();
+	pkt.hdr.heartBeat = m_packet.hdr.heartBeat;
     SendPacket(pkt);
 }
 
