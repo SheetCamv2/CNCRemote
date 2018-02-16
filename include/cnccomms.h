@@ -145,8 +145,6 @@ public:
         cmdOPT_STOP,		//boolean
         cmdSEND_FILE_INIT,	//string, intval. String is file name (note: just the file name excluding path), intval is the length
         cmdSEND_FILE_DATA,	//raw file data in packets of up to 1024 bytes
-        cmdFLOOD,		//boolean
-        cmdMIST,		//boolean
         cmdSPINDLE, //integer: one of spinOFF,spinFWD,spinREV
         cmdHOME,	//BoolAxes. All true = home all. otherwise ONE axis only.
 		cmdSPINDLE_OVER, //float
