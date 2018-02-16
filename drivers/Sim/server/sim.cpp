@@ -92,11 +92,11 @@ public:
         }
         switch(pkt.cmd)
         {
-        case cmdDRIVESON:
+        case cmdDRIVES_ON:
             g_machineState.controlOn = cmd.state();
             break;
 
-        case cmdJOGVEL:
+        case cmdJOG_VEL:
             g_jogVel.CopyFrom(cmd.axes());
             break;
 
@@ -111,7 +111,7 @@ public:
         case cmdFILE:
             break;
 
-        case cmdCLOSEFILE:
+        case cmdCLOSE_FILE:
             break;
 
         case cmdSTART:
@@ -127,27 +127,27 @@ public:
             g_machineState.running = false;
             break;
 
-        case cmdPAUSE:
+        case cmdFEED_HOLD:
             g_machineState.paused = true;
             break;
 
-        case cmdBLOCKDEL:
+        case cmdBLOCK_DEL:
             g_machineState.blockDelete = cmd.state();
             break;
 
-        case cmdSINGLESTEP:
+        case cmdSINGLE_STEP:
             g_machineState.step = cmd.state();
             break;
 
-        case cmdOPTSTOP:
+        case cmdOPT_STOP:
             g_machineState.optStop = cmd.state();
             break;
 
-		case cmdSENDFILEINIT:
+		case cmdSEND_FILE_INIT:
 			RecieveFileInit(cmd);
 			break;
 
-		case cmdSENDFILEDATA:
+		case cmdSEND_FILE_DATA:
 			RecieveFileData(cmd);
 			break;
         }

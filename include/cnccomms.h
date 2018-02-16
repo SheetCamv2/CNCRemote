@@ -31,6 +31,18 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include "PassiveSocket.h"
 #include "timer.h"
 
+#ifdef _WIN32
+#define MUTEX HANDLE
+#define MUTEX_LOCK(mutex) WaitForSingleObject(mutex, INFINITE)
+#define MUTEX_UNLOCK(mutex) ReleaseMutex(mutex)
+#define MUTEX_CREATE(mutex) mutex = CreateMutex(NULL, false, NULL);
+#else
+#define MUTEX pthread_mutex_t
+#define MUTEX_LOCK(mutex) pthread_mutex_lock(&mutex)
+#define MUTEX_UNLOCK(mutex) pthread_mutex_unlock(&mutex)
+#define MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
+#endif // _WIN32
+
 using namespace std;
 
 namespace CncRemote
@@ -119,8 +131,8 @@ public:
         cmdBLOCK_DEL,	//boolean
         cmdSINGLE_STEP,	//boolean
         cmdOPT_STOP,		//boolean
-        cmdSEND_FILE,	//string
-        cmdREQ_FILE,
+        cmdSEND_FILE_INIT,	//string, intval. String is file name (note: just the file name excluding path), intval is the length
+        cmdSEND_FILE_DATA,	//raw file data in packets of up to 1024 bytes
         cmdFLOOD,		//boolean
         cmdMIST,		//boolean
         cmdSPINDLE, //integer: one of spinOFF,spinFWD,spinREV
