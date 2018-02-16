@@ -182,7 +182,6 @@ void Client::HandlePacket(const Packet & pkt)
     {
         StateBuf buf;
         buf.ParseFromString(pkt.data);
-int a = pkt.data.size();
         m_state.MergeFrom(buf);
     }
     break;
@@ -264,19 +263,31 @@ bool Client::Ping(int waitMs)
     return m_pingResp;
 }
 
+bool Client::IsBusy()
+{
+	if((m_lastHeart - m_state.heartbeat() >= 0) && //Haven't received status update from machine yet
+		m_busy)
+	{
+		return true;
+	}
+	m_busy = false;
+	return m_state.busy();
+}
 
 void Client::DrivesOn(const bool state)
 {
     CmdBuf cmd;
     cmd.set_state(state);
-    SendCommand(cmdDRIVESON, cmd);
+    SendCommand(cmdDRIVES_ON, cmd);
+	SetBusy();
 }
 
 void Client::JogVel(const Axes& velocities)
 {
     CmdBuf cmd;
     *cmd.mutable_axes() = velocities;
-    SendCommand(cmdJOGVEL, cmd);
+    SendCommand(cmdJOG_VEL, cmd);
+	SetBusy();
 }
 
 void Client::Mdi(const string line)
@@ -284,15 +295,31 @@ void Client::Mdi(const string line)
     CmdBuf cmd;
     cmd.set_string(line);
     SendCommand(cmdMDI, cmd);
+	SetBusy();
 }
 
 
-void Client::SetFRO(const double percent)
+void Client::FeedOverride(const double percent)
 {
     CmdBuf cmd;
     cmd.set_rate(percent);
     SendCommand(cmdFRO, cmd);
 }
+
+void Client::SpindleOverride(const double percent)
+{
+    CmdBuf cmd;
+    cmd.set_rate(percent);
+    SendCommand(cmdFRO, cmd);
+}
+
+void Client::RapidOverride(const double percent)
+{
+    CmdBuf cmd;
+    cmd.set_rate(percent);
+    SendCommand(cmdFRO, cmd);
+}
+
 
 void Client::LoadFile(const string file)
 {
@@ -304,7 +331,7 @@ void Client::LoadFile(const string file)
 void Client::CloseFile()
 {
     CmdBuf cmd;
-    SendCommand(cmdCLOSEFILE, cmd);
+    SendCommand(cmdCLOSE_FILE, cmd);
 }
 
 
@@ -312,6 +339,7 @@ void Client::CycleStart()
 {
     CmdBuf cmd;
     SendCommand(cmdSTART, cmd);
+	SetBusy();
 }
 
 void Client::Stop()
@@ -320,11 +348,11 @@ void Client::Stop()
     SendCommand(cmdSTOP, cmd);
 }
 
-void Client::Pause(const bool state)
+void Client::FeedHold(const bool state)
 {
     CmdBuf cmd;
     cmd.set_state(state);
-    SendCommand(cmdPAUSE, cmd);
+    SendCommand(cmdFEED_HOLD, cmd);
 }
 
 
@@ -332,21 +360,116 @@ void Client::BlockDelete(const bool state)
 {
     CmdBuf cmd;
     cmd.set_state(state);
-    SendCommand(cmdBLOCKDEL, cmd);
+    SendCommand(cmdBLOCK_DEL, cmd);
 }
 
 void Client::SingleStep(const bool state)
 {
     CmdBuf cmd;
     cmd.set_state(state);
-    SendCommand(cmdSINGLESTEP, cmd);
+    SendCommand(cmdSINGLE_STEP, cmd);
+	SetBusy();
 }
 
 void Client::OptionalStop(const bool state)
 {
     CmdBuf cmd;
     cmd.set_state(state);
-    SendCommand(cmdOPTSTOP, cmd);
+    SendCommand(cmdOPT_STOP, cmd);
 }
+
+void Client::Home(const int axis)
+{
+	CmdBuf buf;
+	BoolAxes& axes = *buf.mutable_bool_axes();
+	switch(axis)
+	{
+	case 0:
+		axes.set_x(true);
+		break;
+
+	case 1:
+		axes.set_y(true);
+		break;
+
+	case 2:
+		axes.set_z(true);
+		break;
+
+	case 3:		
+		axes.set_a(true);
+		break;
+
+	case 4:		
+		axes.set_b(true);
+		break;
+
+	case 5:		
+		axes.set_c(true);
+		break;
+
+	default:
+		return;
+	}
+
+	SendCommand(cmdHOME, buf);	
+	SetBusy();
+}
+
+void Client::HomeAll()
+{
+	CmdBuf buf;
+	BoolAxes& axes = *buf.mutable_bool_axes();
+	axes.set_x(true);
+	axes.set_y(true);
+	axes.set_z(true);
+	axes.set_a(true);
+	axes.set_b(true);
+	axes.set_c(true);
+	SendCommand(cmdHOME, buf);	
+	SetBusy();
+}
+
+
+bool Client::SendCommand(const uint16_t cmd)
+{
+    CmdBuf buf;
+	
+    Packet packet;
+    packet.cmd = cmd;
+    return SendPacket(packet);
+}
+
+bool Client::SendCommand(const uint16_t cmd, const bool state)
+{
+    CmdBuf buf;
+    buf.set_state(state);
+    return SendCommand(cmd, buf);
+}
+
+bool Client::SendCommand(const uint16_t cmd, const double value)
+{
+    CmdBuf buf;
+    buf.set_rate(value);
+    return SendCommand(cmd, buf);
+}
+
+bool Client::SendCommand(const uint16_t cmd, const string value)
+{
+    CmdBuf buf;
+    buf.set_string(value);
+    return SendCommand(cmd, buf);
+}
+
+
+bool Client::SendCommand(const uint16_t command, CmdBuf& data)
+{
+	data.set_heartbeat(++m_heartBeat);
+    Packet packet;
+    data.SerializeToString(&packet.data);
+    packet.cmd = command;
+    return SendPacket(packet);
+}
+
 
 } //namespace CncRemote

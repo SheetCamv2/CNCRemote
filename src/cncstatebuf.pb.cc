@@ -1163,6 +1163,7 @@ static ::std::string* MutableUnknownFieldsForStateBuf(
 }
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
+const int StateBuf::kHeartbeatFieldNumber;
 const int StateBuf::kAbsPosFieldNumber;
 const int StateBuf::kOffsetWorkFieldNumber;
 const int StateBuf::kOffsetFixtureFieldNumber;
@@ -1172,7 +1173,7 @@ const int StateBuf::kMachineConnectedFieldNumber;
 const int StateBuf::kPausedFieldNumber;
 const int StateBuf::kOptionalStopFieldNumber;
 const int StateBuf::kBlockDeleteFieldNumber;
-const int StateBuf::kRunningFieldNumber;
+const int StateBuf::kBusyFieldNumber;
 const int StateBuf::kCurrentLineFieldNumber;
 const int StateBuf::kSingleStepFieldNumber;
 const int StateBuf::kSpindleSpeedFieldNumber;
@@ -1186,6 +1187,8 @@ const int StateBuf::kDisplayMsgFieldNumber;
 const int StateBuf::kMaxFeedLinFieldNumber;
 const int StateBuf::kMaxFeedAngFieldNumber;
 const int StateBuf::kGcodeUnitsFieldNumber;
+const int StateBuf::kSpindleOverrideFieldNumber;
+const int StateBuf::kRapidOverrideFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 StateBuf::StateBuf()
@@ -1227,8 +1230,8 @@ void StateBuf::SharedCtor() {
   offset_fixture_ = NULL;
   homed_ = NULL;
   axis_linear_ = NULL;
-  ::memset(&feed_override_, 0, reinterpret_cast<char*>(&flood_) -
-    reinterpret_cast<char*>(&feed_override_) + sizeof(flood_));
+  ::memset(&feed_override_, 0, reinterpret_cast<char*>(&rapid_override_) -
+    reinterpret_cast<char*>(&feed_override_) + sizeof(rapid_override_));
 }
 
 StateBuf::~StateBuf() {
@@ -1289,7 +1292,7 @@ void StateBuf::Clear() {
 } while (0)
 
   if (_has_bits_[0 / 32] & 255u) {
-    ZR_(feed_override_, optional_stop_);
+    ZR_(feed_override_, paused_);
     if (has_abs_pos()) {
       if (abs_pos_ != NULL) abs_pos_->::CncRemote::Axes::Clear();
     }
@@ -1300,12 +1303,9 @@ void StateBuf::Clear() {
       if (offset_fixture_ != NULL) offset_fixture_->::CncRemote::Axes::Clear();
     }
   }
-  if (_has_bits_[8 / 32] & 65280u) {
-    ZR_(current_line_, spindle_speed_);
-    flood_ = false;
-  }
-  if (_has_bits_[16 / 32] & 8323072u) {
-    ZR_(max_feed_lin_, gcode_units_);
+  ZR_(optional_stop_, spindle_state_);
+  if (_has_bits_[16 / 32] & 16711680u) {
+    ZR_(flood_, gcode_units_);
     if (has_homed()) {
       if (homed_ != NULL) homed_->::CncRemote::BoolAxes::Clear();
     }
@@ -1319,6 +1319,7 @@ void StateBuf::Clear() {
       display_msg_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
     }
   }
+  ZR_(spindle_override_, rapid_override_);
 
 #undef ZR_HELPER_
 #undef ZR_
@@ -1343,9 +1344,24 @@ bool StateBuf::MergePartialFromCodedStream(
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required int32 heartbeat = 1;
+      case 1: {
+        if (tag == 8) {
+          set_has_heartbeat();
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &heartbeat_)));
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(18)) goto parse_abs_pos;
+        break;
+      }
+
       // optional .CncRemote.Axes abs_pos = 2;
       case 2: {
         if (tag == 18) {
+         parse_abs_pos:
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
                input, mutable_abs_pos()));
         } else {
@@ -1467,18 +1483,18 @@ bool StateBuf::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(96)) goto parse_running;
+        if (input->ExpectTag(96)) goto parse_busy;
         break;
       }
 
-      // optional bool running = 12;
+      // optional bool busy = 12;
       case 12: {
         if (tag == 96) {
-         parse_running:
-          set_has_running();
+         parse_busy:
+          set_has_busy();
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
-                 input, &running_)));
+                 input, &busy_)));
         } else {
           goto handle_unusual;
         }
@@ -1669,6 +1685,36 @@ bool StateBuf::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(209)) goto parse_spindle_override;
+        break;
+      }
+
+      // optional double spindle_override = 26;
+      case 26: {
+        if (tag == 209) {
+         parse_spindle_override:
+          set_has_spindle_override();
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   double, ::google::protobuf::internal::WireFormatLite::TYPE_DOUBLE>(
+                 input, &spindle_override_)));
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(217)) goto parse_rapid_override;
+        break;
+      }
+
+      // optional double rapid_override = 27;
+      case 27: {
+        if (tag == 217) {
+         parse_rapid_override:
+          set_has_rapid_override();
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   double, ::google::protobuf::internal::WireFormatLite::TYPE_DOUBLE>(
+                 input, &rapid_override_)));
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -1698,6 +1744,11 @@ failure:
 void StateBuf::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
   // @@protoc_insertion_point(serialize_start:CncRemote.StateBuf)
+  // required int32 heartbeat = 1;
+  if (has_heartbeat()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->heartbeat(), output);
+  }
+
   // optional .CncRemote.Axes abs_pos = 2;
   if (has_abs_pos()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessage(
@@ -1746,9 +1797,9 @@ void StateBuf::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteBool(11, this->block_delete(), output);
   }
 
-  // optional bool running = 12;
-  if (has_running()) {
-    ::google::protobuf::internal::WireFormatLite::WriteBool(12, this->running(), output);
+  // optional bool busy = 12;
+  if (has_busy()) {
+    ::google::protobuf::internal::WireFormatLite::WriteBool(12, this->busy(), output);
   }
 
   // optional int32 current_line = 13;
@@ -1820,6 +1871,16 @@ void StateBuf::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteDouble(25, this->gcode_units(), output);
   }
 
+  // optional double spindle_override = 26;
+  if (has_spindle_override()) {
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(26, this->spindle_override(), output);
+  }
+
+  // optional double rapid_override = 27;
+  if (has_rapid_override()) {
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(27, this->rapid_override(), output);
+  }
+
   output->WriteRaw(unknown_fields().data(),
                    static_cast<int>(unknown_fields().size()));
   // @@protoc_insertion_point(serialize_end:CncRemote.StateBuf)
@@ -1829,7 +1890,13 @@ size_t StateBuf::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:CncRemote.StateBuf)
   size_t total_size = 0;
 
-  if (_has_bits_[0 / 32] & 255u) {
+  // required int32 heartbeat = 1;
+  if (has_heartbeat()) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::Int32Size(
+        this->heartbeat());
+  }
+  if (_has_bits_[1 / 32] & 254u) {
     // optional .CncRemote.Axes abs_pos = 2;
     if (has_abs_pos()) {
       total_size += 1 +
@@ -1871,20 +1938,20 @@ size_t StateBuf::ByteSizeLong() const {
       total_size += 1 + 1;
     }
 
+  }
+  if (_has_bits_[8 / 32] & 65280u) {
     // optional bool optional_stop = 10;
     if (has_optional_stop()) {
       total_size += 1 + 1;
     }
 
-  }
-  if (_has_bits_[8 / 32] & 65280u) {
     // optional bool block_delete = 11;
     if (has_block_delete()) {
       total_size += 1 + 1;
     }
 
-    // optional bool running = 12;
-    if (has_running()) {
+    // optional bool busy = 12;
+    if (has_busy()) {
       total_size += 1 + 1;
     }
 
@@ -1917,13 +1984,13 @@ size_t StateBuf::ByteSizeLong() const {
       total_size += 2 + 1;
     }
 
+  }
+  if (_has_bits_[16 / 32] & 16711680u) {
     // optional bool flood = 18;
     if (has_flood()) {
       total_size += 2 + 1;
     }
 
-  }
-  if (_has_bits_[16 / 32] & 8323072u) {
     // optional .CncRemote.BoolAxes homed = 19;
     if (has_homed()) {
       total_size += 2 +
@@ -1968,6 +2035,18 @@ size_t StateBuf::ByteSizeLong() const {
     }
 
   }
+  if (_has_bits_[24 / 32] & 50331648u) {
+    // optional double spindle_override = 26;
+    if (has_spindle_override()) {
+      total_size += 2 + 8;
+    }
+
+    // optional double rapid_override = 27;
+    if (has_rapid_override()) {
+      total_size += 2 + 8;
+    }
+
+  }
   total_size += unknown_fields().size();
 
   int cached_size = ::google::protobuf::internal::ToCachedSize(total_size);
@@ -1994,6 +2073,9 @@ void StateBuf::MergeFrom(const StateBuf& from) {
 void StateBuf::UnsafeMergeFrom(const StateBuf& from) {
   GOOGLE_DCHECK(&from != this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_heartbeat()) {
+      set_heartbeat(from.heartbeat());
+    }
     if (from.has_abs_pos()) {
       mutable_abs_pos()->::CncRemote::Axes::MergeFrom(from.abs_pos());
     }
@@ -2015,16 +2097,16 @@ void StateBuf::UnsafeMergeFrom(const StateBuf& from) {
     if (from.has_paused()) {
       set_paused(from.paused());
     }
+  }
+  if (from._has_bits_[8 / 32] & (0xffu << (8 % 32))) {
     if (from.has_optional_stop()) {
       set_optional_stop(from.optional_stop());
     }
-  }
-  if (from._has_bits_[8 / 32] & (0xffu << (8 % 32))) {
     if (from.has_block_delete()) {
       set_block_delete(from.block_delete());
     }
-    if (from.has_running()) {
-      set_running(from.running());
+    if (from.has_busy()) {
+      set_busy(from.busy());
     }
     if (from.has_current_line()) {
       set_current_line(from.current_line());
@@ -2041,11 +2123,11 @@ void StateBuf::UnsafeMergeFrom(const StateBuf& from) {
     if (from.has_mist()) {
       set_mist(from.mist());
     }
+  }
+  if (from._has_bits_[16 / 32] & (0xffu << (16 % 32))) {
     if (from.has_flood()) {
       set_flood(from.flood());
     }
-  }
-  if (from._has_bits_[16 / 32] & (0xffu << (16 % 32))) {
     if (from.has_homed()) {
       mutable_homed()->::CncRemote::BoolAxes::MergeFrom(from.homed());
     }
@@ -2070,6 +2152,14 @@ void StateBuf::UnsafeMergeFrom(const StateBuf& from) {
       set_gcode_units(from.gcode_units());
     }
   }
+  if (from._has_bits_[24 / 32] & (0xffu << (24 % 32))) {
+    if (from.has_spindle_override()) {
+      set_spindle_override(from.spindle_override());
+    }
+    if (from.has_rapid_override()) {
+      set_rapid_override(from.rapid_override());
+    }
+  }
   if (!from.unknown_fields().empty()) {
     mutable_unknown_fields()->append(from.unknown_fields());
   }
@@ -2083,6 +2173,7 @@ void StateBuf::CopyFrom(const StateBuf& from) {
 }
 
 bool StateBuf::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
 
   return true;
 }
@@ -2092,6 +2183,7 @@ void StateBuf::Swap(StateBuf* other) {
   InternalSwap(other);
 }
 void StateBuf::InternalSwap(StateBuf* other) {
+  std::swap(heartbeat_, other->heartbeat_);
   std::swap(abs_pos_, other->abs_pos_);
   std::swap(offset_work_, other->offset_work_);
   std::swap(offset_fixture_, other->offset_fixture_);
@@ -2101,7 +2193,7 @@ void StateBuf::InternalSwap(StateBuf* other) {
   std::swap(paused_, other->paused_);
   std::swap(optional_stop_, other->optional_stop_);
   std::swap(block_delete_, other->block_delete_);
-  std::swap(running_, other->running_);
+  std::swap(busy_, other->busy_);
   std::swap(current_line_, other->current_line_);
   std::swap(single_step_, other->single_step_);
   std::swap(spindle_speed_, other->spindle_speed_);
@@ -2115,6 +2207,8 @@ void StateBuf::InternalSwap(StateBuf* other) {
   std::swap(max_feed_lin_, other->max_feed_lin_);
   std::swap(max_feed_ang_, other->max_feed_ang_);
   std::swap(gcode_units_, other->gcode_units_);
+  std::swap(spindle_override_, other->spindle_override_);
+  std::swap(rapid_override_, other->rapid_override_);
   std::swap(_has_bits_[0], other->_has_bits_[0]);
   _unknown_fields_.Swap(&other->_unknown_fields_);
   std::swap(_cached_size_, other->_cached_size_);
@@ -2127,15 +2221,39 @@ void StateBuf::InternalSwap(StateBuf* other) {
 #if PROTOBUF_INLINE_NOT_IN_HEADERS
 // StateBuf
 
-// optional .CncRemote.Axes abs_pos = 2;
-bool StateBuf::has_abs_pos() const {
+// required int32 heartbeat = 1;
+bool StateBuf::has_heartbeat() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-void StateBuf::set_has_abs_pos() {
+void StateBuf::set_has_heartbeat() {
   _has_bits_[0] |= 0x00000001u;
 }
-void StateBuf::clear_has_abs_pos() {
+void StateBuf::clear_has_heartbeat() {
   _has_bits_[0] &= ~0x00000001u;
+}
+void StateBuf::clear_heartbeat() {
+  heartbeat_ = 0;
+  clear_has_heartbeat();
+}
+::google::protobuf::int32 StateBuf::heartbeat() const {
+  // @@protoc_insertion_point(field_get:CncRemote.StateBuf.heartbeat)
+  return heartbeat_;
+}
+void StateBuf::set_heartbeat(::google::protobuf::int32 value) {
+  set_has_heartbeat();
+  heartbeat_ = value;
+  // @@protoc_insertion_point(field_set:CncRemote.StateBuf.heartbeat)
+}
+
+// optional .CncRemote.Axes abs_pos = 2;
+bool StateBuf::has_abs_pos() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+void StateBuf::set_has_abs_pos() {
+  _has_bits_[0] |= 0x00000002u;
+}
+void StateBuf::clear_has_abs_pos() {
+  _has_bits_[0] &= ~0x00000002u;
 }
 void StateBuf::clear_abs_pos() {
   if (abs_pos_ != NULL) abs_pos_->::CncRemote::Axes::Clear();
@@ -2174,13 +2292,13 @@ void StateBuf::set_allocated_abs_pos(::CncRemote::Axes* abs_pos) {
 
 // optional .CncRemote.Axes offset_work = 3;
 bool StateBuf::has_offset_work() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 void StateBuf::set_has_offset_work() {
-  _has_bits_[0] |= 0x00000002u;
+  _has_bits_[0] |= 0x00000004u;
 }
 void StateBuf::clear_has_offset_work() {
-  _has_bits_[0] &= ~0x00000002u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 void StateBuf::clear_offset_work() {
   if (offset_work_ != NULL) offset_work_->::CncRemote::Axes::Clear();
@@ -2219,13 +2337,13 @@ void StateBuf::set_allocated_offset_work(::CncRemote::Axes* offset_work) {
 
 // optional .CncRemote.Axes offset_fixture = 4;
 bool StateBuf::has_offset_fixture() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
 void StateBuf::set_has_offset_fixture() {
-  _has_bits_[0] |= 0x00000004u;
+  _has_bits_[0] |= 0x00000008u;
 }
 void StateBuf::clear_has_offset_fixture() {
-  _has_bits_[0] &= ~0x00000004u;
+  _has_bits_[0] &= ~0x00000008u;
 }
 void StateBuf::clear_offset_fixture() {
   if (offset_fixture_ != NULL) offset_fixture_->::CncRemote::Axes::Clear();
@@ -2264,13 +2382,13 @@ void StateBuf::set_allocated_offset_fixture(::CncRemote::Axes* offset_fixture) {
 
 // optional double feed_override = 6;
 bool StateBuf::has_feed_override() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
+  return (_has_bits_[0] & 0x00000010u) != 0;
 }
 void StateBuf::set_has_feed_override() {
-  _has_bits_[0] |= 0x00000008u;
+  _has_bits_[0] |= 0x00000010u;
 }
 void StateBuf::clear_has_feed_override() {
-  _has_bits_[0] &= ~0x00000008u;
+  _has_bits_[0] &= ~0x00000010u;
 }
 void StateBuf::clear_feed_override() {
   feed_override_ = 0;
@@ -2288,13 +2406,13 @@ void StateBuf::set_feed_override(double value) {
 
 // optional bool control_on = 7;
 bool StateBuf::has_control_on() const {
-  return (_has_bits_[0] & 0x00000010u) != 0;
+  return (_has_bits_[0] & 0x00000020u) != 0;
 }
 void StateBuf::set_has_control_on() {
-  _has_bits_[0] |= 0x00000010u;
+  _has_bits_[0] |= 0x00000020u;
 }
 void StateBuf::clear_has_control_on() {
-  _has_bits_[0] &= ~0x00000010u;
+  _has_bits_[0] &= ~0x00000020u;
 }
 void StateBuf::clear_control_on() {
   control_on_ = false;
@@ -2312,13 +2430,13 @@ void StateBuf::set_control_on(bool value) {
 
 // optional bool machine_connected = 8;
 bool StateBuf::has_machine_connected() const {
-  return (_has_bits_[0] & 0x00000020u) != 0;
+  return (_has_bits_[0] & 0x00000040u) != 0;
 }
 void StateBuf::set_has_machine_connected() {
-  _has_bits_[0] |= 0x00000020u;
+  _has_bits_[0] |= 0x00000040u;
 }
 void StateBuf::clear_has_machine_connected() {
-  _has_bits_[0] &= ~0x00000020u;
+  _has_bits_[0] &= ~0x00000040u;
 }
 void StateBuf::clear_machine_connected() {
   machine_connected_ = false;
@@ -2336,13 +2454,13 @@ void StateBuf::set_machine_connected(bool value) {
 
 // optional bool paused = 9;
 bool StateBuf::has_paused() const {
-  return (_has_bits_[0] & 0x00000040u) != 0;
+  return (_has_bits_[0] & 0x00000080u) != 0;
 }
 void StateBuf::set_has_paused() {
-  _has_bits_[0] |= 0x00000040u;
+  _has_bits_[0] |= 0x00000080u;
 }
 void StateBuf::clear_has_paused() {
-  _has_bits_[0] &= ~0x00000040u;
+  _has_bits_[0] &= ~0x00000080u;
 }
 void StateBuf::clear_paused() {
   paused_ = false;
@@ -2360,13 +2478,13 @@ void StateBuf::set_paused(bool value) {
 
 // optional bool optional_stop = 10;
 bool StateBuf::has_optional_stop() const {
-  return (_has_bits_[0] & 0x00000080u) != 0;
+  return (_has_bits_[0] & 0x00000100u) != 0;
 }
 void StateBuf::set_has_optional_stop() {
-  _has_bits_[0] |= 0x00000080u;
+  _has_bits_[0] |= 0x00000100u;
 }
 void StateBuf::clear_has_optional_stop() {
-  _has_bits_[0] &= ~0x00000080u;
+  _has_bits_[0] &= ~0x00000100u;
 }
 void StateBuf::clear_optional_stop() {
   optional_stop_ = false;
@@ -2384,13 +2502,13 @@ void StateBuf::set_optional_stop(bool value) {
 
 // optional bool block_delete = 11;
 bool StateBuf::has_block_delete() const {
-  return (_has_bits_[0] & 0x00000100u) != 0;
+  return (_has_bits_[0] & 0x00000200u) != 0;
 }
 void StateBuf::set_has_block_delete() {
-  _has_bits_[0] |= 0x00000100u;
+  _has_bits_[0] |= 0x00000200u;
 }
 void StateBuf::clear_has_block_delete() {
-  _has_bits_[0] &= ~0x00000100u;
+  _has_bits_[0] &= ~0x00000200u;
 }
 void StateBuf::clear_block_delete() {
   block_delete_ = false;
@@ -2406,39 +2524,39 @@ void StateBuf::set_block_delete(bool value) {
   // @@protoc_insertion_point(field_set:CncRemote.StateBuf.block_delete)
 }
 
-// optional bool running = 12;
-bool StateBuf::has_running() const {
-  return (_has_bits_[0] & 0x00000200u) != 0;
+// optional bool busy = 12;
+bool StateBuf::has_busy() const {
+  return (_has_bits_[0] & 0x00000400u) != 0;
 }
-void StateBuf::set_has_running() {
-  _has_bits_[0] |= 0x00000200u;
+void StateBuf::set_has_busy() {
+  _has_bits_[0] |= 0x00000400u;
 }
-void StateBuf::clear_has_running() {
-  _has_bits_[0] &= ~0x00000200u;
+void StateBuf::clear_has_busy() {
+  _has_bits_[0] &= ~0x00000400u;
 }
-void StateBuf::clear_running() {
-  running_ = false;
-  clear_has_running();
+void StateBuf::clear_busy() {
+  busy_ = false;
+  clear_has_busy();
 }
-bool StateBuf::running() const {
-  // @@protoc_insertion_point(field_get:CncRemote.StateBuf.running)
-  return running_;
+bool StateBuf::busy() const {
+  // @@protoc_insertion_point(field_get:CncRemote.StateBuf.busy)
+  return busy_;
 }
-void StateBuf::set_running(bool value) {
-  set_has_running();
-  running_ = value;
-  // @@protoc_insertion_point(field_set:CncRemote.StateBuf.running)
+void StateBuf::set_busy(bool value) {
+  set_has_busy();
+  busy_ = value;
+  // @@protoc_insertion_point(field_set:CncRemote.StateBuf.busy)
 }
 
 // optional int32 current_line = 13;
 bool StateBuf::has_current_line() const {
-  return (_has_bits_[0] & 0x00000400u) != 0;
+  return (_has_bits_[0] & 0x00000800u) != 0;
 }
 void StateBuf::set_has_current_line() {
-  _has_bits_[0] |= 0x00000400u;
+  _has_bits_[0] |= 0x00000800u;
 }
 void StateBuf::clear_has_current_line() {
-  _has_bits_[0] &= ~0x00000400u;
+  _has_bits_[0] &= ~0x00000800u;
 }
 void StateBuf::clear_current_line() {
   current_line_ = 0;
@@ -2456,13 +2574,13 @@ void StateBuf::set_current_line(::google::protobuf::int32 value) {
 
 // optional bool single_step = 14;
 bool StateBuf::has_single_step() const {
-  return (_has_bits_[0] & 0x00000800u) != 0;
+  return (_has_bits_[0] & 0x00001000u) != 0;
 }
 void StateBuf::set_has_single_step() {
-  _has_bits_[0] |= 0x00000800u;
+  _has_bits_[0] |= 0x00001000u;
 }
 void StateBuf::clear_has_single_step() {
-  _has_bits_[0] &= ~0x00000800u;
+  _has_bits_[0] &= ~0x00001000u;
 }
 void StateBuf::clear_single_step() {
   single_step_ = false;
@@ -2480,13 +2598,13 @@ void StateBuf::set_single_step(bool value) {
 
 // optional double spindle_speed = 15;
 bool StateBuf::has_spindle_speed() const {
-  return (_has_bits_[0] & 0x00001000u) != 0;
+  return (_has_bits_[0] & 0x00002000u) != 0;
 }
 void StateBuf::set_has_spindle_speed() {
-  _has_bits_[0] |= 0x00001000u;
+  _has_bits_[0] |= 0x00002000u;
 }
 void StateBuf::clear_has_spindle_speed() {
-  _has_bits_[0] &= ~0x00001000u;
+  _has_bits_[0] &= ~0x00002000u;
 }
 void StateBuf::clear_spindle_speed() {
   spindle_speed_ = 0;
@@ -2504,13 +2622,13 @@ void StateBuf::set_spindle_speed(double value) {
 
 // optional uint32 spindle_state = 16;
 bool StateBuf::has_spindle_state() const {
-  return (_has_bits_[0] & 0x00002000u) != 0;
+  return (_has_bits_[0] & 0x00004000u) != 0;
 }
 void StateBuf::set_has_spindle_state() {
-  _has_bits_[0] |= 0x00002000u;
+  _has_bits_[0] |= 0x00004000u;
 }
 void StateBuf::clear_has_spindle_state() {
-  _has_bits_[0] &= ~0x00002000u;
+  _has_bits_[0] &= ~0x00004000u;
 }
 void StateBuf::clear_spindle_state() {
   spindle_state_ = 0u;
@@ -2528,13 +2646,13 @@ void StateBuf::set_spindle_state(::google::protobuf::uint32 value) {
 
 // optional bool mist = 17;
 bool StateBuf::has_mist() const {
-  return (_has_bits_[0] & 0x00004000u) != 0;
+  return (_has_bits_[0] & 0x00008000u) != 0;
 }
 void StateBuf::set_has_mist() {
-  _has_bits_[0] |= 0x00004000u;
+  _has_bits_[0] |= 0x00008000u;
 }
 void StateBuf::clear_has_mist() {
-  _has_bits_[0] &= ~0x00004000u;
+  _has_bits_[0] &= ~0x00008000u;
 }
 void StateBuf::clear_mist() {
   mist_ = false;
@@ -2552,13 +2670,13 @@ void StateBuf::set_mist(bool value) {
 
 // optional bool flood = 18;
 bool StateBuf::has_flood() const {
-  return (_has_bits_[0] & 0x00008000u) != 0;
+  return (_has_bits_[0] & 0x00010000u) != 0;
 }
 void StateBuf::set_has_flood() {
-  _has_bits_[0] |= 0x00008000u;
+  _has_bits_[0] |= 0x00010000u;
 }
 void StateBuf::clear_has_flood() {
-  _has_bits_[0] &= ~0x00008000u;
+  _has_bits_[0] &= ~0x00010000u;
 }
 void StateBuf::clear_flood() {
   flood_ = false;
@@ -2576,13 +2694,13 @@ void StateBuf::set_flood(bool value) {
 
 // optional .CncRemote.BoolAxes homed = 19;
 bool StateBuf::has_homed() const {
-  return (_has_bits_[0] & 0x00010000u) != 0;
+  return (_has_bits_[0] & 0x00020000u) != 0;
 }
 void StateBuf::set_has_homed() {
-  _has_bits_[0] |= 0x00010000u;
+  _has_bits_[0] |= 0x00020000u;
 }
 void StateBuf::clear_has_homed() {
-  _has_bits_[0] &= ~0x00010000u;
+  _has_bits_[0] &= ~0x00020000u;
 }
 void StateBuf::clear_homed() {
   if (homed_ != NULL) homed_->::CncRemote::BoolAxes::Clear();
@@ -2621,13 +2739,13 @@ void StateBuf::set_allocated_homed(::CncRemote::BoolAxes* homed) {
 
 // optional .CncRemote.BoolAxes axis_linear = 20;
 bool StateBuf::has_axis_linear() const {
-  return (_has_bits_[0] & 0x00020000u) != 0;
+  return (_has_bits_[0] & 0x00040000u) != 0;
 }
 void StateBuf::set_has_axis_linear() {
-  _has_bits_[0] |= 0x00020000u;
+  _has_bits_[0] |= 0x00040000u;
 }
 void StateBuf::clear_has_axis_linear() {
-  _has_bits_[0] &= ~0x00020000u;
+  _has_bits_[0] &= ~0x00040000u;
 }
 void StateBuf::clear_axis_linear() {
   if (axis_linear_ != NULL) axis_linear_->::CncRemote::BoolAxes::Clear();
@@ -2666,13 +2784,13 @@ void StateBuf::set_allocated_axis_linear(::CncRemote::BoolAxes* axis_linear) {
 
 // optional string error_msg = 21;
 bool StateBuf::has_error_msg() const {
-  return (_has_bits_[0] & 0x00040000u) != 0;
+  return (_has_bits_[0] & 0x00080000u) != 0;
 }
 void StateBuf::set_has_error_msg() {
-  _has_bits_[0] |= 0x00040000u;
+  _has_bits_[0] |= 0x00080000u;
 }
 void StateBuf::clear_has_error_msg() {
-  _has_bits_[0] &= ~0x00040000u;
+  _has_bits_[0] &= ~0x00080000u;
 }
 void StateBuf::clear_error_msg() {
   error_msg_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
@@ -2720,13 +2838,13 @@ void StateBuf::set_allocated_error_msg(::std::string* error_msg) {
 
 // optional string display_msg = 22;
 bool StateBuf::has_display_msg() const {
-  return (_has_bits_[0] & 0x00080000u) != 0;
+  return (_has_bits_[0] & 0x00100000u) != 0;
 }
 void StateBuf::set_has_display_msg() {
-  _has_bits_[0] |= 0x00080000u;
+  _has_bits_[0] |= 0x00100000u;
 }
 void StateBuf::clear_has_display_msg() {
-  _has_bits_[0] &= ~0x00080000u;
+  _has_bits_[0] &= ~0x00100000u;
 }
 void StateBuf::clear_display_msg() {
   display_msg_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
@@ -2774,13 +2892,13 @@ void StateBuf::set_allocated_display_msg(::std::string* display_msg) {
 
 // optional double max_feed_lin = 23;
 bool StateBuf::has_max_feed_lin() const {
-  return (_has_bits_[0] & 0x00100000u) != 0;
+  return (_has_bits_[0] & 0x00200000u) != 0;
 }
 void StateBuf::set_has_max_feed_lin() {
-  _has_bits_[0] |= 0x00100000u;
+  _has_bits_[0] |= 0x00200000u;
 }
 void StateBuf::clear_has_max_feed_lin() {
-  _has_bits_[0] &= ~0x00100000u;
+  _has_bits_[0] &= ~0x00200000u;
 }
 void StateBuf::clear_max_feed_lin() {
   max_feed_lin_ = 0;
@@ -2798,13 +2916,13 @@ void StateBuf::set_max_feed_lin(double value) {
 
 // optional double max_feed_ang = 24;
 bool StateBuf::has_max_feed_ang() const {
-  return (_has_bits_[0] & 0x00200000u) != 0;
+  return (_has_bits_[0] & 0x00400000u) != 0;
 }
 void StateBuf::set_has_max_feed_ang() {
-  _has_bits_[0] |= 0x00200000u;
+  _has_bits_[0] |= 0x00400000u;
 }
 void StateBuf::clear_has_max_feed_ang() {
-  _has_bits_[0] &= ~0x00200000u;
+  _has_bits_[0] &= ~0x00400000u;
 }
 void StateBuf::clear_max_feed_ang() {
   max_feed_ang_ = 0;
@@ -2822,13 +2940,13 @@ void StateBuf::set_max_feed_ang(double value) {
 
 // optional double gcode_units = 25;
 bool StateBuf::has_gcode_units() const {
-  return (_has_bits_[0] & 0x00400000u) != 0;
+  return (_has_bits_[0] & 0x00800000u) != 0;
 }
 void StateBuf::set_has_gcode_units() {
-  _has_bits_[0] |= 0x00400000u;
+  _has_bits_[0] |= 0x00800000u;
 }
 void StateBuf::clear_has_gcode_units() {
-  _has_bits_[0] &= ~0x00400000u;
+  _has_bits_[0] &= ~0x00800000u;
 }
 void StateBuf::clear_gcode_units() {
   gcode_units_ = 0;
@@ -2844,6 +2962,54 @@ void StateBuf::set_gcode_units(double value) {
   // @@protoc_insertion_point(field_set:CncRemote.StateBuf.gcode_units)
 }
 
+// optional double spindle_override = 26;
+bool StateBuf::has_spindle_override() const {
+  return (_has_bits_[0] & 0x01000000u) != 0;
+}
+void StateBuf::set_has_spindle_override() {
+  _has_bits_[0] |= 0x01000000u;
+}
+void StateBuf::clear_has_spindle_override() {
+  _has_bits_[0] &= ~0x01000000u;
+}
+void StateBuf::clear_spindle_override() {
+  spindle_override_ = 0;
+  clear_has_spindle_override();
+}
+double StateBuf::spindle_override() const {
+  // @@protoc_insertion_point(field_get:CncRemote.StateBuf.spindle_override)
+  return spindle_override_;
+}
+void StateBuf::set_spindle_override(double value) {
+  set_has_spindle_override();
+  spindle_override_ = value;
+  // @@protoc_insertion_point(field_set:CncRemote.StateBuf.spindle_override)
+}
+
+// optional double rapid_override = 27;
+bool StateBuf::has_rapid_override() const {
+  return (_has_bits_[0] & 0x02000000u) != 0;
+}
+void StateBuf::set_has_rapid_override() {
+  _has_bits_[0] |= 0x02000000u;
+}
+void StateBuf::clear_has_rapid_override() {
+  _has_bits_[0] &= ~0x02000000u;
+}
+void StateBuf::clear_rapid_override() {
+  rapid_override_ = 0;
+  clear_has_rapid_override();
+}
+double StateBuf::rapid_override() const {
+  // @@protoc_insertion_point(field_get:CncRemote.StateBuf.rapid_override)
+  return rapid_override_;
+}
+void StateBuf::set_rapid_override(double value) {
+  set_has_rapid_override();
+  rapid_override_ = value;
+  // @@protoc_insertion_point(field_set:CncRemote.StateBuf.rapid_override)
+}
+
 inline const StateBuf* StateBuf::internal_default_instance() {
   return &StateBuf_default_instance_.get();
 }
@@ -2857,6 +3023,7 @@ static ::std::string* MutableUnknownFieldsForCmdBuf(
 }
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
+const int CmdBuf::kHeartbeatFieldNumber;
 const int CmdBuf::kStringFieldNumber;
 const int CmdBuf::kStateFieldNumber;
 const int CmdBuf::kAxesFieldNumber;
@@ -2894,8 +3061,8 @@ void CmdBuf::SharedCtor() {
   string_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   axes_ = NULL;
   bool_axes_ = NULL;
-  ::memset(&state_, 0, reinterpret_cast<char*>(&rate_) -
-    reinterpret_cast<char*>(&state_) + sizeof(rate_));
+  ::memset(&heartbeat_, 0, reinterpret_cast<char*>(&intval_) -
+    reinterpret_cast<char*>(&heartbeat_) + sizeof(intval_));
 }
 
 CmdBuf::~CmdBuf() {
@@ -2951,8 +3118,8 @@ void CmdBuf::Clear() {
            ZR_HELPER_(last) - ZR_HELPER_(first) + sizeof(last));\
 } while (0)
 
-  if (_has_bits_[0 / 32] & 63u) {
-    ZR_(state_, rate_);
+  if (_has_bits_[0 / 32] & 127u) {
+    ZR_(heartbeat_, intval_);
     if (has_string()) {
       string_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
     }
@@ -2987,9 +3154,24 @@ bool CmdBuf::MergePartialFromCodedStream(
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required int32 heartbeat = 1;
+      case 1: {
+        if (tag == 8) {
+          set_has_heartbeat();
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &heartbeat_)));
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(18)) goto parse_string;
+        break;
+      }
+
       // optional string string = 2;
       case 2: {
         if (tag == 18) {
+         parse_string:
           DO_(::google::protobuf::internal::WireFormatLite::ReadString(
                 input, this->mutable_string()));
         } else {
@@ -3095,6 +3277,11 @@ failure:
 void CmdBuf::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
   // @@protoc_insertion_point(serialize_start:CncRemote.CmdBuf)
+  // required int32 heartbeat = 1;
+  if (has_heartbeat()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->heartbeat(), output);
+  }
+
   // optional string string = 2;
   if (has_string()) {
     ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
@@ -3137,7 +3324,13 @@ size_t CmdBuf::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:CncRemote.CmdBuf)
   size_t total_size = 0;
 
-  if (_has_bits_[0 / 32] & 63u) {
+  // required int32 heartbeat = 1;
+  if (has_heartbeat()) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::Int32Size(
+        this->heartbeat());
+  }
+  if (_has_bits_[1 / 32] & 126u) {
     // optional string string = 2;
     if (has_string()) {
       total_size += 1 +
@@ -3203,6 +3396,9 @@ void CmdBuf::MergeFrom(const CmdBuf& from) {
 void CmdBuf::UnsafeMergeFrom(const CmdBuf& from) {
   GOOGLE_DCHECK(&from != this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_heartbeat()) {
+      set_heartbeat(from.heartbeat());
+    }
     if (from.has_string()) {
       set_has_string();
       string_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.string_);
@@ -3236,6 +3432,7 @@ void CmdBuf::CopyFrom(const CmdBuf& from) {
 }
 
 bool CmdBuf::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
 
   return true;
 }
@@ -3245,6 +3442,7 @@ void CmdBuf::Swap(CmdBuf* other) {
   InternalSwap(other);
 }
 void CmdBuf::InternalSwap(CmdBuf* other) {
+  std::swap(heartbeat_, other->heartbeat_);
   string_.Swap(&other->string_);
   std::swap(state_, other->state_);
   std::swap(axes_, other->axes_);
@@ -3263,15 +3461,39 @@ void CmdBuf::InternalSwap(CmdBuf* other) {
 #if PROTOBUF_INLINE_NOT_IN_HEADERS
 // CmdBuf
 
-// optional string string = 2;
-bool CmdBuf::has_string() const {
+// required int32 heartbeat = 1;
+bool CmdBuf::has_heartbeat() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-void CmdBuf::set_has_string() {
+void CmdBuf::set_has_heartbeat() {
   _has_bits_[0] |= 0x00000001u;
 }
-void CmdBuf::clear_has_string() {
+void CmdBuf::clear_has_heartbeat() {
   _has_bits_[0] &= ~0x00000001u;
+}
+void CmdBuf::clear_heartbeat() {
+  heartbeat_ = 0;
+  clear_has_heartbeat();
+}
+::google::protobuf::int32 CmdBuf::heartbeat() const {
+  // @@protoc_insertion_point(field_get:CncRemote.CmdBuf.heartbeat)
+  return heartbeat_;
+}
+void CmdBuf::set_heartbeat(::google::protobuf::int32 value) {
+  set_has_heartbeat();
+  heartbeat_ = value;
+  // @@protoc_insertion_point(field_set:CncRemote.CmdBuf.heartbeat)
+}
+
+// optional string string = 2;
+bool CmdBuf::has_string() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+void CmdBuf::set_has_string() {
+  _has_bits_[0] |= 0x00000002u;
+}
+void CmdBuf::clear_has_string() {
+  _has_bits_[0] &= ~0x00000002u;
 }
 void CmdBuf::clear_string() {
   string_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
@@ -3319,13 +3541,13 @@ void CmdBuf::set_allocated_string(::std::string* string) {
 
 // optional bool state = 3;
 bool CmdBuf::has_state() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 void CmdBuf::set_has_state() {
-  _has_bits_[0] |= 0x00000002u;
+  _has_bits_[0] |= 0x00000004u;
 }
 void CmdBuf::clear_has_state() {
-  _has_bits_[0] &= ~0x00000002u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 void CmdBuf::clear_state() {
   state_ = false;
@@ -3343,13 +3565,13 @@ void CmdBuf::set_state(bool value) {
 
 // optional .CncRemote.Axes axes = 4;
 bool CmdBuf::has_axes() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
 void CmdBuf::set_has_axes() {
-  _has_bits_[0] |= 0x00000004u;
+  _has_bits_[0] |= 0x00000008u;
 }
 void CmdBuf::clear_has_axes() {
-  _has_bits_[0] &= ~0x00000004u;
+  _has_bits_[0] &= ~0x00000008u;
 }
 void CmdBuf::clear_axes() {
   if (axes_ != NULL) axes_->::CncRemote::Axes::Clear();
@@ -3388,13 +3610,13 @@ void CmdBuf::set_allocated_axes(::CncRemote::Axes* axes) {
 
 // optional .CncRemote.BoolAxes bool_axes = 5;
 bool CmdBuf::has_bool_axes() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
+  return (_has_bits_[0] & 0x00000010u) != 0;
 }
 void CmdBuf::set_has_bool_axes() {
-  _has_bits_[0] |= 0x00000008u;
+  _has_bits_[0] |= 0x00000010u;
 }
 void CmdBuf::clear_has_bool_axes() {
-  _has_bits_[0] &= ~0x00000008u;
+  _has_bits_[0] &= ~0x00000010u;
 }
 void CmdBuf::clear_bool_axes() {
   if (bool_axes_ != NULL) bool_axes_->::CncRemote::BoolAxes::Clear();
@@ -3433,13 +3655,13 @@ void CmdBuf::set_allocated_bool_axes(::CncRemote::BoolAxes* bool_axes) {
 
 // optional double rate = 6;
 bool CmdBuf::has_rate() const {
-  return (_has_bits_[0] & 0x00000010u) != 0;
+  return (_has_bits_[0] & 0x00000020u) != 0;
 }
 void CmdBuf::set_has_rate() {
-  _has_bits_[0] |= 0x00000010u;
+  _has_bits_[0] |= 0x00000020u;
 }
 void CmdBuf::clear_has_rate() {
-  _has_bits_[0] &= ~0x00000010u;
+  _has_bits_[0] &= ~0x00000020u;
 }
 void CmdBuf::clear_rate() {
   rate_ = 0;
@@ -3457,13 +3679,13 @@ void CmdBuf::set_rate(double value) {
 
 // optional int32 intval = 7;
 bool CmdBuf::has_intval() const {
-  return (_has_bits_[0] & 0x00000020u) != 0;
+  return (_has_bits_[0] & 0x00000040u) != 0;
 }
 void CmdBuf::set_has_intval() {
-  _has_bits_[0] |= 0x00000020u;
+  _has_bits_[0] |= 0x00000040u;
 }
 void CmdBuf::clear_has_intval() {
-  _has_bits_[0] &= ~0x00000020u;
+  _has_bits_[0] &= ~0x00000040u;
 }
 void CmdBuf::clear_intval() {
   intval_ = 0;

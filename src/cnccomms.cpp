@@ -245,44 +245,6 @@ bool Comms::SendPacket(const Packet &packet)
     return true;
 }
 
-bool Comms::SendCommand(const uint16_t cmd)
-{
-    if(m_socket == NULL) return false;
-    Packet packet;
-    packet.cmd = cmd;
-    return SendPacket(packet);
-}
-
-bool Comms::SendCommand(const uint16_t cmd, const bool state)
-{
-    CmdBuf buf;
-    buf.set_state(state);
-    return SendCommand(cmd, buf);
-}
-
-bool Comms::SendCommand(const uint16_t cmd, const double value)
-{
-    CmdBuf buf;
-    buf.set_rate(value);
-    return SendCommand(cmd, buf);
-}
-
-bool Comms::SendCommand(const uint16_t cmd, const string value)
-{
-    CmdBuf buf;
-    buf.set_string(value);
-    return SendCommand(cmd, buf);
-}
-
-
-bool Comms::SendCommand(const uint16_t command, const CmdBuf& data)
-{
-    if(m_socket < 0) return false;
-    Packet packet;
-    data.SerializeToString(&packet.data);
-    packet.cmd = command;
-    return SendPacket(packet);
-}
 
 void Comms::Connected(const CONNSTATE state)
 {

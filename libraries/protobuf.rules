@@ -7,7 +7,7 @@
 		<CustomBuildRule
 			Name="Protobuf"
 			DisplayName="Protobuf"
-			CommandLine="cncremote\libraries\bin\protoc.exe --cpp_out=$(InputDir) --proto_path=$(InputDir) $(InputPath)"
+			CommandLine="cncremote\libraries\bin\protoc.exe --cpp_out=&quot;$(InputDir).&quot; --proto_path=&quot;$(InputDir).&quot; &quot;$(InputPath)&quot;"
 			Outputs="$(InputDir)\$(InputName).pb.h"
 			FileExtensions="*.proto"
 			ExecutionDescription="Compiling protocol buffers"

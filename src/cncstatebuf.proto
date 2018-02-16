@@ -30,18 +30,18 @@ message BoolAxes {
 
 //this data is sent from the server to the client(s) whenever it is available
 message StateBuf {
-//    optional uint32 heartbeat = 1; //Automatically incremented once every time a packet is sent.
+    required int32 heartbeat = 1; //Heartbeat count from last received command
     optional Axes abs_pos = 2; //Axes in machine coordinates (in metric units)
     optional Axes offset_work = 3; //Work offsets (in metric units)
     optional Axes offset_fixture = 4; //Fixture offsets (in metric units)
 
-    optional double feed_override = 6; //Feed rate override
+    optional double feed_override = 6; //Feed rate override percentage. 1 = 100%
     optional bool control_on = 7; //Control is on and ready to execute command
     optional bool machine_connected = 8; //machine controller is responding.
     optional bool paused = 9; //machine is paused
     optional bool optional_stop = 10; //Optional stop
     optional bool block_delete = 11; //block delete
-    optional bool running = 12; //Machine is running code
+    optional bool busy = 12; //Machine is running code or moving
     optional int32 current_line = 13; //current gcode line running
     optional bool single_step = 14; //Single step
     optional double spindle_speed = 15;
@@ -55,10 +55,13 @@ message StateBuf {
     optional double max_feed_lin = 23;
     optional double max_feed_ang = 24;
     optional double gcode_units = 25; //Convert mm to the currently selected g-code linear units
+    optional double spindle_override = 26; //Spindle override percentage. 1 = 100%
+    optional double rapid_override = 27; //Rapid override percentage. 1 = 100%
 }
 
 //used for commands and responses
 message CmdBuf{
+    required int32 heartbeat = 1; //Heartbeat count. Incremented once per command sent
     optional string string = 2;
     optional bool state = 3;
     optional Axes axes = 4;

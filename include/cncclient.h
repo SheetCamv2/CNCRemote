@@ -54,34 +54,50 @@ public:
 	bool Connect(const unsigned int index, const CncString& address, const uint32_t port); //Connect to server. if index == 0, use a remote server else use the selected plugin (1 = first plugin and so on)
 	void Disconnect(); //Disconnect (normally disconnection is automatic so you shouldn't need to call this)
  	bool Ping(int waitMs); //Ping the server. If there is no response within waitMs milliseconds it returns false. Note unlike other functions this blocks while waiting
+	bool IsBusy(); //Returns true if the machine is exectuting code or moving
 
     //Avoid adding functions that are specific to a certain control software.
     //If you add functions you must also update Comms::CMDTYPE
     void DrivesOn(const bool state); //Turn drives/control on
     void JogVel(const Axes& velocities); //jog axes at the given rates. Use axis values of 0 to stop jogging.
     void Mdi(const string line); //execute MDI command
-    void SetFRO(const double percent); //set feed rate override (1 = 100%)
+    void FeedOverride(const double percent); //set feed rate override (1 = 100%)
+    void SpindleOverride(const double percent); //set spindle override (1 = 100%)
+    void RapidOverride(const double percent); //set rapid override (1 = 100%)
     void LoadFile(const string file); //load file
 	void CloseFile(); //Close any loaded files (some controls lock the file they have open)
     void CycleStart(); //cycle start
     void Stop(); //Stop execution
-    void Pause(const bool state); //pause/resume motion
+    void FeedHold(const bool state); //pause/resume motion
     void BlockDelete(const bool state); //Turn block delete on/off
     void SingleStep(const bool state); //Turn single stepping on/off
     void OptionalStop(const bool state); //Turn optional stop stepping on/off
+	void Home(const int axis); //Home a single axis
+	void HomeAll(); //Home all
 
 
 protected:
 	virtual void HandlePacket(const Packet & pkt);
+	void SetBusy(){m_busy = true; m_lastHeart = m_heartBeat;} //Must be called if the last command sent may make the machine move
 	StateBuf m_state;
 
 private:
+    bool SendCommand(const uint16_t cmd);
+    bool SendCommand(const uint16_t cmd, const bool state);
+    bool SendCommand(const uint16_t cmd, const double value);
+    bool SendCommand(const uint16_t cmd, const string value);
+    bool SendCommand(const uint16_t command, CmdBuf& data);
+
 #ifdef USE_PLUGINS
     vector<Plugin> m_plugins;
     Plugin * m_plugin;
 #endif
 //	time_t m_timeout;
 	bool m_pingResp;
+	bool m_busy;
+	int32_t m_lastHeart;
+	int32_t m_heartBeat;
+
 };
 
 } //namespace CncRemote

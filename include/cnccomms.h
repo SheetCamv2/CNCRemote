@@ -106,25 +106,27 @@ public:
         cmdNULL,
         cmdPING,	//none
         cmdSTATE,	//StateBuf
-        cmdDRIVESON, //boolean
-        cmdJOGVEL,	//Axes. Jog at given velocities
-        cmdJOGSTEP,  //Axes. Jog the given amount
+        cmdDRIVES_ON, //boolean
+        cmdJOG_VEL,	//Axes. Jog at given velocities
+        cmdJOG_STEP,  //Axes. Jog the given amount
         cmdMDI,		//string
         cmdFRO,		//float
         cmdFILE,	//string
-        cmdCLOSEFILE, //none
+        cmdCLOSE_FILE, //none
         cmdSTART,	//none
         cmdSTOP,	//none
-        cmdPAUSE,	//none
-        cmdBLOCKDEL,	//boolean
-        cmdSINGLESTEP,	//boolean
-        cmdOPTSTOP,		//boolean
-        cmdSENDFILE,	//string
-        cmdREQFILE,
+        cmdFEED_HOLD,	//none
+        cmdBLOCK_DEL,	//boolean
+        cmdSINGLE_STEP,	//boolean
+        cmdOPT_STOP,		//boolean
+        cmdSEND_FILE,	//string
+        cmdREQ_FILE,
         cmdFLOOD,		//boolean
         cmdMIST,		//boolean
         cmdSPINDLE, //integer: one of spinOFF,spinFWD,spinREV
         cmdHOME,	//BoolAxes. All true = home all. otherwise ONE axis only.
+		cmdSPINDLE_OVER, //float
+		cmdRAPID_OVER, //float
 
 
         cmdMAX, //this should always be the last entry. Note your code should always ignore command numbers past this.
@@ -134,28 +136,20 @@ protected:
 
     static void * Entry(void * t);
     void * Entry();
-    bool SendCommand(const uint16_t cmd);
-    bool SendCommand(const uint16_t cmd, const bool state);
-    bool SendCommand(const uint16_t cmd, const double value);
-    bool SendCommand(const uint16_t cmd, const string value);
-    bool SendCommand(const uint16_t command, const CmdBuf& data);
     void CheckConn();
     int RecvString(string& data);
     bool SendPacket(const Packet &packet);
-//		bool RecvPacket(Packet &packet);
     size_t CobsEncode(const uint8_t *ptr, size_t length, uint8_t *dst);
     void CobsDecode(const uint8_t *ptr, size_t length);
     void OnData();
 
     virtual void HandlePacket(const Packet & pkt) = 0;
     virtual void OnPacketError() {};
-
 private:
     CActiveSocket *m_socket;
     uint32_t m_port;
     CncString m_address;
 
-private:
     void Connected(const CONNSTATE state);
     Packet m_packet;
     CONNSTATE m_connState;
