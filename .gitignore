@@ -17,3 +17,11 @@ drivers/linuxcnc/server/version.h
 *.ilk
 *.pdb
 *.ncb
+/drivers/Sim/server/.vs/sim/v15/ipch/AutoPCH/15a07c39c17298d3/*.ipch
+*.ipch
+*.suo
+*.db
+*.opendb
+*.user
+*.filters
+/libraries/rpcliba

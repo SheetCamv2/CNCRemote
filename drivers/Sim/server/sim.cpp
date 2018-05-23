@@ -17,191 +17,172 @@ along with this program; if not, you can obtain a copy from mozilla.org
 ******************************************************************/
 
 #include "sim.h"
-
-
-struct MACHINESTATE
-{
-    bool controlOn;
-    bool paused;
-    bool blockDelete;
-    bool optStop;
-    bool running;
-    bool step;
-    double fro;
-    int curLine;
-	int busy;
-} g_machineState;
-
-CncRemote::Axes g_jogVel;
-CncRemote::Axes g_curPos;
-
-const char *g_cmdNames[]={
-    "cmdNULL",
-    "cmdPING",
-    "cmdSTATE",
-    "cmdDRIVESON",
-    "cmdJOGVEL",
-    "cmdJOGSTEP",
-    "cmdMDI",
-    "cmdFRO",
-    "cmdFILE",
-    "cmdCLOSEFILE",
-    "cmdSTART",
-    "cmdSTOP",
-    "cmdPAUSE",
-    "cmdBLOCKDEL",
-    "cmdSINGLESTEP",
-    "cmdOPTSTOP",
-    "cmdSENDFILEINIT",
-    "cmdSENDFILEDATA",
-	"cmdCOOLANT",
-    "cmdMIST",
-    "cmdSPINDLE",
-    "cmdHOME",
-};
-
-class SimConnection : public Connection
-{
-public:
-    SimConnection(CActiveSocket * client, Server * server) : Connection(client, server)
-    {
-        SetTimeout(1);
-    }
-
-    virtual ~SimConnection()
-    {
-
-    }
-
-    virtual void OnConnection()
-    {
-
-    }
-
-    virtual void HandlePacket(const Packet& pkt)
-    {
-        CncRemote::CmdBuf cmd;
-        if(pkt.data.size() > 0 &&
-            !cmd.ParseFromString(pkt.data))
-        {
-            OnPacketError();
-            return;
-        }
-        if(pkt.hdr.cmd < cmdMAX && pkt.hdr.cmd != cmdSTATE)
-        {
-            printf("Command %d %s\n", pkt.hdr.cmd, g_cmdNames[pkt.hdr.cmd]);
-        }
-        switch(pkt.hdr.cmd)
-        {
-        case cmdDRIVES_ON:
-            g_machineState.controlOn = cmd.state();
-            break;
-
-        case cmdJOG_VEL:
-            g_jogVel.CopyFrom(cmd.axes());
-            break;
-
-        case cmdMDI:
-			g_machineState.busy = 1000;
-            printf("MDI:%s\n", cmd.string().c_str());
-            break;
-
-        case cmdFRO:
-            g_machineState.fro = cmd.rate();
-            break;
-
-        case cmdFILE:
-            break;
-
-        case cmdCLOSE_FILE:
-            break;
-
-        case cmdSTART:
-            if(g_machineState.paused)
-            {
-                g_machineState.paused = false;
-                break;
-            }
-            g_machineState.running = true;
-            break;
-
-        case cmdSTOP:
-            g_machineState.running = false;
-            break;
-
-        case cmdFEED_HOLD:
-            g_machineState.paused = true;
-            break;
-
-        case cmdBLOCK_DEL:
-            g_machineState.blockDelete = cmd.state();
-            break;
-
-        case cmdSINGLE_STEP:
-            g_machineState.step = cmd.state();
-            break;
-
-        case cmdOPT_STOP:
-            g_machineState.optStop = cmd.state();
-            break;
-
-		case cmdSEND_FILE_INIT:
-			RecieveFileInit(cmd);
-			break;
-
-		case cmdSEND_FILE_DATA:
-			RecieveFileData(cmd);
-			break;
-        }
-    }
-};
+#include <iostream>
 
 
 Sim::Sim()
 {
-    memset(&g_machineState, 0, sizeof(g_machineState));
+    memset(&machine, 0, sizeof(machine));
+	m_state.Clear();
+	m_state.maxFeedLin = 1000;
 }
 
-void Sim::UpdateState()
-{
-	m_state.set_busy(g_machineState.busy ||
-		g_machineState.running ||
-		g_jogVel.x() != 0 ||
-		g_jogVel.y() != 0 ||
-		g_jogVel.z() != 0 ||
-		g_jogVel.a() != 0 ||
-		g_jogVel.b() != 0 ||
-		g_jogVel.c() != 0);
-
-    m_state.set_machine_connected(true);
-    m_state.set_control_on(g_machineState.controlOn);
-    CncRemote::Axes& axes = *m_state.mutable_abs_pos();
-
-}
-
-Connection * Sim::CreateConnection(CActiveSocket * client, Server * server)
-{
-    return new SimConnection(client, server);
-}
 
 bool Sim::Poll()
 {
-    if(g_machineState.busy)
+    if(machine.busy)
 	{
-		g_machineState.busy --;
+		machine.busy --;
 	}
 
-	CncRemote::Axes& axes = g_curPos;
-    axes.set_x(axes.x() + g_jogVel.x());
-    axes.set_y(axes.y() + g_jogVel.y());
-    axes.set_z(axes.z() + g_jogVel.z());
-    axes.set_a(axes.a() + g_jogVel.a());
-    axes.set_b(axes.b() + g_jogVel.b());
-    axes.set_c(axes.c() + g_jogVel.c());
-    if(g_machineState.running && !g_machineState.paused)
+	CONTROLSTATE busy = mcOFF;
+	if (machine.controlOn)
+	{
+		busy = mcIDLE;
+	}
+	if (machine.busy)
+	{
+		busy = mcMDI;
+	}
+	if (machine.running)
+	{
+		busy = mcRUNNING;
+	}
+
+	if (machine.jogVel.x != 0 ||
+		machine.jogVel.y != 0 ||
+		machine.jogVel.z != 0 ||
+		machine.jogVel.a != 0 ||
+		machine.jogVel.b != 0 ||
+		machine.jogVel.c != 0)
+	{
+		if (busy == mcIDLE || busy == mcJOGGING)
+		{
+			busy = mcJOGGING;
+			m_state.absPos += machine.jogVel * 1;
+		}
+		else
+		{
+			machine.jogVel.Zero();
+		}
+	}
+	m_state.absPos.x += 0.01;
+	m_state.machineStatus = busy;
+
+    if(machine.running && !machine.paused)
     {
-        g_machineState.curLine++;
-        if(g_machineState.step) g_machineState.paused = true;
+		if (machine.runCount == 0)
+		{
+			machine.runCount = 1000;
+			machine.curLine++;
+		}else
+		{
+			machine.runCount--;
+		}
+        if(machine.step) machine.paused = true;
     }
     return(Server::Poll());
+}
+
+State Sim::GetState()
+{
+	//You could generate the state here but in this case we are using a global state
+	//which is updated in Poll()
+	MutexLocker lock = GetLock(); //Sync with main thread
+	return m_state;
+}
+
+void Sim::DrivesOn(const bool state)
+{
+	std::cout << "Drives on:" << state << std::endl;
+
+	machine.controlOn = state;
+}
+
+void Sim::JogVel(const Axes velocities)
+{
+	MutexLocker lock = GetLock(); //Sync with main thread
+	machine.jogVel = velocities;
+}
+
+bool Sim::Mdi(const string line)
+{
+	/*TODO: Proper g-code handling*/
+	std::cout << "MDI:" << line << std::endl;
+
+	return (m_state.machineStatus == mcIDLE || m_state.machineStatus == mcMDI);
+}
+
+void Sim::SpindleOverride(const double percent)
+{
+	MutexLocker lock = GetLock(); //Sync with main thread
+	machine.spindleOverride = percent;
+
+}
+
+void Sim::FeedOverride(const double percent)
+{
+	MutexLocker lock = GetLock(); //Sync with main thread because a double is not atomic on a 32 bit machine
+	machine.feedOverride = percent;
+}
+
+void Sim::RapidOverride(const double percent)
+{
+
+}
+
+bool Sim::LoadFile(const string file)
+{
+	std::cout << "Load file:" << file << std::endl;
+	return true;
+}
+
+void Sim::CloseFile()
+{
+	std::cout << "Close file" << std::endl;
+}
+
+void Sim::CycleStart()
+{
+	std::cout << "Cycle start" << std::endl;
+}
+
+void Sim::CycleStop()
+{
+	std::cout << "Cycle stop" << std::endl;
+}
+
+void Sim::FeedHold(const bool state)
+{
+	std::cout << "Feed hold:" << state << std::endl;
+	m_state.feedHold = state;
+}
+
+void Sim::BlockDelete(const bool state)
+{
+	std::cout << "Block delete:" << state << std::endl;
+	m_state.blockDelete = state;
+}
+
+void Sim::SingleStep(const bool state)
+{
+	std::cout << "Single step:" << state << std::endl;
+	m_state.singleStep = state;
+}
+
+void Sim::OptionalStop(const bool state)
+{
+	std::cout << "Optional stop:" << state << std::endl;
+	m_state.optionalStop = state;
+}
+
+void Sim::Home(const BoolAxes axes)
+{
+	std::cout << "Home axes:";
+	for (int ct = 0; ct < MAX_AXES; ct++)
+	{
+		std::cout << axes.array[ct] << ",";
+	}
+	
+	std::cout << std::endl;
 }

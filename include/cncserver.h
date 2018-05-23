@@ -23,53 +23,25 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #ifndef CNCSERVER_H_INCLUDED
 
 #include "cnccomms.h"
-#include "cncstatebuf.pb.h"
+#include "rpc/server.h"
 
 namespace CncRemote {
 
 class Server;
 
-class Connection : public Comms
-{
-public:
-
-    Connection(CActiveSocket * socket, Server * server);
-    virtual ~Connection();
-    void Close();
-    COMERROR Poll(); //Call at least as often as you need to send/receive data. Only needed if this connection isn't running in it's own thread
-    virtual void UpdateState(); //Called just before state is sent out. Default code just grabs state from the server and sends it out. Override this if you need to add your own state data.
-    inline bool IsClosing(){return m_closing;};
-    COMERROR Run(); //Start this connection in a new thread. Returns immediately after the thread has been created.
-
-protected:
-	void RemoveTemp();
-	void RecieveFileInit(const CmdBuf& cmd); //Helper to handle cmdSENDFILEINIT
-	void RecieveFileData(const CmdBuf& cmd); //Helper to handle cmdSENDFILEDATA
-
-
-    string m_curId;
-    CActiveSocket * m_socket;
-    Server * m_server;
-	FILE * m_loadFile;
-	int m_loadLength;
-	int m_loadCount;
-	CncString m_tempFileName;
-
-private:
 #ifdef _WIN32
-    static DWORD WINAPI Entry( LPVOID param );
+#define MUTEX HANDLE
+#define MUTEX_LOCK(mutex) WaitForSingleObject(mutex, INFINITE)
+#define MUTEX_UNLOCK(mutex) ReleaseMutex(mutex)
+#define MUTEX_CREATE(mutex) mutex = CreateMutex(NULL, false, NULL);
+#define MUTEX_DESTROY(mutex) CloseHandle(mutex);
 #else
-    static void * Entry(void * param);
+#define MUTEX pthread_mutex_t
+#define MUTEX_LOCK(mutex) pthread_mutex_lock(&mutex)
+#define MUTEX_UNLOCK(mutex) pthread_mutex_unlock(&mutex)
+#define MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
+#define MUTEX_DESTROY(mutex) pthread_mutex_destroy(mutex);
 #endif // _WIN32
-    void Entry();
-
-    bool m_closing;
-#ifdef _WIN32
-    HANDLE m_thread;
-#else
-    pthread_t m_thread;
-#endif
-};
 
 //simple class to handle locking. Mutex remains locked for the lifetime of this object.
 class MutexLocker
@@ -78,12 +50,12 @@ public:
     MutexLocker(MUTEX * mutex)
     {
         m_mutex = mutex;
-        MUTEX_LOCK(mutex);
+        MUTEX_LOCK(*mutex);
     }
 
     ~MutexLocker()
     {
-        MUTEX_UNLOCK(m_mutex);
+        MUTEX_UNLOCK(*m_mutex);
     }
 
 private:
@@ -95,28 +67,36 @@ class Server
 public:
     Server();
     virtual ~Server();
-    void SetTimeout(const float seconds);
+//    void SetTimeout(const float seconds);
     COMERROR Bind(const uint32_t port = DEFAULT_COMMS_PORT);
     COMERROR Poll();
-    void RemoveConn(Connection * conn);
-    virtual Connection * CreateConnection(CActiveSocket * client, Server * server)= 0;
-    Packet GetState();
+//    void RemoveConn(Connection * conn);
+//    virtual Connection * CreateConnection(CActiveSocket * client, Server * server)= 0;
     virtual void UpdateState(){};
     MutexLocker GetLock() {return (MutexLocker(&m_syncLock));} //Sync your thread to the main thread for as long as the MutexLocker object exists. Basically locks your thread to the server's Poll() loop
 
 protected:
-    void SetTimeout();
+	virtual State GetState() = 0;
+	virtual void DrivesOn(const bool state) = 0;
+	virtual void JogVel(const Axes velocities) = 0;
+	virtual bool Mdi(const string line) = 0;
+	virtual void SpindleOverride(const double percent) = 0;
+	virtual void FeedOverride(const double percent) = 0;
+	virtual void RapidOverride(const double percent) = 0;
+	virtual bool LoadFile(const string file) = 0;
+	virtual void CloseFile() = 0;
+	virtual void CycleStart() = 0;
+	virtual void CycleStop() = 0;
+	virtual void FeedHold(const bool state) = 0;
+	virtual void BlockDelete(const bool state) = 0;
+	virtual void SingleStep(const bool state) = 0;
+	virtual void OptionalStop(const bool state) = 0;
+	virtual void Home(const BoolAxes axes) = 0;
 
-    CPassiveSocket * m_socket;
-    float m_timeout;
-    bool m_listening;
-    vector<Connection *> m_conns;
-    StateBuf m_state;
-    Packet m_packet;
-    Packet m_statePacket;
-    MUTEX m_stateLock;
     MUTEX m_syncLock;
-	int32_t m_heartBeat;
+
+	rpc::server* m_server;
+//	int32_t m_heartBeat;
 private:
 
 };

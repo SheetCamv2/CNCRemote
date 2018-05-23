@@ -1,6 +1,6 @@
 /****************************************************************
 CNCRemote server
-Copyright 2017 Stable Design <les@sheetcam.com>
+Copyright 2017-2018 Stable Design <les@sheetcam.com>
 
 
 This program is free software; you can redistribute it and/or modify
@@ -25,198 +25,62 @@ along with this program; if not, you can obtain a copy from mozilla.org
 namespace CncRemote
 {
 
+#define MAX_THREADS 8
+
 Server::Server()
 {
-    m_timeout = CONN_TIMEOUT;
-    m_socket = new CPassiveSocket(CSimpleSocket::SocketTypeTcp);
-    m_socket->Initialize();
-    SetTimeout(0);
-    m_listening = false;
-    MUTEX_CREATE(m_stateLock);
     MUTEX_CREATE(m_syncLock);
     MUTEX_LOCK(m_syncLock);
-    m_statePacket.hdr.cmd = Comms::cmdNULL;
-    m_state.set_gcode_units(1);
+	m_server = NULL;
 }
 
 Server::~Server()
 {
-    delete m_socket;
+	delete m_server;
+	MUTEX_DESTROY(m_syncLock);
 }
 
-void Server::SetTimeout(const float seconds)
-{
-   m_timeout = seconds;
-   SetTimeout();
-}
+#define BIND(name, type) m_server->bind(#name, [this](type param) {return name(param);});
 
-void Server::SetTimeout()
-{
-    if(m_timeout > 0.000001)
-    {
-        float seconds = m_timeout;
-        m_socket->SetBlocking();
-        int32_t s = (int)seconds;
-        seconds -= s;
-        int32_t us = seconds * 1000000;
-        m_socket->SetReceiveTimeout(s,us);
-        m_socket->SetSendTimeout(s,us);
-        m_socket->SetConnectTimeout(s, us);
-    }else
-    {
-        m_socket->SetNonblocking();
-    }
-}
+#define BINDVOID(name) m_server->bind(#name, [this]() {return name();});
 
 COMERROR Server::Bind(const uint32_t port)
 {
-    if(!m_socket->Listen(NULL, port))
-    {
-        return errBIND;
-    }
-    return errOK;
+	delete m_server;
+	m_server = new rpc::server(port);
+	m_server->suppress_exceptions(true);
+	BINDVOID(GetState);
+	BIND(DrivesOn, bool);
+	BIND(JogVel, Axes);
+	BIND(Mdi, string);
+	BIND(FeedOverride, double);
+	BIND(SpindleOverride, double);
+	BIND(RapidOverride, double);
+	BIND(LoadFile, string);
+	BINDVOID(CloseFile);
+	BINDVOID(CycleStart);
+	BINDVOID(CycleStop);
+	BIND(FeedHold, bool);
+	BIND(BlockDelete, bool);
+	BIND(SingleStep, bool);
+	BIND(OptionalStop, bool);
+	BIND(Home, BoolAxes);
+	m_server->bind("Ping", []() {return true; });
+	m_server->bind("Version", []() {return PROTOCOL_VERSION; });
+
+	m_server->async_run(MAX_THREADS);
+	return errOK;
 }
 
 COMERROR Server::Poll()
 {
+	if (!m_server) return errCONNECT;
     MUTEX_UNLOCK(m_syncLock);
-    CActiveSocket * client = m_socket->Accept();
     MUTEX_LOCK(m_syncLock);
-    if(client)
-    {
-        printf("Accepting connection from %s\n", client->GetClientAddr());
-        Connection * conn = CreateConnection(client, this);
-        if(conn->Run() != errOK)
-        {
-            printf("Failed to create thread\n");
-            delete conn;
-            return errTHREAD;
-        }
-        m_conns.push_back(conn);
-    }
-    if(m_conns.size() > 0)
-    {
-        MUTEX_LOCK(m_stateLock);
-        UpdateState();
-        m_state.SerializeToString(&m_statePacket.data);
-        m_statePacket.hdr.cmd = Comms::cmdSTATE;
-        MUTEX_UNLOCK(m_stateLock);
-    }
     return errOK;
 }
 
-
-void Server::RemoveConn(Connection * conn)
-{
-    for(size_t ct=0; ct < m_conns.size(); ct++)
-    {
-        if(m_conns[ct] == conn)
-        {
-            m_conns.erase(m_conns.begin() + ct);
-            return;
-        }
-    }
-}
-
-Packet Server::GetState()
-{
-    Packet ret;
-    MUTEX_LOCK(m_stateLock);
-    ret = m_statePacket;
-    MUTEX_UNLOCK(m_stateLock);
-    return ret;
-}
-
-
-Connection::Connection(CActiveSocket * socket, Server * server) : Comms(socket, server)
-{
-    m_socket = socket;
-    m_server = server;
-    m_thread = 0;
-    m_closing = false;
-	m_loadFile = NULL;
-	m_loadLength = 0;
-	m_loadCount = 0;
-}
-
-Connection::~Connection()
-{
-    RemoveTemp();
-	printf("%s disconnected\n", m_socket->GetClientAddr());
-	m_server->RemoveConn(this);
-}
-
-#include "timer.h"
-TestTimer ttm("packet");
-COMERROR Connection::Poll()
-{
-    COMERROR ret = Comms::Poll();
-    if(ret != errOK) return ret;
-    UpdateState();
-	return ret;
-}
-
-void Connection::UpdateState()
-{
-    Packet pkt = m_server->GetState();
-	pkt.hdr.heartBeat = m_packet.hdr.heartBeat;
-    SendPacket(pkt);
-}
-
-COMERROR Connection::Run()
-{
-    if(m_thread)
-    {
-        return errRUNNING;
-    }
-    SetTimeout(CONN_TIMEOUT / 2000000); //Half of CONN_TIMEOUT time. CONN_TIMEOUT is in microseconds.
-
-#ifdef _WIN32
-    m_thread = CreateThread(
-        NULL,                   // default security attributes
-        0,                      // use default stack size
-        Entry,                  // thread function name
-        this,                   // argument to thread function
-        0,                      // use default creation flags
-        NULL);                  // returns the thread identifier
-
-    if(m_thread == NULL)
-    {
-        return errNOTHREAD;
-    }
-#else
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    int rc = pthread_create(&m_thread, &attr, Entry, (void *)this);
-    if(rc)
-    {
-        return errNOTHREAD;
-    }
-#endif // _WIN32
-    return errOK;
-}
-
-#ifdef _WIN32
-DWORD WINAPI Connection::Entry( LPVOID param )
-#else
-void * Connection::Entry(void * param)
-#endif // _WIN32
-{
-    Connection * c = (Connection *) param;
-    c->Entry();
-    delete c;
-    return(NULL);
-}
-
-void Connection::Entry()
-{
-    SetTimeout(0.005);
-	while(!m_closing && Poll() != errCONNECT)
-    {
-    }
-}
-
+/*
 void Connection::RemoveTemp()
 {
 	if(m_loadFile) fclose(m_loadFile);
@@ -285,7 +149,7 @@ void Connection::RecieveFileData(const CmdBuf& cmd)
 		printf("Received file is wrong length");
 	}
 }
-
+*/
 
 } //namespace CncRemote
 

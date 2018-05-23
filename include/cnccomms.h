@@ -21,69 +21,201 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 #ifndef Comms_H
 #define Comms_H
-#if defined(_WIN32) | defined(_WIN64)
-#include <winsock2.h>
-#endif
 
 #include <time.h>
-#include "cncstatebuf.pb.h"
 #include "cncplugin.h"
-#include "PassiveSocket.h"
 #include "timer.h"
-
-#ifdef _WIN32
-#define MUTEX HANDLE
-#define MUTEX_LOCK(mutex) WaitForSingleObject(mutex, INFINITE)
-#define MUTEX_UNLOCK(mutex) ReleaseMutex(mutex)
-#define MUTEX_CREATE(mutex) mutex = CreateMutex(NULL, false, NULL);
-#else
-#define MUTEX pthread_mutex_t
-#define MUTEX_LOCK(mutex) pthread_mutex_lock(&mutex)
-#define MUTEX_UNLOCK(mutex) pthread_mutex_unlock(&mutex)
-#define MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
-#endif // _WIN32
+#include "rpc/client.h"
+//#include "rpc/server.h"
 
 using namespace std;
 
 namespace CncRemote
 {
-#define CONN_TIMEOUT (2000000) //2 seconds
 
-#define MAX_PACKET_SIZE 2048
+#define PROTOCOL_VERSION 1.0 //Current protocol version
+#define MIN_PROTOCOL_VERSION 1.0 //Minimum protocol version that is compatible
 
 #define MAX_AXES 6
 
-#define pktESCAPE 0xFF
+	enum SPINDLESTATE {
+		spinOFF,
+		spinFWD,
+		spinREV,
+	};
 
-#define DEFAULT_COMMS_PORT 5080
+	enum CONTROLSTATE {
+		mcNO_SERVER, //Server is not responding. Note your server should never use this value.
+		mcOFFLINE, //Machine is off line (e.g server is running but it can't connect to the machine hardware)
+		mcOFF, //Machine is connected but drives are off
+		mcIDLE, //Drives on but not moving
+		mcJOGGING, //Machine is jogging
+		mcMDI, //Executing MDI code
+		mcRUNNING, //Executing g-code file
+	};
+
+
+	struct Axes{
+
+		union {
+			double array[MAX_AXES];
+			struct {
+				double x;
+				double y;
+				double z;
+				union {
+					double a;
+					double u;
+				};
+				union {
+					double b;
+					double v;
+				};
+				union {
+					double c;
+					double w;
+				};
+			};
+		};
+		MSGPACK_DEFINE_ARRAY(array);
+
+		void Zero() { memset(array, 0, sizeof(array)); }
+
+		
+		#define OP(n) Axes& operator n (const double src)\
+		{\
+			for (int ct = 0; ct < MAX_AXES; ct++)\
+			{\
+				array[ct] n src;\
+			}\
+			return *this;\
+		}\
+		Axes& operator n (const Axes& src)\
+		{\
+			for (int ct = 0; ct < MAX_AXES; ct++)\
+			{\
+				array[ct] n src.array[ct];\
+			}\
+			return *this;\
+		}
+
+				OP(+=);
+				OP(-=);
+				OP(*=);
+				OP(/=);
+		#undef OP
+
+		#define OP(n) Axes operator n (const double src)\
+		{\
+			Axes ret;\
+			for (int ct = 0; ct < MAX_AXES; ct++)\
+			{\
+				ret.array[ct] = array[ct] n src;\
+			}\
+			return ret;\
+		}\
+		Axes operator n (const Axes& src)\
+		{\
+			Axes ret;\
+			for (int ct = 0; ct < MAX_AXES; ct++)\
+			{\
+				ret.array[ct] = array[ct] n src.array[ct];\
+			}\
+			return ret;\
+		}
+				OP(+);
+				OP(-);
+				OP(*);
+				OP(/);
+		#undef OP
+
+
+
+	};
+
+	struct BoolAxes {
+		union {
+			bool array[MAX_AXES];
+			struct {
+				bool x;
+				bool y;
+				bool z;
+				union {
+					bool a;
+					bool u;
+				};
+				union {
+					bool b;
+					bool v;
+				};
+				union {
+					bool c;
+					bool w;
+				};
+			};
+		};
+		MSGPACK_DEFINE_ARRAY(array);
+
+		void Zero() { memset(array, 0, sizeof(array)); }
+	};
+
+
+	struct State {
+		Axes absPos; //Axes in machine coordinates (in metric units)
+		Axes offsetWork; //Work offsets (in metric units)
+		Axes offsetFixture; //Fixture offsets (in metric units)
+		bool feedHold; //Feed hold status
+		double feedOverride; //Feed rate override percentage. 1 = 100%
+		//    bool control_on = 7; //Control is on and ready to execute command
+		bool optionalStop; //stop
+		bool blockDelete; //block delete
+		union {
+			CONTROLSTATE machineStatus; //Current machine state
+			int _machineStatus; //MessagePack can't handle enums dirtectly
+		};
+		int currentLine; //current gcode line running. -1 if no line is running
+		bool singleStep; //Single step
+		double spindleSpeed; //commanded spindle speed
+		union {
+			SPINDLESTATE spindleState; //Current spindle status
+			int _spindleState;  //MessagePack can't handle enums dirtectly
+		};
+		bool mist; //Mist coolant status
+		bool flood; //Flood coolant status
+		BoolAxes homed; //homed status
+		BoolAxes axisLinear; //true if the axis is linear
+		string errorMsg; //Contains last error message
+		string displayMsg; //Contains any text that should be displayed to the user
+		double maxFeedLin;
+		double maxFeedAng;
+		double gcodeUnits; //Convert mm to the currently selected g-code linear units Usually 1 for metric, 1/25.4 for inch
+		double spindleOverride; //Spindle override percentage. 1 = 100%
+		double rapidOverride; //Rapid override percentage. 1 = 100%
+
+		MSGPACK_DEFINE_MAP(absPos, offsetWork, offsetFixture, feedOverride, feedHold, optionalStop, blockDelete, _machineStatus,
+			currentLine, singleStep, spindleSpeed, _spindleState, mist, flood, homed, axisLinear, errorMsg, displayMsg,
+			maxFeedLin, maxFeedAng, gcodeUnits, spindleOverride, rapidOverride);
+
+		void Clear() { memset(this, 0, sizeof(State));}
+	};
+
+
+
+#define CONN_TIMEOUT (2000000) //2 seconds
+
+
+
+#define DEFAULT_COMMS_PORT 5090
 
 class Server;
-
-#ifdef __GNUC__
-#define PACKED( class_to_pack ) class_to_pack __attribute__((__packed__));
-#else
-#define PACKED( class_to_pack ) __pragma( pack(push, 1) ) class_to_pack __pragma( pack(pop) )
-#endif
-
-struct Packet
-{
-    PACKED(
-	struct
-	{
-		uint16_t cmd;
-		uint16_t heartBeat;
-	} hdr;
-	)
-    string data;
-};
 
 enum COMERROR
 {
     errOK, //no error
-    errSOCKET, //Failed to create socket
-    errBIND, //Failed to bind socket (server only)
-    errCONNECT, //Lost connection
-    errNOSOCKET, //No valid socket
+//    errSOCKET, //Failed to create socket
+ //   errBIND, //Failed to bind socket (server only)
+    errCONNECT, //No connection
+ //   errNOSOCKET, //No valid socket
     errFAILED, //Failed to send data
     errNODATA, //no data was received. This is not an error. Simply no data was available to be processed.
     errTHREAD, //Failed to create thread
@@ -94,71 +226,38 @@ enum COMERROR
 enum CONNSTATE
 {
     connNONE, //No network connection
-    connNETWORK, //Network connection but no data is being trasferred
+ //   connNETWORK, //Network connection but no data is being trasferred
     connDATA, //Connected and talking
 };
 
-
+#if 0
 class Comms
 {
 public:
-    Comms(CActiveSocket *socket, Server * server = NULL);
+//    Comms(CActiveSocket *socket, Server * server = NULL);
     Comms();
     virtual ~Comms();
 
-	bool IsLocal(); //Returns true if the connection is to the local host
+//	bool IsLocal(); //Returns true if the connection is to the local host
 
-    void SetSocket(CActiveSocket *socket)
+/*    void SetSocket(CActiveSocket *socket)
     {
         m_socket = socket;
-    }
-    void Connect(const CncString& address, const uint32_t port); //Connect to a server. Note the connection will only be attempted on the next Poll()
-    CONNSTATE IsConnected()
+    }*/
+//    void Connect(const CncString& address, const uint32_t port); //Connect to a server. Note this is asynchronous so the actual connection may take place later
+/*    CONNSTATE IsConnected()
     {
         return m_connState;   //Is the server connected and running?
-    }
-    virtual void OnConnection(const CONNSTATE state) {}; //Override this if you want to be notfied of changes to the connection.
-
-
-    COMERROR Poll(); //Call on a regular basis
-    void SetTimeout(float seconds); //Set timeout for data send/receive. If set to 0 send/receive are non-blocking
+    }*/
+//    virtual void OnConnection(const CONNSTATE state) {}; //Override this if you want to be notfied of changes to the connection.
 
     void Close(); //Close the connection
-
-    enum CMDTYPE   //it is safe to add to this list but entries must not be deleted or rearranged
-    {
-        cmdNULL,
-        cmdPING,	//none
-        cmdSTATE,	//StateBuf
-        cmdDRIVES_ON, //boolean
-        cmdJOG_VEL,	//Axes. Jog at given velocities
-        cmdJOG_STEP,  //Axes. Jog the given amount
-        cmdMDI,		//string
-        cmdFRO,		//float
-        cmdFILE,	//string
-        cmdCLOSE_FILE, //none
-        cmdSTART,	//none
-        cmdSTOP,	//none
-        cmdFEED_HOLD,	//none
-        cmdBLOCK_DEL,	//boolean
-        cmdSINGLE_STEP,	//boolean
-        cmdOPT_STOP,		//boolean
-        cmdSEND_FILE_INIT,	//string, intval. String is file name (note: just the file name excluding path), intval is the length
-        cmdSEND_FILE_DATA,	//raw file data in packets of up to 1024 bytes
-        cmdSPINDLE, //integer: one of spinOFF,spinFWD,spinREV
-        cmdHOME,	//BoolAxes. All true = home all. otherwise ONE axis only.
-		cmdSPINDLE_OVER, //float
-		cmdRAPID_OVER, //float
-
-
-        cmdMAX, //this should always be the last entry. Note your code should always ignore command numbers past this.
-    };
 
 protected:
 
     static void * Entry(void * t);
     void * Entry();
-    void CheckConn();
+/*    void CheckConn();
     int RecvString(string& data);
     bool SendPacket(const Packet &packet);
     size_t CobsEncode(const uint8_t *ptr, size_t length, uint8_t *dst);
@@ -168,21 +267,21 @@ protected:
     virtual void HandlePacket(const Packet & pkt) = 0;
     virtual void OnPacketError() {};
 
-    Packet m_packet;
+    Packet m_packet;*/
 private:
-    CActiveSocket *m_socket;
-    uint32_t m_port;
-    CncString m_address;
+//    CActiveSocket *m_socket;
+ //   uint32_t m_port;
+ //   CncString m_address;
 
-    void Connected(const CONNSTATE state);
-    CONNSTATE m_connState;
+//    void Connected(const CONNSTATE state);
+/*    CONNSTATE m_connState;
     float m_socketTimeout;
     UTimer m_connTimer;
     uint64_t m_connTime;
-    string m_rxData;
+    string m_rxData;*/
 
 };
-
+#endif
 } //namespace CncRemote
 
 

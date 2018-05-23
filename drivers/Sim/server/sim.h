@@ -29,11 +29,52 @@ class Sim : public CncRemote::Server
 {
 public:
     Sim();
-    virtual void UpdateState();
-    virtual Connection * CreateConnection(CActiveSocket * client, Server * server);
     bool Poll();
 
+protected:
+	virtual State GetState();
+	virtual void DrivesOn(const bool state);
+	virtual void JogVel(const Axes velocities);
+	virtual bool Mdi(const string line);
+	virtual void SpindleOverride(const double percent);
+	virtual void FeedOverride(const double percent);
+	virtual void RapidOverride(const double percent);
+	virtual bool LoadFile(const string file);
+	virtual void CloseFile();
+	virtual void CycleStart();
+	virtual void CycleStop();
+	virtual void FeedHold(const bool state);
+	virtual void BlockDelete(const bool state);
+	virtual void SingleStep(const bool state);
+	virtual void OptionalStop(const bool state);
+	virtual void Home(const BoolAxes axes);
+
+
+
+	struct MACHINESTATE
+	{
+		bool controlOn;
+		bool paused;
+		bool blockDelete;
+		bool optStop;
+		bool running;
+		bool step;
+		double feedOverride;
+		int curLine;
+		int busy;
+		double spindleCmd;
+		double spindleSpeed;
+		double spindleOverride;
+		CncRemote::Axes jogVel;
+		CncRemote::Axes curPos;
+		int runCount;
+	} machine;
+
+protected:
+	//For simplicity we keep a global state that is common to all connections
+	State m_state;
 private:
+
 };
 
 #endif

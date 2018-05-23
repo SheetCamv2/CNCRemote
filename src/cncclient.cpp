@@ -20,10 +20,12 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 
 #include "cncclient.h"
-#include <time.h>
+#include <iostream>
+#include <ctime>
+#include <chrono>
+
 
 #ifdef _WIN32
-#include "Shlwapi.h"
 #else
 #include <dlfcn.h>
 #include <dirent.h>
@@ -31,6 +33,15 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 #include <sstream>
 #include "timer.h"
+
+#define CATCHRPC 	catch (rpc::rpc_error &e) {\
+	OnException(e);\
+}catch(clmdep_msgpack::type_error & e) {\
+	OnException(e);\
+}catch(rpc::timeout & e) {\
+	OnException(e);\
+}
+
 
 namespace CncRemote
 {
@@ -40,7 +51,10 @@ Client::Client()
 #ifdef USE_PLUGINS
     m_plugin = NULL;
 #endif
-    SetSocket(new CActiveSocket());
+	m_client = NULL;
+	m_state.Clear();
+	m_connected = false;
+	m_serverVer = 0;
 }
 
 Client::~Client()
@@ -58,6 +72,7 @@ Client::~Client()
 #endif
     }
 #endif
+	delete m_client;
 }
 
 
@@ -171,61 +186,138 @@ bool Client::LoadPlugins(const CncString& path)
 }
 #endif
 
-void Client::HandlePacket(const Packet & pkt)
+void Client::SetBusy(const int state)
 {
-    m_serverHeart = pkt.hdr.heartBeat;
-	if(m_busy &&
-		(m_busyHeart - m_serverHeart) < 0 )//We are in sync with machine state
+	if(state > m_statusCache)
 	{
-		m_busy = false;
+		m_statusCache = state; 
 	}
-
-	switch(pkt.hdr.cmd)
-    {
-    case cmdNULL:
-        break;
-
-    case cmdSTATE:
-    {
-        StateBuf buf;
-        buf.ParseFromString(pkt.data);
-        m_state.MergeFrom(buf);
-    }
-    break;
-    }
+	m_busyHeart = m_heartBeat+ 1;
 }
 
-
-bool Client::Poll()
+COMERROR Client::Poll()
 {
 #ifdef USE_PLUGINS
     if(m_plugin) m_plugin->Poll();
 #endif
 
-    COMERROR ret = Comms::Poll();
-    /*switch(ret)
-    {
-    case errNODATA:
-//        m_isConnected = (m_timeout > time(NULL));
-        break;
+	if (!m_connected) return errCONNECT;
 
-    case errOK:
-//        m_timeout = time(NULL) + CONN_TIMEOUT;
-        break;
+	COMERROR ret = errOK;
 
-    default:
-    }*/
+	try
+	{
+		if (m_pollFuture.valid())
+		{	
+			int time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - m_pollTimer).count();
+			if (m_pollFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+			{
+				m_roundTrip = time;
+				if (m_serverVer == 0)
+				{
+					float ver = m_pollFuture.get().as<float>();
+					m_serverVer = ver;
+					if (ver < MIN_PROTOCOL_VERSION)
+					{
+						OnVersionFailed(ver);
+						m_connected = false;
+						m_state.machineStatus = mcNO_SERVER;
+						m_serverVer = 0;
+					}
+				}
+				else
+				{
+					m_state = m_pollFuture.get().as<State>();
+					if (m_heartBeat >= m_busyHeart)
+					{
+						m_statusCache = 0;
+					}
+					m_heartBeat++;
+				}
+			}
+			else
+			{
+				if (time > 1000000) //Time out if no response after one second and try again
+				{
+//					ret = errCONNECT;
+					m_state.machineStatus = mcOFFLINE;
+				}
+				else
+				{
+					return errOK;
+				}
+			}
+		}
+	}CATCHRPC;
 
-//    if(m_isConnected)
-    {
-        SendCommand(cmdSTATE);
-    }
-    return ret == errOK;
+	try {
+		m_pollTimer = std::chrono::high_resolution_clock::now();
+		if (m_serverVer == 0)
+		{
+			m_pollFuture = m_client->async_call("Version");
+		}
+		else
+		{
+			m_pollFuture = m_client->async_call("GetState");
+		}
+	}
+	catch (rpc::timeout& e)
+	{
+		int a = 1;
+	}
+	catch (clmdep_msgpack::type_error & e)
+	{
+		cout << e.what() << std::endl;
+	}
+
+    return ret;
 }
+
+
+void Client::OnException(rpc::rpc_error &e)
+{
+	std::cout << std::endl << e.what() << std::endl;
+	std::cout << "in function '" << e.get_function_name() << "': "
+		<< e.get_error().as<std::string>() << std::endl;
+
+}
+
+void Client::OnException(clmdep_msgpack::type_error & e)
+{
+	std::cout << "Type error: " << e.what() << std::endl;
+}
+
+void Client::OnException(rpc::timeout &e)
+{
+	std::cout << "Timeout error: " << e.what() << std::endl;
+}
+
+//void(rpc::client &, connection_state, connection_state)
+
+void Client::OnConnectChange(rpc::client & client, rpc::connection_state was, rpc::connection_state now)
+{
+	if (was == rpc::connection_state::connected)
+	{
+		m_pollFuture = std::future<RPCLIB_MSGPACK::object_handle>(); //invalidate future because the server disconnected
+	}
+	if (now == rpc::connection_state::disconnected)
+	{
+		client.async_reconnect();
+	}
+	m_connected = now == rpc::connection_state::connected;
+	if (!m_connected) m_state.machineStatus = mcNO_SERVER;
+	m_serverVer = 0;
+}
+
+
 
 
 bool Client::Connect(const unsigned int index, const CncString& address, const uint32_t port)
 {
+	m_port = port;
+	delete m_client;
+	m_pollFuture = std::future<RPCLIB_MSGPACK::object_handle>(); //invalidate future
+	m_address = to_utf8(address);
 #ifdef USE_PLUGINS
     if(m_plugin)
     {
@@ -237,12 +329,13 @@ bool Client::Connect(const unsigned int index, const CncString& address, const u
         if(index > m_plugins.size()) return false;
         m_plugin = &m_plugins[index - 1];
         m_plugin->Start();
-        Comms::Connect(_T("localhost"),port);
-    }else
+		m_address = "localhost";
+	}
 #endif
 
-    Comms::Connect(address, port);
-    return true;
+	m_client = new rpc::client(m_address, port, [this](rpc::client & client, rpc::connection_state was, rpc::connection_state now) {OnConnectChange(client, was, now); });
+	m_client->set_timeout(500);
+	return true;
 }
 
 void Client::Disconnect()
@@ -254,224 +347,203 @@ void Client::Disconnect()
         m_plugin = NULL;
     }
 #endif
-    Close();
+	delete m_client;
+	m_client = NULL;
 }
 
-bool Client::Ping(int waitMs)
+float Client::Ping(int waitMs)
 {
-    m_pingResp = false;
-    SendCommand(cmdPING);
-    while (!m_pingResp && waitMs >= 0)
-    {
-        SleepMs(10);
-        if(!Poll()) return false;
-        waitMs -= 10;
-    }
-    return m_pingResp;
+	if (!m_connected) return -1;
+	using namespace std::chrono;
+	high_resolution_clock::time_point t = high_resolution_clock::now();
+	try
+	{
+		auto future = m_client->async_call("Ping");
+		future.wait_for(milliseconds(waitMs));
+		if (future.valid())
+		{
+			return (float)(duration_cast<microseconds>(high_resolution_clock::now() - t).count()) / 1000;
+		}
+	}CATCHRPC;
+	return -1;
 }
 
-bool Client::IsBusy()
+bool Client::IsBusy(const int state)
 {
-	if(m_busy) return true;
-	return m_state.busy();
+	if (!m_connected) return true;
+	if(m_statusCache > m_state.machineStatus)
+	{
+		return(m_statusCache > state);
+	}
+	return (m_state.machineStatus > state);
 }
 
 void Client::DrivesOn(const bool state)
 {
-    CmdBuf cmd;
-    cmd.set_state(state);
-    SendCommand(cmdDRIVES_ON, cmd);
-	SetBusy();
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("DrivesOn", state);
+	}CATCHRPC;
 }
 
 void Client::JogVel(const Axes& velocities)
 {
-    CmdBuf cmd;
-    *cmd.mutable_axes() = velocities;
-    SendCommand(cmdJOG_VEL, cmd);
-	SetBusy();
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("JogVel", velocities);
+	}CATCHRPC;
+	SetBusy(mcJOGGING);
 }
 
-void Client::Mdi(const string line)
+bool Client::Mdi(const string line)
 {
-    CmdBuf cmd;
-    cmd.set_string(line);
-    SendCommand(cmdMDI, cmd);
-	SetBusy();
+	if (!m_connected) return false;
+	bool ret = false;
+	try
+	{
+		ret = m_client->call("Mdi", line).as<bool>();
+	}CATCHRPC;
+	SetBusy(mcMDI);
+	return ret;
 }
 
 
 void Client::FeedOverride(const double percent)
 {
-    CmdBuf cmd;
-    cmd.set_rate(percent);
-    SendCommand(cmdFRO, cmd);
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("FeedOverride", percent);
+	}CATCHRPC;
 }
 
 void Client::SpindleOverride(const double percent)
 {
-    CmdBuf cmd;
-    cmd.set_rate(percent);
-    SendCommand(cmdFRO, cmd);
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("SpindleOverride", percent);
+	}CATCHRPC;
 }
 
 void Client::RapidOverride(const double percent)
 {
-    CmdBuf cmd;
-    cmd.set_rate(percent);
-    SendCommand(cmdFRO, cmd);
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("RapidOverride", percent);
+	}CATCHRPC;
 }
 
 
-void Client::LoadFile(const string file)
+bool Client::LoadFile(const string file)
 {
-    CmdBuf cmd;
-    cmd.set_string(file);
-    SendCommand(cmdFILE, cmd);
+	if (!m_connected) return false;
+	bool ret = false;
+	try
+	{
+		ret = m_client->call("LoadFile", file).as<bool>();
+	}CATCHRPC;
+	return ret;
 }
 
 void Client::CloseFile()
 {
-    CmdBuf cmd;
-    SendCommand(cmdCLOSE_FILE, cmd);
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("CloseFile");
+	}CATCHRPC;
 }
 
 
 void Client::CycleStart()
 {
-    CmdBuf cmd;
-    SendCommand(cmdSTART, cmd);
-	SetBusy();
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("CycleStart");
+	}CATCHRPC;
+	SetBusy(mcRUNNING);
 }
 
-void Client::Stop()
+void Client::CycleStop()
 {
-    CmdBuf cmd;
-    SendCommand(cmdSTOP, cmd);
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("CycleStop");
+	}CATCHRPC;
 }
 
 void Client::FeedHold(const bool state)
 {
-    CmdBuf cmd;
-    cmd.set_state(state);
-    SendCommand(cmdFEED_HOLD, cmd);
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("FeedHold", state);
+	}CATCHRPC;
 }
 
 
 void Client::BlockDelete(const bool state)
 {
-    CmdBuf cmd;
-    cmd.set_state(state);
-    SendCommand(cmdBLOCK_DEL, cmd);
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("BlockDelete", state);
+	}CATCHRPC;
 }
 
 void Client::SingleStep(const bool state)
 {
-    CmdBuf cmd;
-    cmd.set_state(state);
-    SendCommand(cmdSINGLE_STEP, cmd);
-	SetBusy();
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("SingleStep", state);
+	}CATCHRPC;
 }
 
 void Client::OptionalStop(const bool state)
 {
-    CmdBuf cmd;
-    cmd.set_state(state);
-    SendCommand(cmdOPT_STOP, cmd);
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("OptionalStop", state);
+	}CATCHRPC;
 }
 
-void Client::Home(const int axis)
+void Client::Home(const unsigned int axis)
 {
-	CmdBuf buf;
-	BoolAxes& axes = *buf.mutable_bool_axes();
-	switch(axis)
+	if (!m_connected) return;
+	if (axis >= MAX_AXES) return;
+	BoolAxes axes;
+	axes.Zero();
+	axes.array[axis] = true;
+	if (!m_connected) return;
+	try
 	{
-	case 0:
-		axes.set_x(true);
-		break;
-
-	case 1:
-		axes.set_y(true);
-		break;
-
-	case 2:
-		axes.set_z(true);
-		break;
-
-	case 3:		
-		axes.set_a(true);
-		break;
-
-	case 4:		
-		axes.set_b(true);
-		break;
-
-	case 5:		
-		axes.set_c(true);
-		break;
-
-	default:
-		return;
-	}
-
-	SendCommand(cmdHOME, buf);	
-	SetBusy();
+		m_client->send("Home", axes);
+	}CATCHRPC;
+	SetBusy(mcRUNNING);
 }
 
 void Client::HomeAll()
 {
-	CmdBuf buf;
-	BoolAxes& axes = *buf.mutable_bool_axes();
-	axes.set_x(true);
-	axes.set_y(true);
-	axes.set_z(true);
-	axes.set_a(true);
-	axes.set_b(true);
-	axes.set_c(true);
-	SendCommand(cmdHOME, buf);	
-	SetBusy();
+	
+	BoolAxes axes;
+	for (int ct = 0; ct < MAX_AXES; ct++)
+	{
+		axes.array[ct] = true;
+	}
+	if (!m_connected) return;
+	try
+	{
+		m_client->send("Home", axes);
+	}CATCHRPC;
+	SetBusy(mcRUNNING);
 }
-
-
-bool Client::SendCommand(const uint16_t cmd)
-{
-    CmdBuf buf;
-    Packet packet;
-	packet.hdr.heartBeat = ++m_heartBeat;
-    packet.hdr.cmd = cmd;
-    return SendPacket(packet);
-}
-
-bool Client::SendCommand(const uint16_t cmd, const bool state)
-{
-    CmdBuf buf;
-    buf.set_state(state);
-    return SendCommand(cmd, buf);
-}
-
-bool Client::SendCommand(const uint16_t cmd, const double value)
-{
-    CmdBuf buf;
-    buf.set_rate(value);
-    return SendCommand(cmd, buf);
-}
-
-bool Client::SendCommand(const uint16_t cmd, const string value)
-{
-    CmdBuf buf;
-    buf.set_string(value);
-    return SendCommand(cmd, buf);
-}
-
-
-bool Client::SendCommand(const uint16_t command, CmdBuf& data)
-{
-    Packet packet;
-	packet.hdr.heartBeat = ++m_heartBeat;
-    data.SerializeToString(&packet.data);
-    packet.hdr.cmd = command;
-    return SendPacket(packet);
-}
-
 
 } //namespace CncRemote

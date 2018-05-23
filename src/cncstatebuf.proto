@@ -10,6 +10,14 @@ enum SPINDLE {
 	spinREV = 2;
 }
 
+enum STATEFLAGS {
+	mcOFF = 0;
+	mcIDLE = 1;
+	mcJOGGING = 2;
+	mcMDI = 3;
+	mcRUNNING = 4;
+}
+
 message Axes {
     optional double x = 1;
     optional double y = 2;
@@ -36,12 +44,12 @@ message StateBuf {
     optional Axes offset_fixture = 4; //Fixture offsets (in metric units)
 
     optional double feed_override = 6; //Feed rate override percentage. 1 = 100%
-    optional bool control_on = 7; //Control is on and ready to execute command
+//    optional bool control_on = 7; //Control is on and ready to execute command
     optional bool machine_connected = 8; //machine controller is responding.
     optional bool paused = 9; //machine is paused
     optional bool optional_stop = 10; //Optional stop
     optional bool block_delete = 11; //block delete
-    optional bool busy = 12; //Machine is running code or moving
+    optional int32 state = 12; //Current machine state
     optional int32 current_line = 13; //current gcode line running
     optional bool single_step = 14; //Single step
     optional double spindle_speed = 15;
