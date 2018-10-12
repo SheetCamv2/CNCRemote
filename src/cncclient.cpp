@@ -217,7 +217,7 @@ COMERROR Client::Poll()
 				{
 					float ver = m_pollFuture.get().as<float>();
 					m_serverVer = ver;
-					if (ver < MIN_PROTOCOL_VERSION)
+					if (ver < CNCREMOTE_MIN_PROTOCOL_VERSION)
 					{
 						OnVersionFailed(ver);
 						m_connected = false;
@@ -438,9 +438,45 @@ void Client::RapidOverride(const double percent)
 }
 
 
-bool Client::LoadFile(const string file)
+bool Client::LoadFile(string file)
 {
 	if (!m_connected) return false;
+	if (!IsLocal()) //need to upload
+	{
+		FILE * fp = fopen(file.c_str(), "rb");
+		if (!fp)
+		{
+			return false;
+		}
+
+#ifdef _WIN32
+		int s = file.find_last_of("/\\");
+#else
+		int s = file.find_last_of("/");
+#endif
+		if (s == string::npos) s = 0;
+		int e = file.find_last_of(".");
+		if (e == string::npos || e < s) e = file.size();
+		string name = file.substr(s + 1 , e - (s + 1));
+		try 
+		{
+			file = m_client->call("SendInit", name).as<string>();
+			if (file.empty()) return false;
+			char buf[FILE_BLOCK_SIZE];
+			string s;
+			int blk = 0;
+			int bytes = 0;
+			do
+			{
+				bytes = fread(buf, 1, FILE_BLOCK_SIZE, fp);
+				s.assign(buf, bytes);
+				if (!m_client->call("SendData", s, blk++).as<bool>()) return false;
+				Poll();
+			} while (bytes == FILE_BLOCK_SIZE);
+		}CATCHRPC;
+	}
+
+
 	bool ret = false;
 	try
 	{
@@ -544,6 +580,12 @@ void Client::HomeAll()
 		m_client->send("Home", axes);
 	}CATCHRPC;
 	SetBusy(mcRUNNING);
+}
+
+bool Client::IsLocal()
+{
+	//FIXME: Find a better way of detecting a local connection
+	return (m_connected && (m_address == "localhost" || m_address == "127.0.0.1"));
 }
 
 } //namespace CncRemote

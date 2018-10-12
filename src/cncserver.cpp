@@ -25,48 +25,54 @@ along with this program; if not, you can obtain a copy from mozilla.org
 namespace CncRemote
 {
 
-#define MAX_THREADS 8
+	enum { MAX_THREADS = 8 };
 
 Server::Server()
 {
     MUTEX_CREATE(m_syncLock);
     MUTEX_LOCK(m_syncLock);
 	m_server = NULL;
+	m_file = NULL;
 }
 
 Server::~Server()
 {
+	DeleteTemp();
 	delete m_server;
 	MUTEX_DESTROY(m_syncLock);
 }
 
-#define BIND(name, type) m_server->bind(#name, [this](type param) {return name(param);});
 
-#define BINDVOID(name) m_server->bind(#name, [this]() {return name();});
+#define BIND0(name) m_server->bind(#name, [this]() {return name();});
+#define BIND1(name, type1) m_server->bind(#name, [this](type1 param1) {return name(param1);});
+#define BIND2(name, type1, type2) m_server->bind(#name, [this](type1 param1, type2 param2) {return name(param1, param2);});
 
 COMERROR Server::Bind(const uint32_t port)
 {
 	delete m_server;
 	m_server = new rpc::server(port);
 	m_server->suppress_exceptions(true);
-	BINDVOID(GetState);
-	BIND(DrivesOn, bool);
-	BIND(JogVel, Axes);
-	BIND(Mdi, string);
-	BIND(FeedOverride, double);
-	BIND(SpindleOverride, double);
-	BIND(RapidOverride, double);
-	BIND(LoadFile, string);
-	BINDVOID(CloseFile);
-	BINDVOID(CycleStart);
-	BINDVOID(CycleStop);
-	BIND(FeedHold, bool);
-	BIND(BlockDelete, bool);
-	BIND(SingleStep, bool);
-	BIND(OptionalStop, bool);
-	BIND(Home, BoolAxes);
+
+	BIND0(GetState);
+	BIND1(DrivesOn, bool);
+	BIND1(JogVel, Axes);
+	BIND1(Mdi, string);
+	BIND1(FeedOverride, double);
+	BIND1(SpindleOverride, double);
+	BIND1(RapidOverride, double);
+	BIND1(LoadFile, string);
+	BIND0(CloseFile);
+	BIND0(CycleStart);
+	BIND0(CycleStop);
+	BIND1(FeedHold, bool);
+	BIND1(BlockDelete, bool);
+	BIND1(SingleStep, bool);
+	BIND1(OptionalStop, bool);
+	BIND1(Home, BoolAxes);
+	BIND1(SendInit, string);
+	BIND2(SendData, string, int);
 	m_server->bind("Ping", []() {return true; });
-	m_server->bind("Version", []() {return PROTOCOL_VERSION; });
+	m_server->bind("Version", []() {return (CNCREMOTE_PROTOCOL_VERSION); });
 
 	m_server->async_run(MAX_THREADS);
 	return errOK;
@@ -78,6 +84,74 @@ COMERROR Server::Poll()
     MUTEX_UNLOCK(m_syncLock);
     MUTEX_LOCK(m_syncLock);
     return errOK;
+}
+
+string Server::SendInit(string nameHint)
+{
+	CloseFile();
+	DeleteTemp();
+	m_curBlock = 0;
+#ifdef _WIN32
+	char szTempFileName[MAX_PATH];  
+	char lpTempPathBuffer[MAX_PATH];
+	DWORD dwRetVal = GetTempPathA(MAX_PATH, lpTempPathBuffer);
+	if (dwRetVal > MAX_PATH || (dwRetVal == 0))
+	{
+		return("");
+	}
+
+	//  Generates a temporary file name. 
+	UINT uRetVal = GetTempFileNameA(lpTempPathBuffer, nameHint.c_str(), 0, szTempFileName);
+	if (uRetVal == 0)
+	{
+		return("");
+	}
+	m_file = fopen(szTempFileName, "w");
+	if (m_file)
+	{
+		m_curFile = szTempFileName;
+		return szTempFileName;
+	}
+	return("");
+#else
+	int fd = mkstemp(nameHint.c_str());
+	if (fd < 0) return ("");
+	char path[MAX_PATH];
+	if (fcntl(fd, F_GETPATH, path) < 0) return ("");
+	m_file = fdopen(fd, "w");
+	if (!m_file) return ("");
+	m_curFile = path;
+	return path;
+#endif
+
+}
+
+bool Server::SendData(const string data, const int block)
+{
+	if (!m_file) return false;
+	if (block != m_curBlock)
+	{
+		fclose(m_file);
+		return false;
+	}
+	m_curBlock = block + 1;
+	int l = data.size();
+	int r = fwrite(data.c_str(), 1, l, m_file);
+	if (r != l)
+	{
+		fclose(m_file);
+		return false;
+	}
+	if (l < FILE_BLOCK_SIZE) fclose(m_file);
+	return true;
+}
+
+
+void Server::DeleteTemp()
+{
+	if (m_file) fclose(m_file);
+	if (m_curFile.empty()) return;
+	remove(m_curFile.c_str());
 }
 
 /*
