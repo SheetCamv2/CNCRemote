@@ -45,6 +45,7 @@
 				<Option use_console_runner="0" />
 				<Compiler>
 					<Add option="-march=i686" />
+					<Add option="-std=c++0x" />
 					<Add option="-g" />
 					<Add option="-std=c++11" />
 					<Add option="-D_LINUX" />
@@ -95,12 +96,10 @@
 				<Compiler>
 					<Add option="-march=i686" />
 					<Add option="-g" />
-					<Add option="-std=gnu++98" />
+					<Add option="-std=c++11" />
 					<Add option="-D_WIN32" />
 					<Add directory="../../../include" />
-					<Add directory="../../../src" />
-					<Add directory="../../../libraries/include" />
-					<Add directory="../../../clsocket/src" />
+					<Add directory="../../../libraries/rpclib/include" />
 				</Compiler>
 				<Linker>
 					<Add library="protobuf-lite-3.1.0" />
@@ -115,23 +114,12 @@
 			<Add option="-fexceptions" />
 			<Add option="-DZMQ_STATIC" />
 		</Compiler>
-		<Unit filename="../../../clsocket/src/ActiveSocket.cpp" />
-		<Unit filename="../../../clsocket/src/ActiveSocket.h" />
-		<Unit filename="../../../clsocket/src/Host.h" />
-		<Unit filename="../../../clsocket/src/PassiveSocket.cpp" />
-		<Unit filename="../../../clsocket/src/PassiveSocket.h" />
-		<Unit filename="../../../clsocket/src/SimpleSocket.cpp" />
-		<Unit filename="../../../clsocket/src/SimpleSocket.h" />
-		<Unit filename="../../../clsocket/src/StatTimer.h" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
 		<Unit filename="../../../include/cncserver.h" />
-		<Unit filename="../../../include/millisleep.h" />
 		<Unit filename="../../../src/cnccomms.cpp" />
 		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncserver.cpp" />
-		<Unit filename="../../../src/cncstatebuf.pb.cc" />
-		<Unit filename="../../../src/cncstatebuf.pb.h" />
 		<Unit filename="../../../src/timer.cpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="main.h" />

@@ -34,20 +34,20 @@ public:
 protected:
 	virtual State GetState();
 	virtual void DrivesOn(const bool state);
-	virtual void JogVel(const Axes velocities);
-	virtual bool Mdi(const string line);
+	virtual void JogVel(const Axes& velocities);
+	virtual bool Mdi(const string& line);
 	virtual void SpindleOverride(const double percent);
 	virtual void FeedOverride(const double percent);
 	virtual void RapidOverride(const double percent);
-	virtual bool LoadFile(const string file);
-	virtual void CloseFile();
+	virtual bool LoadFile(const string& file);
+	virtual bool CloseFile();
 	virtual void CycleStart();
 	virtual void CycleStop();
 	virtual void FeedHold(const bool state);
 	virtual void BlockDelete(const bool state);
 	virtual void SingleStep(const bool state);
 	virtual void OptionalStop(const bool state);
-	virtual void Home(const BoolAxes axes);
+	virtual void Home(const BoolAxes& axes);
 
 
 

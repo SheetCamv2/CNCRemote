@@ -56,12 +56,9 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Unit filename="../../../clsocket/src/ActiveSocket.cpp" />
 		<Unit filename="../../../clsocket/src/ActiveSocket.h" />
 		<Unit filename="../../../clsocket/src/Host.h" />
-		<Unit filename="../../../clsocket/src/PassiveSocket.cpp" />
 		<Unit filename="../../../clsocket/src/PassiveSocket.h" />
-		<Unit filename="../../../clsocket/src/SimpleSocket.cpp" />
 		<Unit filename="../../../clsocket/src/SimpleSocket.h" />
 		<Unit filename="../../../clsocket/src/StatTimer.h" />
 		<Unit filename="../../../include/cncclient.h" />

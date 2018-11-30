@@ -1,209 +1,44 @@
+/*
+EdingCNC server plugin
+Copyright 2018 Stable Design <les@sheetcam.com>
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the Mozilla Public License Version 2.0 or later
+as published by the Mozilla foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+Mozilla Public License for more details.
+
+You should have received a copy of the Mozilla Public License
+along with this program; if not, you can obtain a copy from mozilla.org
+******************************************************************/
+
 #include "cnccomms.h"
 #include "EdingCNC.h"
 
 #include <tlhelp32.h>
 
-enum
+#define ASARRAYD(n) ((double *)&n)
+#define ASARRAYB(n) ((int *)&n)
+
+EdingCncServer::EdingCncServer()
 {
-
-    btnEnable = 1000,
-    btnHome = 1001,
-    btnStart = 1002,
-    btnPause = 1003,
-    btnStop = 1004,
-    btnRewind = 1005,
-    btnMist = 1006,
-    btnFlood = 1007,
-    btnSpindle = 1008,
-    btnJogXP = 1009,
-    btnJogXM = 1010,
-    btnJogYP = 1011,
-    btnJogYM = 1012,
-    btnJogZP = 1013,
-    btnJogZM = 1014,
-    btnJogAP = 1015,
-    btnJogAM = 1016,
-    btnJogBP = 1017,
-    btnJogBM = 1018,
-    btnJogCP = 1019,
-    btnJogCM = 1020,
-
-    btnZeroX = 1021,
-    btnZeroY = 1022,
-    btnZeroZ = 1023,
-    btnZeroA = 1024,
-    btnZeroB = 1025,
-    btnZeroC = 1026,
-    btnJogStep = 1027,
-    btnHomeX = 1028,
-    btnHomeY = 1029,
-    btnHomeZ = 1030,
-    btnHomeA = 1031,
-    btnHomeB = 1032,
-    btnHomeC = 1033,
-    btnBlockDelete = 1034,
-    btnSingleStep = 1035,
-    btnFastJog = 1036,
-    btnSyncTools = 1037,
-    btnAutoSync = 1038,
-    btnMonitorTools = 1039,
-    btnSimulate = 1040,
-
-    droX = 2000,
-    droY = 2001,
-    droZ = 2002,
-    droA = 2003,
-    droB = 2004,
-    droC = 2005,
-    droCommandFeed = 2006,
-    droFRO = 2007,
-    droActualFeed = 2008,
-    droSpindle = 2009,
-    droMachineX = 2010,
-    droMachineY = 2011,
-    droMachineZ = 2012,
-    droMachineA = 2013,
-    droMachineB = 2014,
-    droMachineC = 2015,
-    droStepSize = 2016,
-    droJogPercent = 2017,
-
-    /*use this ID for the panel containing jog buttons. This catches key presses
-    NOTE: Any controls on this panel that are not text boxes should have the
-    wxWANTS_CHARS style flag set
-    */
-    funcJOG = 3000,
-
-    /*MDI entry box. Should be a single line text box.
-    Must have the wxWANTS_CHARS style flag set
-    */
-    funcMDIBOX = 3001,
-
-    /*MDI history box. Should be a list box.
-    Notes:
-    You must have a MDI box for this box to be of any use.
-    This box must be on the same panel as the MDI box.
-    Must have the wxWANTS_CHARS and wxTE_PROCESS_ENTER style flags set.
-    */
-    funcMDIHISTORY = 3002,
-
-    /*G and M codes. Should be a multi line text box. Should be read only
-    */
-    funcGMCODES = 3003,
-
-    /* Status box. Should be a text box. Should be read only*/
-    funcSTATUS = 3004,
-};
-
-
-struct ENABLE
-{
-    int button;
-    CURSTATE enable;
-};
-
-static const ENABLE g_enables[]=
-{
-    {btnEnable, stateANY},
-    {btnHome, stateIDLE},
-    {btnStart, statePAUSED},
-    {btnPause, stateRUNNING},
-    {btnStop, stateANY},
-    {btnRewind, stateIDLE},
-    {btnMist, stateANY},
-    {btnFlood, stateANY},
-    {btnSpindle, stateTOOLCHANGE},
-    {btnJogXP, statePAUSED},
-    {btnJogXM, statePAUSED},
-    {btnJogYP, statePAUSED},
-    {btnJogYM, statePAUSED},
-    {btnJogZP, statePAUSED},
-    {btnJogZM, statePAUSED},
-    {btnJogAP, statePAUSED},
-    {btnJogAM, statePAUSED},
-    {btnJogBP, statePAUSED},
-    {btnJogBM, statePAUSED},
-    {btnJogCP, statePAUSED},
-    {btnJogCM, statePAUSED},
-    {btnZeroX, stateTOOLCHANGE},
-    {btnZeroY, stateTOOLCHANGE},
-    {btnZeroZ, stateTOOLCHANGE},
-    {btnZeroA, stateTOOLCHANGE},
-    {btnZeroB, stateTOOLCHANGE},
-    {btnZeroC, stateTOOLCHANGE},
-    {btnJogStep, statePAUSED},
-    {btnHomeX, stateIDLE},
-    {btnHomeY, stateIDLE},
-    {btnHomeZ, stateIDLE},
-    {btnHomeA, stateIDLE},
-    {btnHomeB, stateIDLE},
-    {btnHomeC, stateIDLE},
-    {btnBlockDelete, statePAUSED},
-    {btnSingleStep, statePAUSED},
-    {btnFastJog, statePAUSED},
-    {btnSyncTools, stateIDLE},
-    {btnAutoSync, stateIDLE},
-    {btnMonitorTools, stateIDLE},
-    {btnSimulate, stateIDLE},
-
-    {droX, stateTOOLCHANGE},
-    {droY, stateTOOLCHANGE},
-    {droZ, stateTOOLCHANGE},
-    {droA, stateTOOLCHANGE},
-    {droB, stateTOOLCHANGE},
-    {droC, stateTOOLCHANGE},
-    {droCommandFeed, stateNEVER},
-    {droFRO, stateANY},
-    {droActualFeed, stateNEVER},
-    {droSpindle, stateRUNNING},
-    {droMachineX, stateNEVER},
-    {droMachineY, stateNEVER},
-    {droMachineZ, stateNEVER},
-    {droMachineA, stateNEVER},
-    {droMachineB, stateNEVER},
-    {droMachineC, stateNEVER},
-    {droStepSize, stateANY},
-    {droJogPercent, stateANY},
-
-    {funcJOG, statePAUSED},
-    {funcMDIBOX, stateTOOLCHANGE},
-    {funcMDIHISTORY, stateTOOLCHANGE},
-    {funcGMCODES, stateNEVER},
-    {funcSTATUS, stateNEVER},
-    {-1,stateNEVER}
-};
-
-EdingCnc::EdingCnc()
-{
-    m_autoLoad = false;
-    m_controlCount = 0;
-    m_displayOn = false;
-    m_step = false;
-    m_jogVel = 0.25;
-    m_stepSize = 1;
-    m_oldLine = -1;
-    memset(&m_jogging,0,sizeof (CNC_CART_DOUBLE));
-    m_fastJog = false;
-    m_toolCount = 0;
-    m_autoSync = false;
-    m_autoMonitor = false;
     m_connected = false;
     m_connectCount = 0;
-    m_curState = stateNEVER;
-    m_zMax = -1e17;
     m_cncDll = NULL;
+	m_zMax = 0;
 }
 
-EdingCnc::~EdingCnc()
+EdingCncServer::~EdingCncServer()
 {
     if(m_cncDll) FreeLibrary(m_cncDll);
 }
 
-#define GETSYMBOL(type, f)     f = (type)GetProcAddress(m_cncDll,L(#f)); if(!f) ok = false;
-#define GETSYMBOL2(type, f, a) f = (type)GetProcAddress(m_cncDll,L(#a)); if(!f) ok = false;
 
-
-void EdingCnc::GetPausePos(CNC_CART_DOUBLE *pos, int *spindleOutput, int *FloodOutput, int *mistOutput,
+void EdingCncServer::GetPausePos(CNC_CART_DOUBLE *pos, int *spindleOutput, int *FloodOutput, int *mistOutput,
                            int *lineNumber, int *valid, int* doArray, int *arrayX, int *arrayY)
 {
     CNC_PAUSE_STS* sts = CncGetPauseStatus();
@@ -219,7 +54,7 @@ void EdingCnc::GetPausePos(CNC_CART_DOUBLE *pos, int *spindleOutput, int *FloodO
 }
 
 
-bool EdingCnc::LoadDll()
+bool EdingCncServer::LoadDll()
 {
     if(m_cncDll)
     {
@@ -228,11 +63,11 @@ bool EdingCnc::LoadDll()
     wstring path;
     HKEY key;
     wstring regPath = L"SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
-    LONG ret = RegOpenKeyExW(HKEY_LOCAL_MACHINE, regPath.c_str(), 0, KEY_READ, &hKey);
+    LONG ret = RegOpenKeyExW(HKEY_LOCAL_MACHINE, regPath.c_str(), 0, KEY_READ, &key);
     if(ret != ERROR_SUCCESS)
     {
         regPath = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
-        ret = RegOpenKeyExW(HKEY_LOCAL_MACHINE, regPath.c_str(), 0, KEY_READ, &hKey);
+        ret = RegOpenKeyExW(HKEY_LOCAL_MACHINE, regPath.c_str(), 0, KEY_READ, &key);
     }
     if(ret != ERROR_SUCCESS) return false; //something has gone horribly wrong
     DWORD    subKeys=0;               // number of subkeys
@@ -259,12 +94,16 @@ bool EdingCnc::LoadDll()
         RegCloseKey(key);
         return false;
     }
+
+#define MAX_KEY_LENGTH 256
+
     TCHAR    keyName[MAX_KEY_LENGTH];   // buffer for subkey name
     DWORD    nameSize;                   // size of name string
 
     int dllVersion = 0;
-    for (int i=0; i<subKeys; i++)
+    for (DWORD i=0; i<subKeys; i++)
     {
+		nameSize = MAX_KEY_LENGTH;
         ret = RegEnumKeyEx(key, i,keyName, &nameSize,  NULL, NULL, NULL, NULL);
         if (ret == ERROR_SUCCESS)
         {
@@ -273,18 +112,19 @@ bool EdingCnc::LoadDll()
             if(ver < dllVersion) continue;
             DWORD    values=0;
             HKEY key2;
-            ret = RegOpenKeyExW(HKEY_LOCAL_MACHINE, (regPath + L"\\" + keyName).c_str(), 0, KEY_READ, &hKey);
+            ret = RegOpenKeyExW(HKEY_LOCAL_MACHINE, (regPath + L"\\" + keyName).c_str(), 0, KEY_READ, &key2);
             if(ret != ERROR_SUCCESS) continue;
             TCHAR keyData[MAX_KEY_LENGTH];
             DWORD dataSize = MAX_KEY_LENGTH;
-            ret = RegQueryValueExW(hKey, L"Publisher", 0, NULL, keyData, &dataSize);
+            ret = RegQueryValueExW(key2, L"Publisher", 0, NULL, (LPBYTE)keyData, &dataSize);
             if(ret != ERROR_SUCCESS ||
                     wcscmp(keyData,L"EDING CNC B.V.") != 0)
             {
                 RegCloseKey(key2);
                 continue;
             }
-            ret = RegQueryValueExW(hKey, L"InstallLocation", 0, NULL, keyData, &dataSize);
+			dataSize = MAX_KEY_LENGTH;
+			ret = RegQueryValueExW(key2, L"InstallLocation", 0, NULL, (LPBYTE)keyData, &dataSize);
             if(ret == ERROR_SUCCESS)
             {
                 dllVersion = ver;
@@ -298,12 +138,16 @@ bool EdingCnc::LoadDll()
     {
         return false;
     }
-    path += L"\\cncapi.dll"
-    m_cncDll = LoadLibraryW(path.c_str())
+	path += L"cncapi.dll";
+	m_cncDll = LoadLibraryW(path.c_str());
     if(!m_cncDll)
     {
         return false;
     }
+
+#define GETSYMBOL(type, f)     f = (type)GetProcAddress(m_cncDll,#f); if(!f) ok = false;
+#define GETSYMBOL2(type, f, a) f = (type)GetProcAddress(m_cncDll,#a); if(!f) ok = false;
+
 
     bool ok = true;
     GETSYMBOL2(CNCGETCURRENTT, CncGetCurrentT, CncGetCurrentToolNumber);
@@ -359,6 +203,23 @@ bool EdingCnc::LoadDll()
     GETSYMBOL(CNCMOVETO, CncMoveTo);
     GETSYMBOL(CNCGETACTUALTOOLZOFFSET, CncGetActualToolZOffset);
     GETSYMBOL(CNCGETACTUALORIGINOFFSET, CncGetActualOriginOffset);
+	GETSYMBOL(CNCSETSPEEDOVERRIDE, CncSetSpeedOverride);
+	GETSYMBOL(CNCGETOPTIONALSTOP, CncGetOptionalStop);
+	GETSYMBOL(CNCGETBLOCDELETE, CncGetBlocDelete);
+	GETSYMBOL(CNCGETOUTPUT, CncGetOutput);
+	GETSYMBOL(CNCINMILLIMETERMODE, CncInMillimeterMode);
+	GETSYMBOL(CNCGETPROGRAMMEDFEED, CncGetProgrammedFeed);
+	GETSYMBOL(CNCGETCURRENTTOOLNUMBER, CncGetCurrentToolNumber);
+	GETSYMBOL(CNCGETCURRENTGCODESETTINGSTEXT, CncGetCurrentGcodeSettingsText);
+	GETSYMBOL(CNCENABLEOPTIONALSTOP, CncEnableOptionalStop);
+	GETSYMBOL(CNCLOGFIFOGET, CncLogFifoGet);
+	GETSYMBOL(CNCGRAPHFIFOGET, CncGraphFifoGet);
+	GETSYMBOL(CNCSTARTRENDERGRAPH, CncStartRenderGraph);
+	GETSYMBOL(CNCGETMOTIONSTATUS, CncGetMotionStatus);
+		
+		
+		
+		 		
 
     if(!ok)
     {
@@ -367,28 +228,23 @@ bool EdingCnc::LoadDll()
     return ok;
 }
 
-void EdingCnc::OnConnect(void)
+void EdingCncServer::Poll()
 {
-    m_displayOn = true;
-    scPlugin->GetSetting(_T("jogVel"), &m_jogVel);
-    scPlugin->GetSetting(_T("stepSize"), &m_stepSize);
-    scPlugin->GetSetting(_T("autoSync"), &m_autoSync);
-    scPlugin->GetSetting(_T("autoMonitor"), &m_autoMonitor);
+	PollConnected();
+	Server::Poll();
+	CNC_LOG_MESSAGE msg;
+	CNC_RC ret = CncLogFifoGet(&msg);
+	if(ret == CNC_RC_OK)
+	{
+		LogMessage(msg.text);
+	}
 }
 
-
-void EdingCnc::PollConnected()
+void EdingCncServer::PollConnected()
 {
     if(!GuiRunning())
     {
         m_connectCount = 0;
-        if(m_connected)
-        {
-            m_connected = false;
-            scPlugin->NotifyLua(dllENABLE, enableNOTRUNNING);
-            CncDisConnectServer();
-            m_cncDll.Unload();
-        }
         return;
     }
     if(m_connected)
@@ -418,14 +274,13 @@ void EdingCnc::PollConnected()
         return;
     }
     m_connected = true;
-    scPlugin->NotifyLua(dllENABLE,enableRUNNING);
-    for(int ct=0; ct< CNC_MAX_TOOLS; ct++)
+/*    for(int ct=0; ct< CNC_MAX_TOOLS; ct++)
     {
         m_tools[ct] = CncGetToolData(ct);
-    }
+    }*/
 }
 
-bool EdingCnc::GuiRunning()
+bool EdingCncServer::GuiRunning()
 {
     PROCESSENTRY32 procEntry;
     HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -466,7 +321,472 @@ bool EdingCnc::GuiRunning()
 }
 
 
-int EdingCnc::OnNotify(const int index,const double val)
+
+void EdingCncServer::UpdateState(State& state)
+{
+
+	CNC_IE_STATE cnc = CncGetState();
+
+	switch (cnc)
+	{
+	case CNC_IE_POWERUP_STATE:
+	case CNC_IE_IDLE_STATE:
+		state.machineStatus = mcOFFLINE;
+		return;
+
+	case CNC_IE_READY_STATE:
+		if (!CncGetOutput(CNC_IOID_DRIVE_ENABLE_OUT))
+		{
+			state.machineStatus = mcOFF;
+			break;
+		}
+		state.machineStatus = mcIDLE;
+		break;
+
+	case CNC_IE_EXEC_ERROR_STATE:
+	case CNC_IE_INT_ERROR_STATE:
+	case CNC_IE_ABORTED_STATE:
+		state.machineStatus = mcOFF;
+		break;
+
+	case CNC_IE_RUNNING_JOB_STATE:
+	case CNC_IE_RUNNING_LINE_STATE:
+	case CNC_IE_RUNNING_SUB_STATE:
+	case CNC_IE_RUNNING_SUB_SEARCH_STATE:
+	case CNC_IE_RUNNING_LINE_SEARCH_STATE:
+	case CNC_IE_PAUSED_LINE_STATE:
+	case CNC_IE_PAUSED_JOB_STATE:
+	case CNC_IE_PAUSED_SUB_STATE:
+	case CNC_IE_PAUSED_LINE_SEARCH_STATE:
+	case CNC_IE_PAUSED_SUB_SEARCH_STATE:
+	case CNC_IE_RUNNING_LINE_HANDWHEEL_STATE:
+	case CNC_IE_RUNNING_LINE_PAUSED_STATE:
+		state.machineStatus = mcRUNNING;
+		break;
+
+	case CNC_IE_RUNNING_HANDWHEEL_STATE:
+	case CNC_IE_RUNNING_AXISJOG_STATE:
+	case CNC_IE_RUNNING_IPJOG_STATE:
+		state.machineStatus = mcJOGGING;
+		break;
+
+	case CNC_IE_RENDERING_GRAPH_STATE:
+	case CNC_IE_SEARCHING_STATE:
+	case CNC_IE_SEARCHED_DONE_STATE:
+		state.machineStatus = mcMDI; //not strictly correct but need to indicate interpreter is busy
+		break;
+	}
+
+	CNC_MOTION_STATUS motStatus = CncGetMotionStatus();
+
+
+
+
+
+	CNC_CART_DOUBLE absPos = CncGetMachinePos();
+	CNC_CART_DOUBLE workPos = CncGetWorkPos();
+	for (int ct = 0; ct < MAX_AXES; ct++)
+	{
+		state.machinePos.array[ct] = ASARRAYD(absPos)[ct];
+		state.position.array[ct] = ASARRAYD(workPos)[ct];
+	}
+	if (state.machinePos.z > m_zMax)
+	{
+		m_zMax = state.machinePos.z;
+	}
+
+	state.feedHold = CncGetPauseStatus()->pauseManualActionRequired;
+	state.feedOverride = CncGetActualFeedOverride();
+	state.optionalStop = CncGetOptionalStop();
+	state.blockDelete = CncGetBlocDelete();
+	state.currentLine = CncGetCurInterpreterLine();
+	state.singleStep = CncGetSingleStepMode();
+	CNC_SPINDLE_STS* spin = CncGetSpindleStatus();
+	state.spindleCmd = spin->programmedSpindleSpeed;
+	state.spindleActual = spin->actualSpindleSpeedSigned;
+	if (spin->spindleIsOn)
+	{
+		if (spin->spindleDirection) state.spindleState = spinREV;
+		else state.spindleState = spinFWD;
+	}
+	else
+	{
+		state.spindleState = spinOFF;
+	}
+	state.spindleOverride = spin->speedOverrideFactor;
+
+	state.mist = CncGetOutput(CNC_IOID_COOLANT2_OUT);
+	state.flood = CncGetOutput(CNC_IOID_COOLANT1_OUT);
+	
+	for (int ct = 0; ct < MAX_AXES; ct++)
+	{
+		CNC_JOINT_STS * joint = CncGetJointStatus(ct);
+		state.homed.array[ct] = joint->isHomed;
+	}
+
+	double feed = 0;
+	for (int ct = 0; ct < 3; ct++)
+	{
+		CNC_JOINT_CFG * joint = CncGetJointConfig(ct);
+		if (joint)
+		{
+			feed += joint->maxVelocity * joint->maxVelocity;
+		}
+	}
+	state.maxFeedLin = sqrt(feed);
+	if (CncInMillimeterMode())
+		state.gcodeUnits = 1;
+	else
+		state.gcodeUnits = 1/25.4;
+	state.rapidOverride = 1;
+	state.feedCmd = CncGetProgrammedFeed();
+	state.feedActual = CncGetActualFeed();
+	state.tool = CncGetCurrentToolNumber();
+
+	char buf[80];
+	CncGetCurrentGcodeSettingsText(buf);
+	state.interpState = buf;
+}
+
+void EdingCncServer::DrivesOn(const bool drivesOn)
+{
+	Sync();
+	if (CncGetEMStopActive()) //can't do anything if external estop active
+	{
+		return;
+	}
+
+	CNC_IE_STATE cnc = CncGetState();
+
+	if (!drivesOn)
+	{
+		switch (cnc)
+		{
+		case CNC_IE_RUNNING_JOB_STATE:
+		case CNC_IE_RUNNING_LINE_STATE:
+		case CNC_IE_RUNNING_SUB_STATE:
+		case CNC_IE_RUNNING_LINE_SEARCH_STATE:
+		case CNC_IE_RUNNING_SUB_SEARCH_STATE:
+			//Running state, Pause and reset, return
+			CncPauseJob();
+			break;
+
+		case CNC_IE_RUNNING_AXISJOG_STATE:
+		case CNC_IE_RUNNING_IPJOG_STATE:
+			//These states cannot be reset
+			CncStopJog(-1);
+		}
+//		CncAbortJob();
+		CncSetOutput(CNC_IOID_DRIVE_ENABLE_OUT, 0);
+		return;
+	}
+
+	if (cnc >= CNC_IE_READY_STATE && CncGetOutput(CNC_IOID_DRIVE_ENABLE_OUT) &&
+		(cnc < CNC_IE_EXEC_ERROR_STATE || cnc >  CNC_IE_ABORTED_STATE)) return; //drives already on
+	CncReset2(1);
+	CncSetOutput(CNC_IOID_DRIVE_ENABLE_OUT, 1);
+
+
+	//Check handwheel mode from server status and force back to non tracking mode if needed.
+	CNC_TRACKING_STATUS trackSts = *CncGetTrackingStatus();
+	bool serverHandwheelMode = false;
+
+	//Update tracking if hand wheel
+	if (trackSts.curTrackingMode == CNC_TRACKMODE_HANDWHEEL_POS || trackSts.curTrackingMode == CNC_TRACKMODE_HANDWHEEL_VEL)
+	{
+		serverHandwheelMode = true;
+		CncStopTracking();
+	}
+}
+
+void EdingCncServer::JogVel(const Axes velocities)
+{
+
+	CNC_IE_STATE cnc = CncGetState();
+	
+	bool wasMoving = cnc == CNC_IE_RUNNING_AXISJOG_STATE ||
+		cnc == CNC_IE_RUNNING_HANDWHEEL_STATE;
+	bool move = false;
+	for(int ct=0; ct< CNC_MAX_AXES; ct++)
+	{
+		if (velocities.array[ct] != 0)
+		{
+			move = true;
+			break;
+		}
+	}
+
+	LockedState s = GetState();
+	State& state = s.Data();
+
+	if(move)
+	{
+		if(CncStartVelocityTracking) //velocity tracking mode is quicker to respond than jog mode
+		{
+			if(!wasMoving)
+			{
+				CncStartVelocityTracking();
+			}
+			CNC_CART_BOOL move;
+			CNC_CART_DOUBLE vels;
+			for(int ct=0; ct< MAX_AXES; ct++)
+			{
+				ASARRAYB(move)[ct] = true;
+				ASARRAYD(vels)[ct] = velocities.array[ct] * state.maxFeedLin;
+			}
+			CncSetTrackingVelocity(vels, move);
+		}else //does not support tracking mode
+		{
+			double vel = 0;
+			for (int ct = 0; ct < MAX_AXES; ct++)
+			{
+				double d = velocities.array[ct];
+				vel += d * d;
+			}
+			vel = sqrt(vel) * state.maxFeedLin;
+			CncStartJog((double *)velocities.array, vel, true);
+		}
+	}else
+	{
+		if (!wasMoving) return;
+		if(CncStartVelocityTracking)
+		{
+			CncStopTracking();
+		}else
+		{
+			CncStopJog(-1);
+		}
+	}
+}
+
+void EdingCncServer::JogStep(const Axes distance, const double speed)
+{
+	if (speed <= 0) return;
+	CNC_IE_STATE cnc = CncGetState();
+	if (cnc <= CNC_IE_ABORTED_STATE) return; //already moving so ignore
+
+	LockedState state = GetState();
+	CncStartJog((double *)distance.array, speed * state.Data().maxFeedLin, false);
+}
+
+
+bool EdingCncServer::Mdi(const string line)
+{
+	return CncRunSingleLine((char *)line.c_str()) == CNC_RC_OK;
+}
+
+void EdingCncServer::SpindleOverride(const double percent)
+{
+	CncSetSpeedOverride(percent);
+}
+
+void EdingCncServer::FeedOverride(const double percent)
+{
+	CncSetFeedOverride(percent);
+}
+
+void EdingCncServer::RapidOverride(const double percent)
+{
+	LogMessage("Rapid override not supported");
+}
+
+bool EdingCncServer::LoadFile(const string file)
+{
+	Sync();
+	CncString s1 = from_utf8(file.c_str());
+	const wchar_t * s2 = s1.c_str();
+	CNC_RC ret = CncLoadJob(s2);
+//	return CncLoadJob(from_utf8(file.c_str()).c_str()) == CNC_RC_OK;
+	return ret == CNC_RC_OK;
+}
+
+bool EdingCncServer::CloseFile()
+{
+	return CncLoadJob(L"") == CNC_RC_OK;
+}
+
+void EdingCncServer::CycleStart()
+{
+	switch(CncGetState())
+	{
+	case CNC_IE_PAUSED_LINE_STATE:        /* single line paused, by pause command */
+	case CNC_IE_PAUSED_JOB_STATE:         /* paused running job, by pause command */
+	case CNC_IE_PAUSED_SUB_STATE:         /* paused running sub , by pause command */
+	case CNC_IE_PAUSED_LINE_SEARCH_STATE: /* paused running line search line running from search*/
+	case CNC_IE_PAUSED_SUB_SEARCH_STATE:  /* paused running sub search subroutine running from search */
+		if(!CheckPause())
+		{
+			return;
+		}
+		break;
+
+	default:
+		m_zMax = -1e17;
+	}
+	CncRunOrResumeJob();
+}
+
+void EdingCncServer::CycleStop()
+{
+	CncPauseJob();
+	CncReset();
+}
+
+void EdingCncServer::FeedHold(const bool state)
+{
+	CncPauseJob();
+}
+
+void EdingCncServer::BlockDelete(const bool state)
+{
+	CncEnableBlockDelete(state);
+}
+
+void EdingCncServer::SingleStep(const bool state)
+{
+	CncSingleStepMode(state);
+}
+
+void EdingCncServer::OptionalStop(const bool state)
+{
+	CncEnableOptionalStop(state);
+}
+
+void EdingCncServer::Home(const BoolAxes axes)
+{
+	bool found = true;
+	for (int ct = 0; ct < MAX_AXES; ct++)
+	{
+		if (!axes.array[ct])
+		{
+			found = false;
+			break;
+		}
+	}
+	if (found)
+	{
+		CncRunSingleLine("gosub home_all");
+		return;
+	}
+	if (axes.z) CncRunSingleLine("gosub home_z");
+	if (axes.x) CncRunSingleLine("gosub home_x");
+	if (axes.y) CncRunSingleLine("gosub home_y");
+	if (axes.a) CncRunSingleLine("gosub home_a");
+	if (axes.b) CncRunSingleLine("gosub home_b");
+	if (axes.c) CncRunSingleLine("gosub home_c");
+}
+
+Axes EdingCncServer::GetOffset(const unsigned int index)
+{
+	CNC_MOTION_STATUS motStatus = CncGetMotionStatus();
+	CNC_OFFSET_AND_PLANE& plane = motStatus.activeOffsetAndPlane;
+
+	double * ptr = NULL;
+	int axes = MAX_AXES;
+	switch (index)
+	{
+	case 0:
+		axes = 3;
+		ptr = (double *)&plane.toolOffset;
+		break;
+
+	case 1:
+		ptr = (double *)&plane.currentG5X;
+		break;
+
+	case 2:
+		ptr = (double *)&plane.g92Offset;
+		break;
+
+	case 3:
+		ptr = (double *)&plane.spindleConfigOffset;
+		break;
+
+	case 4:
+		ptr = (double *)&plane.totalOffset;
+
+	default:
+		axes = 0;
+	}
+
+	Axes ret;
+	for (int ct = 0; ct < axes; ct++)
+	{
+		ret.array[ct] = *ptr++;
+	}
+	for (int ct = axes; ct < MAX_AXES; ct++)
+	{
+		ret.array[ct] = 0;
+	}
+	return ret;
+}
+
+
+bool EdingCncServer::StartPreview(const int recommendedSize)
+{
+	m_recSize = recommendedSize;
+	memset(&m_graphOffset, 0, sizeof(m_graphOffset));
+	return CncStartRenderGraph(0,1) == CNC_RC_OK;
+}
+
+PreviewData EdingCncServer::GetPreview()
+{
+	PreviewData ret;
+	CNC_GRAPH_FIFO_DATA point;
+	for (int ct = 0; ct < m_recSize && CncGraphFifoGet(&point) == CNC_RC_OK; ct++)
+	{
+		PreviewAxes a;
+		switch (point.type)
+		{
+		case CNC_MOVE_TYPE_G1:
+		case CNC_MOVE_TYPE_PROBE:
+			a.type = prevMOVE;
+			break;
+
+		case CNC_MOVE_TYPE_G0:
+			a.type = prevRAPID;
+			break;
+
+		case CNC_MOVE_TYPE_START_POSITION:
+			a.type = prevSTART;
+			break;
+
+		case CNC_MOVE_TYPE_ORIGIN_OFFSET:
+			for (int ct = 0; ct < MAX_AXES; ct++)
+			{
+				m_graphOffset.array[ct] = ASARRAYD(point.pos)[ct];
+			}
+			continue;
+
+		default:
+			continue;
+		}
+		for (int ct = 0; ct < MAX_AXES; ct++)
+		{
+			a.array[ct] = ASARRAYD(point.pos)[ct] + m_graphOffset.array[ct];
+		}
+		ret.push_back(a);
+	}
+	return ret;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+int EdingCncServer::OnNotify(const int index,const double val)
 {
     if(index >= dllCONTROL_CHG)
     {
@@ -523,7 +843,7 @@ int EdingCnc::OnNotify(const int index,const double val)
     return(0);
 }
 
-void EdingCnc::SendString(const int index, const wstring value)
+void EdingCncServer::SendString(const int index, const wstring value)
 {
     CONTROL * ptr = m_controls;
     for(int ct=0; ct< m_controlCount; ct++)
@@ -537,13 +857,13 @@ void EdingCnc::SendString(const int index, const wstring value)
     }
 }
 
-void EdingCnc::StatusText(const wstring& msg)
+void EdingCncServer::StatusText(const wstring& msg)
 {
     SendString(funcSTATUS, msg);
 }
 
 
-void EdingCnc::CheckDro(const int index, const double value)
+void EdingCncServer::CheckDro(const int index, const double value)
 {
     CONTROL * ptr = m_controls;
     for(int ct=0; ct< m_controlCount; ct++)
@@ -569,7 +889,7 @@ void EdingCnc::CheckDro(const int index, const double value)
     }
 }
 
-bool EdingCnc::OnPostBegin(const scChar * fileName, const bool local)
+bool EdingCncServer::OnPostBegin(const scChar * fileName, const bool local)
 {
     if(local || !m_autoLoad || !CncIsServerConnected())
     {
@@ -580,7 +900,7 @@ bool EdingCnc::OnPostBegin(const scChar * fileName, const bool local)
     return(false);
 }
 
-void EdingCnc::PopulateTool(CNC_TOOL_DATA& data, RoundTool * tool)
+void EdingCncServer::PopulateTool(CNC_TOOL_DATA& data, RoundTool * tool)
 {
     data.id = tool->number;
     wstring name = tool->name;
@@ -600,7 +920,7 @@ void EdingCnc::PopulateTool(CNC_TOOL_DATA& data, RoundTool * tool)
     }
 }
 
-void EdingCnc::SyncTools()
+void EdingCncServer::SyncTools()
 {
     Tools& tools = Parts::Get().tools;
     const wxCharBuffer unused = wstring(_T("Unused")).ToAscii();
@@ -646,7 +966,7 @@ void EdingCnc::SyncTools()
 }
 
 
-void EdingCnc::OnPostEnd(const scChar * fileName, const bool local)
+void EdingCncServer::OnPostEnd(const scChar * fileName, const bool local)
 {
 
     if(local || !m_autoLoad || fileName[0] ==0 || !CncIsServerConnected())
@@ -669,7 +989,7 @@ void EdingCnc::OnPostEnd(const scChar * fileName, const bool local)
 }
 
 
-void EdingCnc::ScanTools()
+void EdingCncServer::ScanTools()
 {
     Tools& tools = Parts::Get().tools;
     m_toolCount++;
@@ -712,7 +1032,7 @@ void EdingCnc::ScanTools()
 }
 
 //enum CURSTATE {stateNEVER, stateIDLE, statePAUSED, stateRUNNING, stateJOG, stateANY};
-void EdingCnc::EnableControls()
+void EdingCncServer::EnableControls()
 {
     static CNC_IE_STATE prevState = CNC_IE_LAST_STATE;
     CURSTATE cur = stateJOG;
@@ -759,15 +1079,7 @@ void EdingCnc::EnableControls()
         }
         cur = statePAUSED;
     }
-    /*	}else
-    	{
-    		if(m_curState != stateTOOLCHANGE)
-    		{
-    			StatusText(wstring::Format(_T("Load tool %i"),CncGetCurrentT()));
-    		}
-    		cur = stateTOOLCHANGE;
-    		prevState = CNC_IE_LAST_STATE;
-    	}*/
+
 
     if( cur == m_curState)
     {
@@ -793,7 +1105,7 @@ void EdingCnc::EnableControls()
     }
 }
 
-void EdingCnc::DoTimer(void)
+void EdingCncServer::DoTimer(void)
 {
     PollConnected();
     if(!m_connected)
@@ -911,7 +1223,7 @@ void EdingCnc::DoTimer(void)
     }
 }
 
-void EdingCnc::OnDrawDisplay(void)
+void EdingCncServer::OnDrawDisplay(void)
 {
     if(!m_displayOn || m_drawPos[0] == 1e17)
     {
@@ -929,12 +1241,12 @@ void EdingCnc::OnDrawDisplay(void)
     glPopMatrix();
 }
 
-void EdingCnc::MDI(const char * string)
+void EdingCncServer::MDI(const char * string)
 {
     CncRunSingleLine((char *)string);
 }
 
-void EdingCnc::MDI(const char * string, const double value)
+void EdingCncServer::MDI(const char * string, const double value)
 {
     char buf[1024];
     sprintf(buf,string,value);
@@ -945,7 +1257,7 @@ void EdingCnc::MDI(const char * string, const double value)
 #define ASARRAYD(n) ((double *)&n)
 #define ASARRAYB(n) ((int *)&n)
 
-void EdingCnc::JogAxis(int button, bool run)
+void EdingCncServer::JogAxis(int button, bool run)
 {
     int axis = button - btnJogXP;
     if(axis < 0)
@@ -1024,33 +1336,18 @@ void EdingCnc::JogAxis(int button, bool run)
         {
             CncStopJog(axis);
         }
-        /*		bool moving = false;
-        		for(int ct=0; ct< CNC_MAX_AXES; ct++)
-        		{
-        			if(m_jogging.array[ct] == 0)
-        			{
-        				CncStopJog(ct);
-        			}else
-        			{
-        				moving = true;
-        			}
-        		}
-        		if(moving && !m_step)
-        		{
-        			CncStartJog(m_jogging, vel, !m_step);
-        		}*/
+
     }
 }
 
 
-void EdingCnc::Toggle(CNC_IO_ID pin)
+void EdingCncServer::Toggle(CNC_IO_ID pin)
 {
     CNC_IO_PORT_STS* s = CncGetIOStatus(pin);
     CncSetOutput(pin, !s->lvalue);
 }
 
-
-void EdingCnc::DrivesOnOff()
+void EdingCncServer::DrivesOnOff()
 {
     StatusText(_T(""));
     CNC_IE_STATE state = CncGetState();
@@ -1147,112 +1444,114 @@ void EdingCnc::DrivesOnOff()
     }
 }
 
-bool EdingCnc::CheckPause()
+*/
+
+bool EdingCncServer::CheckPause()
 {
 
-    CNC_PAUSE_STS* sts = CncGetPauseStatus();
-    if(sts->pauseManualActionRequired)
-    {
-        return(true);
-    }
-    CNC_CART_DOUBLE pausePos;
-    int spindle;
-    int flood;
-    int mist;
-    int line;
-    int valid;
-    int doArray[CNC_MAX_AXES];
-    int arrayX[CNC_MAX_AXES];
-    int arrayY[CNC_MAX_AXES];
-    GetPausePos(&pausePos, &spindle, &flood, &mist, &line, &valid, doArray, arrayX, arrayY);
-    if(!valid)
-    {
-        return(false);
-    }
+	CNC_PAUSE_STS* sts = CncGetPauseStatus();
+	if(sts->pauseManualActionRequired)
+	{
+		return(true);
+	}
+	CNC_CART_DOUBLE pausePos;
+	int spindle;
+	int flood;
+	int mist;
+	int line;
+	int valid;
+	int doArray[CNC_MAX_AXES];
+	int arrayX[CNC_MAX_AXES];
+	int arrayY[CNC_MAX_AXES];
+	GetPausePos(&pausePos, &spindle, &flood, &mist, &line, &valid, doArray, arrayX, arrayY);
+	if(!valid)
+	{
+		return(false);
+	}
 
-    CNC_CART_DOUBLE offset = CncGetActualOriginOffset();
-    offset.z += CncGetActualToolZOffset();
+	CNC_CART_DOUBLE offset = CncGetActualOriginOffset();
+	offset.z += CncGetActualToolZOffset();
 
-    static CNC_CART_DOUBLE machinePos;
-    machinePos = CncGetMachinePos();
-    if(memcmp(&pausePos, &machinePos, sizeof(CNC_CART_DOUBLE)) == 0)
-    {
-        return(true);
-    }
+	static CNC_CART_DOUBLE machinePos;
+	machinePos = CncGetMachinePos();
+	if(memcmp(&pausePos, &machinePos, sizeof(CNC_CART_DOUBLE)) == 0)
+	{
+		return(true);
+	}
 
-    if(m_zMax < machinePos.z)
-    {
-        m_zMax = machinePos.z;
-    }
-    if(m_zMax < pausePos.z)
-    {
-        m_zMax = pausePos.z;
-    }
+	if(m_zMax < machinePos.z)
+	{
+		m_zMax = machinePos.z;
+	}
+	if(m_zMax < pausePos.z)
+	{
+		m_zMax = pausePos.z;
+	}
+/*
+	wstring msg;
+	if(machinePos.x != pausePos.x ||
+		machinePos.y != pausePos.y)
+	{
+		msg += wstring::Format(_("Z to %.3f\n"), m_zMax - offset.z);
+		msg += wstring::Format(_("X,Y to %.3f, %.3f\n"), pausePos.x - offset.x, pausePos.y - offset.y);
+	}
+	msg += wstring::Format(_("Z to %.3f\n"), pausePos.z - offset.z);
+	msg = _("The machine move sequence will be:\n") + msg;
 
-    wstring msg;
-    if(machinePos.x != pausePos.x ||
-            machinePos.y != pausePos.y)
-    {
-        msg += wstring::Format(_("Z to %.3f\n"), m_zMax - offset.z);
-        msg += wstring::Format(_("X,Y to %.3f, %.3f\n"), pausePos.x - offset.x, pausePos.y - offset.y);
-    }
-    msg += wstring::Format(_("Z to %.3f\n"), pausePos.z - offset.z);
-    msg = _("The machine move sequence will be:\n") + msg;
+	int ans = wxMessageBox(msg, _("Safety move"), wxOK | wxCANCEL | wxICON_QUESTION);
+	if(ans != wxOK)
+	{
+		return(false);
+	}
+*/
+	CNC_CART_BOOL moveArray;
 
-    int ans = wxMessageBox(msg, _("Safety move"), wxOK | wxCANCEL | wxICON_QUESTION);
-    if(ans != wxOK)
-    {
-        return(false);
-    }
-    CNC_CART_BOOL moveArray;
+	for(int ct=0; ct < CNC_MAX_AXES; ct++)
+	{
+		ASARRAYB(moveArray)[ct] = 1;
+	}
+	//={1,1,1,1,1,1};
 
-    for(int ct=0; ct < CNC_MAX_AXES; ct++)
-    {
-        ASARRAYB(moveArray)[ct] = 1;
-    }
-    //={1,1,1,1,1,1};
-
-    if(machinePos.x != pausePos.x ||
-            machinePos.y != pausePos.y)
-    {
-        machinePos.z = m_zMax;
-        CncMoveTo(machinePos, moveArray, 0.2);
-    }
-    if(!WaitMove())
-    {
-        return(false);
-    }
-    CncSetOutput(CNC_IOID_COOLANT2_OUT, mist);
-    CncSetOutput(CNC_IOID_COOLANT1_OUT, flood);
-    CncSetOutput(CNC_IOID_TOOL_OUT, spindle);
-    machinePos.x = pausePos.x;
-    machinePos.y = pausePos.y;
-    machinePos.a = pausePos.a;
-    machinePos.b = pausePos.b;
-    machinePos.c = pausePos.c;
-    CncMoveTo(machinePos, moveArray, 0.2);
-    if(!WaitMove())
-    {
-        return(false);
-    }
-    machinePos.z = pausePos.z;
-    CncMoveTo(machinePos, moveArray, 0.2);
-    if(!WaitMove())
-    {
-        return(false);
-    }
-    return(true);
+	if(machinePos.x != pausePos.x ||
+		machinePos.y != pausePos.y)
+	{
+		machinePos.z = m_zMax;
+		CncMoveTo(machinePos, moveArray, 0.2);
+	}
+	if(!WaitMove())
+	{
+		return(false);
+	}
+	CncSetOutput(CNC_IOID_COOLANT2_OUT, mist);
+	CncSetOutput(CNC_IOID_COOLANT1_OUT, flood);
+	CncSetOutput(CNC_IOID_TOOL_OUT, spindle);
+	machinePos.x = pausePos.x;
+	machinePos.y = pausePos.y;
+	machinePos.a = pausePos.a;
+	machinePos.b = pausePos.b;
+	machinePos.c = pausePos.c;
+	CncMoveTo(machinePos, moveArray, 0.2);
+	if(!WaitMove())
+	{
+		return(false);
+	}
+	machinePos.z = pausePos.z;
+	CncMoveTo(machinePos, moveArray, 0.2);
+	if(!WaitMove())
+	{
+		return(false);
+	}
+	return(true);
 }
 
-bool EdingCnc::WaitMove()
+bool EdingCncServer::WaitMove()
 {
-    CNC_IE_STATE state;
-    do
-    {
-        wxMilliSleep(50);
-        wxTheApp->Yield(true);
-        state = CncGetState();
-    }
-    while(state == CNC_IE_RUNNING_AXISJOG_STATE);
-    return(state == CNC_IE_PAUSED_JOB_STATE);
+	CNC_IE_STATE state;
+	do
+	{
+		Sleep(50);
+		state = CncGetState();
+	}
+	while(state == CNC_IE_RUNNING_AXISJOG_STATE);
+	return(state == CNC_IE_PAUSED_JOB_STATE);
 }

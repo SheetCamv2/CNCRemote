@@ -137,9 +137,10 @@ bool Sim::LoadFile(const string file)
 	return true;
 }
 
-void Sim::CloseFile()
+bool Sim::CloseFile()
 {
 	std::cout << "Close file" << std::endl;
+	return true;
 }
 
 void Sim::CycleStart()
@@ -182,6 +183,7 @@ void Sim::Home(const BoolAxes axes)
 	for (int ct = 0; ct < MAX_AXES; ct++)
 	{
 		std::cout << axes.array[ct] << ",";
+		if(axes.array[ct]) m_state.homed.array[ct] = true;
 	}
 	
 	std::cout << std::endl;

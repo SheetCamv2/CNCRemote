@@ -39,7 +39,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
     #define LIBHANDLE HMODULE
 #else
 	typedef std::string CncString; //UTF-8 on Linux
-	typedef wchar CncChar;
+	typedef char CncChar;
     #include <stdint.h>
     #define LIBHANDLE void *
 #endif

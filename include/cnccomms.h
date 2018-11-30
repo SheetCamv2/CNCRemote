@@ -26,12 +26,27 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include "cncplugin.h"
 #include "timer.h"
 #include "rpc/client.h"
-//#include "rpc/server.h"
 
 using namespace std;
 
 namespace CncRemote
 {
+
+	class Mutex
+	{
+	public:
+		Mutex();
+		virtual ~Mutex();
+		void Lock();
+		void Unlock();
+	private:
+#ifdef _WIN32
+		HANDLE m_mutex;
+#else
+		pthread_mutex_t m_mutex;
+#endif
+	};
+
 #define CNCREMOTE_PROTOCOL_VERSION 2
 #define CNCREMOTE_MIN_PROTOCOL_VERSION 2
 
@@ -57,6 +72,11 @@ namespace CncRemote
 		mcRUNNING, ///<Executing g-code file
 	};
 
+	enum PREVIEWTYPE {
+		prevSTART, // Start point
+		prevMOVE, // Cutting move
+		prevRAPID, // Rapid move
+	};
 
 	struct Axes{
 
@@ -131,10 +151,17 @@ namespace CncRemote
 				OP(*);
 				OP(/);
 		#undef OP
-
-
-
 	};
+
+	struct PreviewAxes : Axes
+	{
+		union {
+			PREVIEWTYPE type;
+			int _type; //MessagePack can't handle enums directly
+		};
+	};
+
+	typedef std::vector<PreviewAxes> PreviewData;
 
 	struct BoolAxes {
 		union {
@@ -163,10 +190,13 @@ namespace CncRemote
 	};
 
 
-	struct State {
-		Axes absPos; ///<Axes in machine coordinates (in metric units)
-		Axes offsetWork; ///<Work offsets (in metric units)
-		Axes offsetFixture; ///<Fixture offsets (in metric units)
+	class State {
+	public:
+		State();
+		State(const State& src, Mutex& mutex);
+		virtual ~State();
+		Axes position; ///<Axes in tool coordinates (in metric units)
+		Axes machinePos; ///<Axes in machine coordinates (in metric units)
 		bool feedHold; ///<Feed hold status
 		double feedOverride; ///<Feed rate override percentage. 1 = 100%
 		//    bool control_on = 7; //Control is on and ready to execute command
@@ -178,7 +208,8 @@ namespace CncRemote
 		};
 		int currentLine; ///<current gcode line running. -1 if no line is running
 		bool singleStep; ///<Single step
-		double spindleSpeed; ///<commanded spindle speed
+		double spindleCmd; ///<commanded spindle speed
+		double spindleActual; ///<actual spindle speed
 		union {
 			SPINDLESTATE spindleState; ///<Current spindle status
 			int _spindleState;  //MessagePack can't handle enums dirtectly
@@ -186,20 +217,29 @@ namespace CncRemote
 		bool mist; ///<Mist coolant status
 		bool flood; ///<Flood coolant status
 		BoolAxes homed; ///<homed status
-		BoolAxes axisLinear; ///<true if the axis is linear
-		string errorMsg; ///<Contains last error message
-		string displayMsg; ///<Contains any text that should be displayed to the user
-		double maxFeedLin;
-		double maxFeedAng;
+		BoolAxes axisAngular; ///<true if the axis is angular
+		double maxFeedLin; ///<Maximum linear feed rate
+		double maxFeedAng; ///<Maximum angular feed rate
 		double gcodeUnits; ///<Convert mm to the currently selected g-code linear units Usually 1 for metric, 1/25.4 for inch
 		double spindleOverride; ///<Spindle override percentage. 1 = 100%
 		double rapidOverride; ///<Rapid override percentage. 1 = 100%
+		double feedCmd; ///<Commanded feed rate
+		double feedActual; ///<Actual feed rate
+		int tool; ///<Currently selected tool
+		string interpState; ///<Interpreter state text
 
-		MSGPACK_DEFINE_MAP(absPos, offsetWork, offsetFixture, feedOverride, feedHold, optionalStop, blockDelete, _machineStatus,
-			currentLine, singleStep, spindleSpeed, _spindleState, mist, flood, homed, axisLinear, errorMsg, displayMsg,
-			maxFeedLin, maxFeedAng, gcodeUnits, spindleOverride, rapidOverride);
+		/* The following are for internal use*/
+		int errorCount; ///<The total number error messages
+		int messageCount; ///<The total number warning messages
+		int fileCount; ///<A count of files loaded. Used to indicate that a file has changed
 
-		void Clear() { memset(this, 0, sizeof(State));}
+		MSGPACK_DEFINE_MAP(position, machinePos, feedOverride, feedHold, optionalStop, blockDelete, _machineStatus,
+			currentLine, singleStep, spindleCmd, spindleActual, _spindleState, mist, flood, homed, axisAngular, errorCount, messageCount,
+			maxFeedLin, maxFeedAng, gcodeUnits, spindleOverride, rapidOverride, feedCmd, feedActual, tool, interpState, fileCount);
+
+//		void Clear() { memset(this, 0, sizeof(State));}
+	private:
+		Mutex * m_mutex;
 	};
 
 

@@ -52,9 +52,10 @@ Client::Client()
     m_plugin = NULL;
 #endif
 	m_client = NULL;
-	m_state.Clear();
 	m_connected = false;
 	m_serverVer = 0;
+	m_errIndex = 0;
+	m_msgIndex = 0;
 }
 
 Client::~Client()
@@ -97,7 +98,7 @@ bool Client::LoadPlugins(const CncString& path)
 
 
     WIN32_FIND_DATAW dir;
-    HANDLE hFind = FindFirstFileW((path + L"\\*.dll").c_str(), &dir);
+    HANDLE hFind = FindFirstFileW((path + L"*.dll").c_str(), &dir);
     if (hFind == INVALID_HANDLE_VALUE)
     {
         return false;
@@ -210,7 +211,7 @@ COMERROR Client::Poll()
 		if (m_pollFuture.valid())
 		{	
 			int time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - m_pollTimer).count();
-			if (m_pollFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+			if (m_pollFuture.wait_for(std::chrono::seconds(1)) == std::future_status::ready)
 			{
 				m_roundTrip = time;
 				if (m_serverVer == 0)
@@ -581,6 +582,26 @@ void Client::HomeAll()
 	}CATCHRPC;
 	SetBusy(mcRUNNING);
 }
+
+string Client::GetNextError()
+{
+	if (m_errIndex >= m_state.errorCount)
+	{
+		return string();
+	}
+	return m_client->call("GetError", m_errIndex++).as<string>();
+}
+
+string Client::GetNextMessage()
+{
+	if (m_msgIndex >= m_state.messageCount)
+	{
+		return string();
+	}
+	return m_client->call("GetMessage", m_msgIndex++).as<string>();
+}
+
+
 
 bool Client::IsLocal()
 {

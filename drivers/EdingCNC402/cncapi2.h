@@ -75,7 +75,19 @@ typedef CNC_RC (__stdcall * CNCMOVETO)(CNC_CART_DOUBLE pos,
 								   double velocityFactor);
 typedef double (__stdcall * CNCGETACTUALTOOLZOFFSET)(void);
 typedef CNC_CART_DOUBLE (__stdcall * CNCGETACTUALORIGINOFFSET)(void);
-
+typedef CNC_RC (__stdcall * CNCSETSPEEDOVERRIDE)(double factor);
+typedef int (__stdcall * CNCGETOPTIONALSTOP)(void);
+typedef int (__stdcall * CNCGETBLOCDELETE)(void);
+typedef int (__stdcall * CNCGETOUTPUT)(CNC_IO_ID id);
+typedef int (__stdcall * CNCINMILLIMETERMODE)(void);
+typedef double (__stdcall * CNCGETPROGRAMMEDFEED)(void);
+typedef int (__stdcall * CNCGETCURRENTTOOLNUMBER)(void);
+typedef void (__stdcall * CNCGETCURRENTGCODESETTINGSTEXT)(char *actualGCodeSettings);
+typedef CNC_RC (__stdcall * CNCENABLEOPTIONALSTOP)(int enable);
+typedef CNC_RC (__stdcall * CNCLOGFIFOGET)(CNC_LOG_MESSAGE *data);
+typedef CNC_RC EXP2DF (__stdcall * CNCGRAPHFIFOGET)(CNC_GRAPH_FIFO_DATA *data);
+typedef CNC_RC EXP2DF (__stdcall * CNCSTARTRENDERGRAPH)(int outLines, int contour);
+typedef CNC_MOTION_STATUS EXP2DF (__stdcall * CNCGETMOTIONSTATUS)(void);
 
 #ifdef __cplusplus
 	}

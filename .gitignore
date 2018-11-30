@@ -25,3 +25,5 @@ drivers/linuxcnc/server/version.h
 *.user
 *.filters
 /libraries/rpcliba
+*.obj
+/build/vc/CncRemote/Release static

@@ -27,10 +27,9 @@ namespace CncRemote
 
 	enum { MAX_THREADS = 8 };
 
+
 Server::Server()
 {
-    MUTEX_CREATE(m_syncLock);
-    MUTEX_LOCK(m_syncLock);
 	m_server = NULL;
 	m_file = NULL;
 }
@@ -39,7 +38,6 @@ Server::~Server()
 {
 	DeleteTemp();
 	delete m_server;
-	MUTEX_DESTROY(m_syncLock);
 }
 
 
@@ -53,14 +51,15 @@ COMERROR Server::Bind(const uint32_t port)
 	m_server = new rpc::server(port);
 	m_server->suppress_exceptions(true);
 
-	BIND0(GetState);
+	m_server->bind("GetState", [this]() {return GetState2();});
 	BIND1(DrivesOn, bool);
 	BIND1(JogVel, Axes);
+	BIND2(JogStep, Axes, double);
 	BIND1(Mdi, string);
 	BIND1(FeedOverride, double);
 	BIND1(SpindleOverride, double);
 	BIND1(RapidOverride, double);
-	BIND1(LoadFile, string);
+	m_server->bind("LoadFile", [this](string param1) {return LoadFile2(param1);});
 	BIND0(CloseFile);
 	BIND0(CycleStart);
 	BIND0(CycleStop);
@@ -69,8 +68,12 @@ COMERROR Server::Bind(const uint32_t port)
 	BIND1(SingleStep, bool);
 	BIND1(OptionalStop, bool);
 	BIND1(Home, BoolAxes);
+	BIND1(GetOffset, unsigned int);
 	BIND1(SendInit, string);
 	BIND2(SendData, string, int);
+	BIND1(GetError, int);
+	BIND1(GetMessage, int);
+
 	m_server->bind("Ping", []() {return true; });
 	m_server->bind("Version", []() {return (CNCREMOTE_PROTOCOL_VERSION); });
 
@@ -81,9 +84,13 @@ COMERROR Server::Bind(const uint32_t port)
 COMERROR Server::Poll()
 {
 	if (!m_server) return errCONNECT;
-    MUTEX_UNLOCK(m_syncLock);
-    MUTEX_LOCK(m_syncLock);
     return errOK;
+}
+
+LockedState Server::GetState()
+{
+	LockedState l(&m_state, &m_syncLock);
+	return l;
 }
 
 string Server::SendInit(string nameHint)
@@ -153,6 +160,54 @@ void Server::DeleteTemp()
 	if (m_curFile.empty()) return;
 	remove(m_curFile.c_str());
 }
+
+State Server::GetState2()
+{
+	{
+		Sync();
+		UpdateState(m_state);
+	}
+	return State(m_state, m_syncLock);;
+}
+
+bool Server::LoadFile2(const string file)
+{
+	m_state.fileCount++;
+	return LoadFile(file);
+}
+
+string Server::GetError(const unsigned int index)
+{
+	if (index >= m_errors.size()) return string();
+	return m_errors[index];
+}
+
+string Server::GetMessage(const unsigned int index)
+{
+	if (index >= m_messages.size()) return string();
+	return m_messages[index];
+}
+
+void Server::LogError(string error)
+{
+	if (error.size() > 0)
+	{
+		m_errors.push_back(error);
+		m_state.errorCount = m_errors.size();
+	}
+}
+
+void Server::LogMessage(string message)
+{
+	if (message.size() > 0)
+	{
+		m_messages.push_back(message);
+		m_state.messageCount = m_messages.size();
+	}
+}
+
+
+
 
 /*
 void Connection::RemoveTemp()

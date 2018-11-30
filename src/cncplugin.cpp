@@ -37,7 +37,8 @@ wstring from_utf8(const char * string)
     if (!MultiByteToWideChar(CP_UTF8, 0, string, -1, &wbuff[0], len))
         return L"ErrorA2W";
 
-    return &wbuff[0];}
+    return &wbuff[0];
+}
 
 string to_utf8(const CncString& string)
 {
@@ -75,7 +76,7 @@ std::string to_utf8(const CncString& string)
 
 FILE * ufopen(const char * file, const char * mode)
 {
-#ifdef _WIN32
+#ifdef _MSC_VER
     FILE * ret = _wfopen(from_utf8(file).c_str(), from_utf8(mode).c_str());
     return ret;
 #else

@@ -6,9 +6,9 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Debug">
+			<Target title="Debug-Windows">
 				<Option platforms="Windows;" />
-				<Option output="../../../bin/plugins/win32/$(PROJECT_NAME)_d" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../bin/plugins/win32/$(PROJECT_NAME)_d" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -20,14 +20,12 @@
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
-					<Add library="protobuf-lite-3.1.0" />
-					<Add library="libzmq-4.2.3" />
 					<Add directory="../../../libraries/lib/i386-linux-gnu" />
 				</Linker>
 			</Target>
-			<Target title="Release">
+			<Target title="Release-Windows">
 				<Option platforms="Windows;" />
-				<Option output="../../../plugins/linuxcnc" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../bin/plugins/win32/$(PROJECT_NAME)" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -35,6 +33,7 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add directory="../../../include" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />

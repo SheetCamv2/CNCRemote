@@ -1,73 +1,68 @@
+/******************************************************************
+EdingCNC server plugin
+Copyright 2018 Stable Design <les@sheetcam.com>
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the Mozilla Public License Version 2.0 or later
+as published by the Mozilla foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+Mozilla Public License for more details.
+
+You should have received a copy of the Mozilla Public License
+along with this program; if not, you can obtain a copy from mozilla.org
+******************************************************************/
+
 #ifndef EDINGCNC_PLUGIN_H
 #define EDINGCNC_PLUGIN_H
+#include "cncapi2.h"
+#include "cncserver.h"
 
-
-#define MAX_CONTROLS 100
+using namespace std;
+using namespace CncRemote;
 
 enum CURSTATE {stateNEVER, stateIDLE, stateTOOLCHANGE, stateJOG, statePAUSED, stateRUNNING, stateANY};
 
-struct CONTROL {
-	int number;
-	double value;
-	bool enabled;
-	CURSTATE enState;
-};
-
-#define DRAW_AXES 3
-
-class EdingCnc
+class EdingCncServer : public CncRemote::Server
 {
 public:
-    EdingCnc();
-    ~EdingCnc();
-	CNCGETPAUSESTATUS CncGetPauseStatus;
-	CNCGETSPINDLESTATUS CncGetSpindleStatus;
+    EdingCncServer();
+    ~EdingCncServer();
 	bool LoadDll();
-    void Poll();
+    virtual void Poll();
 
+protected:
+	virtual void UpdateState(State& state);
+	virtual void DrivesOn(const bool state);
+	virtual void JogVel(const Axes velocities);
+	virtual void JogStep(const Axes distance, const double speed);
+	virtual bool Mdi(const string line);
+	virtual void SpindleOverride(const double percent);
+	virtual void FeedOverride(const double percent);
+	virtual void RapidOverride(const double percent);
+	virtual bool LoadFile(const string file);
+	virtual bool CloseFile();
+	virtual void CycleStart();
+	virtual void CycleStop();
+	virtual void FeedHold(const bool state);
+	virtual void BlockDelete(const bool state);
+	virtual void SingleStep(const bool state);
+	virtual void OptionalStop(const bool state);
+	virtual void Home(const BoolAxes axes);
+	virtual Axes GetOffset(const unsigned int index);
+	virtual bool StartPreview(const int recommendedSize);
+	virtual PreviewData GetPreview();
 
-private:
-	void GetPausePos(CNC_CART_DOUBLE *pos, int *spindleOutput, int *FloodOutput, int *mistOutput,
-		int *lineNumber, int *valid, int* doArray, int *arrayX, int *arrayY);
-	void PollConnected();
-	bool GuiRunning();
-
-	void DoTimer(void);
-	void CheckDro(const int index, const double value);
-	void MDI(const char * string);
-	void MDI(const char * string, const double value);
-	void Jog(const double x, const double y, const double z,
-				 const double a, const double b, const double c);
-	void Toggle(CNC_IO_ID pin);
-	void ControlChanged(const unsigned int index, const double value);
-	int GetJogAxis(int button);
-	void JogAxis(int button, bool run);
-	void GetTools();
-	void PopulateTool(CNC_TOOL_DATA& data, RoundTool * tool);
-	void SyncTools();
-	void ScanTools();
-	void SendString(const int index, const wstring value);
-	void EnableControls();
-	void StatusText(const wstring& msg);
-	void DrivesOnOff();
+protected:
 	bool CheckPause();
 	bool WaitMove();
+private:
 
-	bool m_step;
-	double m_jogVel;
-	double m_stepSize;
-	int m_oldLine;
-	CNC_CART_DOUBLE m_jogging;
-	bool m_fastJog;
-	CNC_TOOL_DATA m_tools[CNC_MAX_TOOLS];
-	unsigned int m_toolCount;
-    string m_activeCodes;
-	bool m_connected;
-	int m_connectCount;
-	CURSTATE m_curState;
-	double m_zMax;
-
-	HMODULE m_cncDll;
+	CNCGETPAUSESTATUS CncGetPauseStatus;
+	CNCGETSPINDLESTATUS CncGetSpindleStatus;
 	CNCGETTOOLDATA CncGetToolData;
 	CNCISSERVERCONNECTED CncIsServerConnected;
 	CNCCONNECTSERVER CncConnectServer;
@@ -116,8 +111,32 @@ private:
 	CNCSTARTVELOCITYTRACKING CncStartVelocityTracking;
 	CNCSTOPTRACKING CncStopTracking;
 	CNCGETJOINTCONFIG CncGetJointConfig;
+	CNCSETSPEEDOVERRIDE CncSetSpeedOverride;
+	CNCGETOPTIONALSTOP CncGetOptionalStop;
+	CNCGETBLOCDELETE CncGetBlocDelete;
+	CNCGETOUTPUT CncGetOutput;
+	CNCINMILLIMETERMODE CncInMillimeterMode;
+	CNCGETPROGRAMMEDFEED CncGetProgrammedFeed;
+	CNCGETCURRENTTOOLNUMBER CncGetCurrentToolNumber;
+	CNCGETCURRENTGCODESETTINGSTEXT CncGetCurrentGcodeSettingsText;
+	CNCENABLEOPTIONALSTOP CncEnableOptionalStop;
+	CNCLOGFIFOGET CncLogFifoGet;
+	CNCGRAPHFIFOGET CncGraphFifoGet;
+	CNCSTARTRENDERGRAPH CncStartRenderGraph;
+	CNCGETMOTIONSTATUS CncGetMotionStatus;
 
+	void GetPausePos(CNC_CART_DOUBLE *pos, int *spindleOutput, int *FloodOutput, int *mistOutput,
+		int *lineNumber, int *valid, int* doArray, int *arrayX, int *arrayY);
+	void PollConnected();
+	bool GuiRunning();
+
+	HMODULE m_cncDll;
+	bool m_connected;
+	int m_connectCount;
+	bool m_jogging;
+	double m_zMax;
+	int m_recSize;
+	Axes m_graphOffset;
 };
-
 #endif
 

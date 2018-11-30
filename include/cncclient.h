@@ -81,6 +81,11 @@ public:
 
 	State & GetState() { return (m_state); } ///<Get the current machine state
 
+	bool HasErrors() { return m_errIndex < m_state.errorCount; } ///<Returns true is there are any errors pending
+	bool HasMessages() { return m_msgIndex < m_state.messageCount; } ///<Returns true if there are any messages pending
+	string GetNextError(); ///<Get the next error. Returns empty string if none pending.
+	string GetNextMessage(); ///<Get the next message. Returns empty string if none pending.
+
 	bool IsLocal(); ///<Returns true if this is a local connection
 protected:
 	void SetBusy(const int state); ///<Must be called if the last command sent may make the machine move
@@ -112,6 +117,8 @@ private:
 	string m_address;
 	int m_port;
 	float m_serverVer;
+	unsigned int m_errIndex;
+	unsigned int m_msgIndex;
 };
 
 } //namespace CncRemote
