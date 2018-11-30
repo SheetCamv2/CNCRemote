@@ -18,7 +18,7 @@ int main(int argc, char * argv[])
 #ifdef _WIN32
         Sleep(20);
 #else
-        sleep_ms(1);
+        SleepMs(1);
 #endif
     }
     return 0;

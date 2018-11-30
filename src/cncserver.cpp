@@ -87,10 +87,10 @@ COMERROR Server::Poll()
     return errOK;
 }
 
-LockedState Server::GetState()
+StatePtr Server::GetState()
 {
-	LockedState l(&m_state, &m_syncLock);
-	return l;
+	StatePtr s(&m_state, &m_syncLock);
+	return s;
 }
 
 string Server::SendInit(string nameHint)
@@ -99,7 +99,7 @@ string Server::SendInit(string nameHint)
 	DeleteTemp();
 	m_curBlock = 0;
 #ifdef _WIN32
-	char szTempFileName[MAX_PATH];  
+	char szTempFileName[MAX_PATH];
 	char lpTempPathBuffer[MAX_PATH];
 	DWORD dwRetVal = GetTempPathA(MAX_PATH, lpTempPathBuffer);
 	if (dwRetVal > MAX_PATH || (dwRetVal == 0))
@@ -107,7 +107,7 @@ string Server::SendInit(string nameHint)
 		return("");
 	}
 
-	//  Generates a temporary file name. 
+	//  Generates a temporary file name.
 	UINT uRetVal = GetTempFileNameA(lpTempPathBuffer, nameHint.c_str(), 0, szTempFileName);
 	if (uRetVal == 0)
 	{
@@ -121,10 +121,10 @@ string Server::SendInit(string nameHint)
 	}
 	return("");
 #else
-	int fd = mkstemp(nameHint.c_str());
+	char path[PATH_MAX];
+	sprintf(path,"/tmp/CncRemote%sXXXXXX", nameHint.c_str());
+	int fd = mkstemp(path);
 	if (fd < 0) return ("");
-	char path[MAX_PATH];
-	if (fcntl(fd, F_GETPATH, path) < 0) return ("");
 	m_file = fdopen(fd, "w");
 	if (!m_file) return ("");
 	m_curFile = path;
@@ -167,7 +167,7 @@ State Server::GetState2()
 		Sync();
 		UpdateState(m_state);
 	}
-	return State(m_state, m_syncLock);;
+	return State(m_state, m_syncLock);
 }
 
 bool Server::LoadFile2(const string file)
@@ -218,7 +218,7 @@ void Connection::RemoveTemp()
 	{
 #ifdef _WIN32
 		_wremove(m_tempFileName.c_str());
-#else	
+#else
 		remove(m_tempFileName.c_str());
 #endif
 		m_tempFileName.clear();

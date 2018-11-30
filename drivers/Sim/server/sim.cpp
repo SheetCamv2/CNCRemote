@@ -23,8 +23,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 Sim::Sim()
 {
     memset(&machine, 0, sizeof(machine));
-	m_state.Clear();
-	m_state.maxFeedLin = 1000;
+	GetState()->maxFeedLin = 1000;
 }
 
 
@@ -49,6 +48,8 @@ bool Sim::Poll()
 		busy = mcRUNNING;
 	}
 
+	StatePtr state = GetState();
+
 	if (machine.jogVel.x != 0 ||
 		machine.jogVel.y != 0 ||
 		machine.jogVel.z != 0 ||
@@ -59,15 +60,15 @@ bool Sim::Poll()
 		if (busy == mcIDLE || busy == mcJOGGING)
 		{
 			busy = mcJOGGING;
-			m_state.absPos += machine.jogVel * 1;
+			state->position += machine.jogVel * 1;
 		}
 		else
 		{
 			machine.jogVel.Zero();
 		}
 	}
-	m_state.absPos.x += 0.01;
-	m_state.machineStatus = busy;
+	state->position.x += 0.01;
+	state->machineStatus = busy;
 
     if(machine.running && !machine.paused)
     {
@@ -84,12 +85,8 @@ bool Sim::Poll()
     return(Server::Poll());
 }
 
-State Sim::GetState()
+void Sim::UpdateState(State& state)
 {
-	//You could generate the state here but in this case we are using a global state
-	//which is updated in Poll()
-	MutexLocker lock = GetLock(); //Sync with main thread
-	return m_state;
 }
 
 void Sim::DrivesOn(const bool state)
@@ -109,8 +106,8 @@ bool Sim::Mdi(const string line)
 {
 	/*TODO: Proper g-code handling*/
 	std::cout << "MDI:" << line << std::endl;
-
-	return (m_state.machineStatus == mcIDLE || m_state.machineStatus == mcMDI);
+	StatePtr state = GetState();
+	return (state->machineStatus == mcIDLE || state->machineStatus == mcMDI);
 }
 
 void Sim::SpindleOverride(const double percent)
@@ -153,38 +150,39 @@ void Sim::CycleStop()
 	std::cout << "Cycle stop" << std::endl;
 }
 
-void Sim::FeedHold(const bool state)
+void Sim::FeedHold(const bool status)
 {
-	std::cout << "Feed hold:" << state << std::endl;
-	m_state.feedHold = state;
+	std::cout << "Feed hold:" << status << std::endl;
+	GetState()->feedHold = status;
 }
 
-void Sim::BlockDelete(const bool state)
+void Sim::BlockDelete(const bool status)
 {
-	std::cout << "Block delete:" << state << std::endl;
-	m_state.blockDelete = state;
+	std::cout << "Block delete:" << status << std::endl;
+	GetState()->blockDelete = status;
 }
 
-void Sim::SingleStep(const bool state)
+void Sim::SingleStep(const bool status)
 {
-	std::cout << "Single step:" << state << std::endl;
-	m_state.singleStep = state;
+	std::cout << "Single step:" << status << std::endl;
+	GetState()->singleStep = status;
 }
 
-void Sim::OptionalStop(const bool state)
+void Sim::OptionalStop(const bool status)
 {
-	std::cout << "Optional stop:" << state << std::endl;
-	m_state.optionalStop = state;
+	std::cout << "Optional stop:" << status << std::endl;
+	GetState()->optionalStop = status;
 }
 
 void Sim::Home(const BoolAxes axes)
 {
+    StatePtr state = GetState();
 	std::cout << "Home axes:";
 	for (int ct = 0; ct < MAX_AXES; ct++)
 	{
 		std::cout << axes.array[ct] << ",";
-		if(axes.array[ct]) m_state.homed.array[ct] = true;
+		if(axes.array[ct]) state->homed.array[ct] = true;
 	}
-	
+
 	std::cout << std::endl;
 }

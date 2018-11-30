@@ -51,31 +51,26 @@ private:
 };
 
 
-class LockedState
+class StatePtr : private shared_ptr<MutexLocker>
 {
 public:
-	LockedState(State * state, Mutex * mutex)
+	StatePtr(State * state, Mutex * mutex) : shared_ptr<MutexLocker>(new MutexLocker(mutex))
 	{
 		m_state = state;
-		m_mutex = mutex;
-		mutex->Lock();
 	}
 
-	LockedState(LockedState& src)
+	StatePtr(const StatePtr &src)
 	{
 		m_state = src.m_state;
-		m_mutex = src.m_mutex;
-		src.m_mutex = NULL;
 	}
 
-	virtual ~LockedState()
-	{
-		if(m_mutex) m_mutex->Unlock();
-	}
-	State& Data() { return *m_state; }
+    State * operator->()
+    {
+        return m_state;
+    }
+
 private:
 	State* m_state;
-	Mutex * m_mutex;
 };
 
 
@@ -102,7 +97,7 @@ public:
 	*/
 	MutexLocker GetLock() {return (MutexLocker(&m_syncLock));}
 
-	/**Synchronise threads 
+	/**Synchronise threads
 	If you are not using GetState, use Sync() to synchronise your thread.
 	GetState automatically does this.*/
 
@@ -110,18 +105,9 @@ public:
 
 
 	/** Get the current machine state.
-	This is thread safe. Generally you would use this this function as:
-	\code
-	LockedState lockedState = GetState();
-	State& state = lockedState.Data();
-	\endcode
-	WARNING: You must keep an instance of your locked state for as long as you want to access the data. For instance
-	\code
-	State& state = GetState().Data();
-	\endcode
-	is dangerous. You will have a reference to the state but depending on your compiler it may not be thread safe.
+	This returns a thread safe smart pointer to the global state.
 	*/
-	LockedState GetState();
+	StatePtr GetState();
 
 protected:
 	//Override these to provide machine functionality
@@ -256,7 +242,7 @@ protected:
 
 	/** Start graphics preview.
 	Return false if cannot preview (file not loaded, preview not implemented etc).
-	recommendedSize is a recommended maximum number of points to return. 
+	recommendedSize is a recommended maximum number of points to return.
 	If a preview is currently in progress it should be aborted.
 	Note: m_curFile normally contains the path of the currently loaded file (if loaded)
 	*/
@@ -271,7 +257,7 @@ protected:
 	*/
 	virtual PreviewData GetPreview() { return PreviewData(); }
 
-	/** End preview and close the file if needed. 
+	/** End preview and close the file if needed.
 	May be called before all preview data has been read, for example if the user aborts previewing.
 	*/
 	virtual void EndPreview() {}
@@ -286,7 +272,7 @@ protected:
 	*/
 	void LogMessage(string message);
 
-	
+
 	rpc::server* m_server;
 
 	FILE * m_file;

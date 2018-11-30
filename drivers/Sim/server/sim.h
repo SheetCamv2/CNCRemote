@@ -32,14 +32,15 @@ public:
     bool Poll();
 
 protected:
-	virtual State GetState();
+	virtual void UpdateState(State& state);
 	virtual void DrivesOn(const bool state);
-	virtual void JogVel(const Axes& velocities);
-	virtual bool Mdi(const string& line);
+	virtual void JogVel(const Axes velocities);
+	virtual void JogStep(const Axes distance, const double speed);
+	virtual bool Mdi(const string line);
 	virtual void SpindleOverride(const double percent);
 	virtual void FeedOverride(const double percent);
 	virtual void RapidOverride(const double percent);
-	virtual bool LoadFile(const string& file);
+	virtual bool LoadFile(const string file);
 	virtual bool CloseFile();
 	virtual void CycleStart();
 	virtual void CycleStop();
@@ -47,7 +48,8 @@ protected:
 	virtual void BlockDelete(const bool state);
 	virtual void SingleStep(const bool state);
 	virtual void OptionalStop(const bool state);
-	virtual void Home(const BoolAxes& axes);
+	virtual void Home(const BoolAxes axes);
+	virtual Axes GetOffset(const unsigned int index);
 
 
 
@@ -71,8 +73,6 @@ protected:
 	} machine;
 
 protected:
-	//For simplicity we keep a global state that is common to all connections
-	State m_state;
 private:
 
 };

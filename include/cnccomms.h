@@ -104,7 +104,7 @@ namespace CncRemote
 
 		void Zero() { memset(array, 0, sizeof(array)); }
 
-		
+
 		#define OP(n) Axes& operator n (const double src)\
 		{\
 			for (int ct = 0; ct < MAX_AXES; ct++)\
@@ -192,8 +192,9 @@ namespace CncRemote
 
 	class State {
 	public:
-		State();
-		State(const State& src, Mutex& mutex);
+		State(); ///<Create a standard instance
+		State(const State& src, Mutex& mutex); ///<Create a ref counted, mutex locked instance. The mutex is unlocked once all copies of this instance are deleted.
+		State(const State& src);
 		virtual ~State();
 		Axes position; ///<Axes in tool coordinates (in metric units)
 		Axes machinePos; ///<Axes in machine coordinates (in metric units)
@@ -240,6 +241,7 @@ namespace CncRemote
 //		void Clear() { memset(this, 0, sizeof(State));}
 	private:
 		Mutex * m_mutex;
+		int * m_count;
 	};
 
 

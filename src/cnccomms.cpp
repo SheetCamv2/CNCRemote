@@ -52,12 +52,12 @@ namespace CncRemote
 #else
 	Mutex::Mutex()
 	{
-		pthread_mutex_init(&m_mutex, NULL)
+		pthread_mutex_init(&m_mutex, NULL);
 	}
 
 	Mutex::~Mutex()
 	{
-		pthread_mutex_destroy(m_mutex);
+		pthread_mutex_destroy(&m_mutex);
 	}
 
 	void Mutex::Lock()
@@ -67,7 +67,7 @@ namespace CncRemote
 
 	void Mutex:: Unlock()
 	{
-		pthread_mutex_unlock(&m_mutex)
+		pthread_mutex_unlock(&m_mutex);
 	}
 #endif // _WIN32
 
@@ -84,17 +84,34 @@ namespace CncRemote
 		fileCount = 0;
 		machineStatus = mcNO_SERVER;
 		m_mutex = NULL;
+		m_count = NULL;
 	}
 
 	State::State(const State& src, Mutex& mutex)
 	{
 		*this = src;
 		m_mutex = &mutex;
+		m_count = new int;
+		*m_count = 1;
+	}
+
+	State::State(const State& src)
+	{
+	    *this = src;
+	    if(m_count) m_count++;
 	}
 
 	State::~State()
 	{
-		if (m_mutex) m_mutex->Unlock();
+		if (m_count)
+        {
+            (*m_count)--;
+            if(*m_count <= 0 && m_mutex)
+            {
+                m_mutex->Unlock();
+                delete m_count;
+            }
+        }
 	}
 } //namespace CncRemote
 

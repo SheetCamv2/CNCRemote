@@ -13,28 +13,19 @@
 				<Option type="1" />
 				<Option compiler="msvc8" />
 				<Option use_console_runner="0" />
-				<Option projectCompilerOptionsRelation="1" />
-				<Option projectLinkerOptionsRelation="1" />
-				<Compiler>
-					<Add option="/MDd" />
-					<Add option="/GA" />
-					<Add option="/fp:fast" />
-					<Add option="/Zi" />
-					<Add option="/EHsc" />
-					<Add option="/DUNICODE" />
-					<Add option="/D_DEBUG" />
-					<Add directory="../../../include" />
-					<Add directory="../../../src" />
-					<Add directory="../../../../cncremote/libraries/include" />
-					<Add directory="../../../clsocket/src" />
-				</Compiler>
-				<Linker>
-					<Add option="/DEBUG" />
-					<Add library="libprotobuf-lite-3_1_0-32d.lib" />
-					<Add library="ws2_32.lib" />
-					<Add library="IPHLPAPI.lib" />
-					<Add directory="../../../libraries/lib/win32/vc9" />
-				</Linker>
+				<Option projectCompilerOptionsRelation="-1" />
+				<Option projectLinkerOptionsRelation="-1" />
+				<Option projectIncludeDirsRelation="-1" />
+				<Option projectResourceIncludeDirsRelation="-1" />
+				<Option projectLibDirsRelation="-1" />
+				<MakeCommands>
+					<Build command="" />
+					<CompileFile command="" />
+					<Clean command="" />
+					<DistClean command="" />
+					<AskRebuildNeeded command="" />
+					<SilentBuild command=" &gt; $(CMD_NULL)" />
+				</MakeCommands>
 			</Target>
 			<Target title="Debug-Linux">
 				<Option platforms="Unix;" />
@@ -44,19 +35,13 @@
 				<Option compiler="gcc" />
 				<Option use_console_runner="0" />
 				<Compiler>
-					<Add option="-march=i686" />
-					<Add option="-std=c++0x" />
-					<Add option="-g" />
 					<Add option="-std=c++11" />
+					<Add option="-g" />
 					<Add option="-D_LINUX" />
 					<Add directory="../../../include" />
-					<Add directory="../../../src" />
-					<Add directory="../../../libraries/include" />
-					<Add directory="../../../clsocket/src" />
+					<Add directory="../../../libraries/rpclib/include" />
 				</Compiler>
 				<Linker>
-					<Add library="protobuf-lite-3.1.0" />
-					<Add library="zmq-4.2.3" />
 					<Add library="pthread" />
 					<Add directory="../../../libraries/lib/i386-linux-gnu" />
 				</Linker>
@@ -112,7 +97,6 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
-			<Add option="-DZMQ_STATIC" />
 		</Compiler>
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
