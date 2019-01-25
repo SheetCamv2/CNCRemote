@@ -1,3 +1,6 @@
 [submodule "libraries/rpclib"]
 	path = libraries/rpclib
 	url = https://github.com/rpclib/rpclib.git
+[submodule "libraries/linear-rpc"]
+	path = libraries/linear-rpc
+	url = https://github.com/linear-rpc/linear-cpp.git

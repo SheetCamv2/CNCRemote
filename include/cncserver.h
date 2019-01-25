@@ -22,55 +22,46 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #ifndef CNCSERVER_H_INCLUDED
 #ifndef CNCSERVER_H_INCLUDED
 
+#ifdef _WIN32
+#include <WinSock2.h>
+#endif
+
 #include "cnccomms.h"
-#include "rpc/server.h"
+#include "linear/tcp_server.h"
+#include "linear/mutex.h"
 
 namespace CncRemote {
 
-class Server;
+/** A thread locking object
+The mutex will remain locked for as long as this object or any copies of it exist
 
-
-/** simple class to handle locking. Mutex remains locked for the lifetime of this object.
 */
-class MutexLocker
+class ThreadLock : private linear::shared_ptr<linear::lock_guard<linear::mutex>>
 {
 public:
-    MutexLocker(Mutex * mutex)
-    {
-        m_mutex = mutex;
-		mutex->Lock();
-    }
-
-    ~MutexLocker()
-    {
-		m_mutex->Unlock();
-    }
-
-private:
-	Mutex * m_mutex;
+	ThreadLock(linear::mutex& mutex) : 
+		linear::shared_ptr<linear::lock_guard<linear::mutex>>(new linear::lock_guard<linear::mutex>(mutex))
+	{
+	}
 };
 
-
-class StatePtr : private shared_ptr<MutexLocker>
+/** A locked smart pointer to a State object
+The state remains mutex locked for as long as this object or any copies of it exist
+*/
+class LockedState:public State, private ThreadLock
 {
 public:
-	StatePtr(State * state, Mutex * mutex) : shared_ptr<MutexLocker>(new MutexLocker(mutex))
+	LockedState(State& state, linear::mutex& mutex) : ThreadLock(mutex)
 	{
-		m_state = state;
+		m_state = &state;
 	}
 
-	StatePtr(const StatePtr &src)
-	{
-		m_state = src.m_state;
-	}
+	virtual ~LockedState() {}
 
-    State * operator->()
-    {
-        return m_state;
-    }
+	State& operator ->() { return *m_state; }
 
 private:
-	State* m_state;
+	State * m_state;
 };
 
 
@@ -87,27 +78,29 @@ public:
 	/**	Bind a given port to receive packets.
 	*/
 	COMERROR Bind(const uint32_t port = DEFAULT_COMMS_PORT);
+
 	/**	Call this every so often from your main loop.
-	Note this is used to synchronize connection threads with your main thread.
-	If you use thread synchronization you need to call this often to keep latency low.
+	Note this is used to synchronize connection threads with your main thread.\n
+	If you use thread synchronization you need to call this often to keep latency low.\n
+	NOTE: If you intend to use this you must call it at least once before you bind the server.\n
 	*/
     COMERROR Poll();
 
-	/**Sync your thread to the main thread for as long as the MutexLocker object exists. Basically locks your thread to the server's Poll() loop
+	/**Sync your thread to the main thread for as long as the ThreadLock object or copies of it exist.\n
+	Basically locks your thread to the server's Poll() loop	\n
+	A normal usage case: \code
+	ThreadLock lock = GetLock();
+	//The server will now be locked and the state object is guaranteed thread safe until all copies of lock are destroyed
+	\endcode
 	*/
-	MutexLocker GetLock() {return (MutexLocker(&m_syncLock));}
-
-	/**Synchronise threads
-	If you are not using GetState, use Sync() to synchronise your thread.
-	GetState automatically does this.*/
-
-	#define Sync() MutexLocker _lock = GetLock();
+	ThreadLock GetLock() {return ThreadLock(m_syncLock);}
 
 
 	/** Get the current machine state.
 	This returns a thread safe smart pointer to the global state.
+	The state remains locked for as long as this object exists
 	*/
-	StatePtr GetState();
+	LockedState GetState();
 
 protected:
 	//Override these to provide machine functionality
@@ -272,9 +265,6 @@ protected:
 	*/
 	void LogMessage(string message);
 
-
-	rpc::server* m_server;
-
 	FILE * m_file;
 	int m_curBlock;
 	string m_curFile;
@@ -282,14 +272,21 @@ protected:
 	vector<string> m_messages;
 
 private:
-	Mutex m_syncLock;
+	State GetState_();
+	int Version() { return CNCREMOTE_PROTOCOL_VERSION; }
+
+	linear::mutex m_syncLock;
 	State m_state;
 
 	void DeleteTemp();
 	State GetState2();
 	bool LoadFile2(const string file);
 
-
+	class Handler;
+	friend class Handler;
+	linear::shared_ptr<Handler> m_handler;
+	linear::TCPServer m_server;
+	linear::TCPSocket m_socket;
 
 };
 

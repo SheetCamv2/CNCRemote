@@ -17,6 +17,9 @@ along with this program; if not, you can obtain a copy from mozilla.org
 ******************************************************************/
 
 
+#ifdef _WIN32
+#include <WinSock2.h>
+#endif
 
 
 #include "cnccomms.h"
@@ -83,35 +86,6 @@ namespace CncRemote
 		messageCount = 0;
 		fileCount = 0;
 		machineStatus = mcNO_SERVER;
-		m_mutex = NULL;
-		m_count = NULL;
-	}
-
-	State::State(const State& src, Mutex& mutex)
-	{
-		*this = src;
-		m_mutex = &mutex;
-		m_count = new int;
-		*m_count = 1;
-	}
-
-	State::State(const State& src)
-	{
-	    *this = src;
-	    if(m_count) m_count++;
-	}
-
-	State::~State()
-	{
-		if (m_count)
-        {
-            (*m_count)--;
-            if(*m_count <= 0 && m_mutex)
-            {
-                m_mutex->Unlock();
-                delete m_count;
-            }
-        }
 	}
 } //namespace CncRemote
 

@@ -20,9 +20,18 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #ifndef CNCCLIENT_H_INCLUDED
 #define CNCCLIENT_H_INCLUDED
 
+#ifdef _WIN32
+#include <WinSock2.h>
+#endif
+
 #include "cnccomms.h"
 #include "cncplugin.h"
-#include "rpc/rpc_error.h"
+#include "linear/tcp_client.h"
+#include "linear/log.h"
+#include "linear/timer.h"
+#include "linear/handler.h"
+#include "linear/mutex.h"
+
 
 namespace CncRemote
 {
@@ -37,6 +46,7 @@ struct Plugin
     CNCPOLLFUNC Poll;
     CNCCONTROLEXISTSFUNC ControlExists;
 };
+
 class Client : private Plugin
 #else
 class Client
@@ -55,7 +65,7 @@ public:
 	void Disconnect(); ///<Disconnect (normally disconnection is automatic so you shouldn't need to call this)
  	float Ping(int waitMs); ///<Ping the server. If there is no response within waitMs milliseconds it returns false. Returns time for round trip in milliseconds. Blocks for up to waitMs milliseconds
 	bool IsBusy(const int state); ///<Returns true if the machine state is greater then the given state
-	bool IsConnected() { return m_connected; } ///<Returns true if we are connected to server
+	bool IsConnected() { return m_socket.GetState() == linear::Socket::CONNECTED; } ///<Returns true if we are connected to server
 
 
     void DrivesOn(const bool state); ///<Turn drives/control on
@@ -69,7 +79,7 @@ public:
 	Returns false if failed. This function blocks until the file is loaded.
 	*/
 	bool LoadFile(string file); 
-	void CloseFile(); ///<Close any loaded files (some controls lock the file they have open)
+	bool CloseFile(); ///<Close any loaded files (some controls lock the file they have open)
     void CycleStart(); ///<cycle start
     void CycleStop(); ///<Stop execution
     void FeedHold(const bool state); ///<pause/resume motion
@@ -92,33 +102,55 @@ protected:
 	State m_state;
 	int m_roundTrip; //Time for a GetState() round trip in us
 
-	virtual void OnException(rpc::rpc_error &error);
-	virtual void OnException(clmdep_msgpack::type_error & e);
-	virtual void OnException(rpc::timeout &error);
-	virtual void OnVersionFailed(const float serverVersion) {}; ///<If server connects but it's version is not compatible
-
+	bool Notify(std::string function, const linear::type::any& param);
+	bool Call(std::string function, const linear::type::any& param, linear::Response& response);
 private:
-	void OnConnectChange(rpc::client & client, rpc::connection_state was, rpc::connection_state now);
+
 
 #ifdef USE_PLUGINS
     vector<Plugin> m_plugins;
     Plugin * m_plugin;
 #endif
-//	time_t m_timeout;
-//	bool m_pingResp;
 	int m_statusCache;
-//	int16_t m_serverHeart;
 	int32_t m_busyHeart;
 	int32_t m_heartBeat;
-	rpc::client * m_client;
-	std::future<RPCLIB_MSGPACK::object_handle> m_pollFuture;
-	std::chrono::high_resolution_clock::time_point m_pollTimer;
-	bool m_connected;
-	string m_address;
-	int m_port;
 	float m_serverVer;
 	unsigned int m_errIndex;
 	unsigned int m_msgIndex;
+
+	class Handler;
+	friend class Handler;
+	linear::shared_ptr<Handler> m_handler;
+	linear::TCPClient m_client;
+	linear::TCPSocket m_socket;
+	unsigned m_timeout;
+	
+	struct ResponseData
+	{
+		uint32_t msgid;
+		Client * client;
+		linear::mutex mutex;
+		linear::Response* response;
+		bool ok;
+	};
+	
+	class ResponseTrack
+	{
+	public:
+		ResponseTrack(Client* client, const int32_t msgid, linear::Response& response);
+		~ResponseTrack();
+		bool Wait();
+		static ResponseData* Find(const int32_t msgid);
+
+		static void OnResponse(const linear::Socket& socket, const linear::Response& response);
+		static void OnError(const linear::Socket& socket, const linear::Request& request, const linear::Error& error);
+
+
+	private:
+		ResponseData m_data;
+		static std::vector<ResponseData *> m_responses;
+		static linear::mutex m_mutex;
+	};
 };
 
 } //namespace CncRemote

@@ -48,7 +48,7 @@ bool Sim::Poll()
 		busy = mcRUNNING;
 	}
 
-	StatePtr state = GetState();
+	LockedState state = GetState();
 
 	if (machine.jogVel.x != 0 ||
 		machine.jogVel.y != 0 ||
@@ -106,7 +106,7 @@ bool Sim::Mdi(const string line)
 {
 	/*TODO: Proper g-code handling*/
 	std::cout << "MDI:" << line << std::endl;
-	StatePtr state = GetState();
+	LockedState state = GetState();
 	return (state->machineStatus == mcIDLE || state->machineStatus == mcMDI);
 }
 
@@ -176,7 +176,7 @@ void Sim::OptionalStop(const bool status)
 
 void Sim::Home(const BoolAxes axes)
 {
-    StatePtr state = GetState();
+    LockedState state = GetState();
 	std::cout << "Home axes:";
 	for (int ct = 0; ct < MAX_AXES; ct++)
 	{

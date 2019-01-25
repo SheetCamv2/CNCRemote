@@ -17,45 +17,255 @@ along with this program; if not, you can obtain a copy from mozilla.org
 ******************************************************************/
 
 
+#ifdef _WIN32
+#include <WinSock2.h>
+#endif
 
 
 #include "cncclient.h"
 #include <iostream>
 #include <ctime>
-#include <chrono>
-
+/*
 
 #ifdef _WIN32
 #else
 #include <dlfcn.h>
 #include <dirent.h>
 #endif
+*/
+
 
 #include <sstream>
 #include "timer.h"
 
-#define CATCHRPC 	catch (rpc::rpc_error &e) {\
-	OnException(e);\
-}catch(clmdep_msgpack::type_error & e) {\
-	OnException(e);\
-}catch(rpc::timeout & e) {\
-	OnException(e);\
-}
-
-
 namespace CncRemote
 {
 
+Client::ResponseTrack::ResponseTrack(Client* client, const int32_t msgid, linear::Response& response)
+{
+	m_data.client = client;
+	m_data.ok = false;
+	m_data.response = &response;
+	m_data.msgid = msgid;
+	m_data.mutex.lock();
+	{
+		linear::lock_guard<linear::mutex> guard(m_mutex);
+		m_responses.push_back(&m_data);
+	}
+}
+
+Client::ResponseTrack::~ResponseTrack()
+{
+	linear::lock_guard<linear::mutex> guard(m_mutex);
+	for (std::vector<ResponseData *>::iterator it = m_responses.begin(); it != m_responses.end(); it++)
+	{
+		if ((*it) == &m_data)
+		{
+			m_responses.erase(it);
+			return;
+		}
+	}
+}
+
+bool Client::ResponseTrack::Wait()
+{
+	m_data.mutex.lock(); //Wait for thread to unlock
+	linear::lock_guard<linear::mutex> guard(m_mutex);
+	for (std::vector<ResponseData *>::iterator it = m_responses.begin(); it != m_responses.end(); it++)
+	{
+		if ((*it) == &m_data)
+		{
+			m_responses.erase(it);
+			return m_data.ok;
+		}
+	}
+	return false;
+}
+
+Client::ResponseData* Client::ResponseTrack::Find(const int32_t msgid)
+{
+	linear::lock_guard<linear::mutex> guard(m_mutex);
+	for (std::vector<ResponseData *>::iterator it = m_responses.begin(); it != m_responses.end(); it++)
+	{
+		if ((*it)->msgid == msgid)
+		{
+			return (*it);
+		}
+	}
+	return NULL;
+}
+
+
+void Client::ResponseTrack::OnResponse(const linear::Socket& socket, const linear::Response& response)
+{
+	ResponseData* dat = ResponseTrack::Find(response.msgid);
+	if (!dat) return; //Don't recognise this response
+	*(dat->response) = response;
+	dat->ok = true;
+	dat->mutex.unlock();
+}
+
+void Client::ResponseTrack::OnError(const linear::Socket& socket, const linear::Request& request, const linear::Error& error)
+{
+	ResponseData* dat = ResponseTrack::Find(request.msgid);
+	if (!dat) return; //Don't recognise this response
+	dat->ok = false;
+	dat->mutex.unlock();
+}
+
+std::vector<Client::ResponseData *> Client::ResponseTrack::m_responses;
+linear::mutex Client::ResponseTrack::m_mutex;
+
+
+
+class Client::Handler : public linear::Handler
+{
+public:
+	Handler()
+	{
+		m_retries = 0;
+	}
+
+	~Handler() {}
+
+	static void Reconnect(void* args) 
+	{
+		linear::Socket* socket = reinterpret_cast<linear::Socket*>(args);
+		socket->Connect();
+		delete socket;
+	}
+
+	void OnConnect(const linear::Socket& socket) 
+	{
+		m_retries = 0;
+		const linear::Addrinfo& info = socket.GetPeerInfo();
+		std::cout << "OnConnect: " << info.addr << ":" << info.port << std::endl;
+	}
+
+	void OnDisconnect(const linear::Socket& socket, const linear::Error&) {
+		int retryTime = 1000;
+		if (m_retries < 10)
+		{
+			retryTime = 100;
+			m_retries++;
+		}
+		m_retryTimer.Start(Handler::Reconnect, retryTime, new linear::Socket(socket));
+	}
+	void OnMessage(const linear::Socket& socket, const linear::Message& msg) {
+		const linear::Addrinfo& info = socket.GetPeerInfo();
+		switch(msg.type) {
+		case linear::REQUEST:
+		{
+			linear::Request request = msg.as<linear::Request>();
+			std::cout << "recv Request: msgid = " << request.msgid
+				<< ", method = \"" << request.method << "\""
+				<< ", params = " << request.params.stringify()
+				<< " from " << info.addr << ":" << info.port << std::endl;
+			linear::Response response(request.msgid, linear::type::nil(), std::string("This client does not handle request"));
+			response.Send(socket);
+		}
+		break;
+		case linear::RESPONSE:
+		{
+			linear::Response response = msg.as<linear::Response>();
+			std::cout << "recv Response(Handler): msgid = " << response.msgid
+				<< ", result = " << response.result.stringify()
+				<< ", error = " << response.error.stringify()
+				<< " from " << info.addr << ":" << info.port << std::endl;
+			std::cout << "origin request: msgid = " << response.request.msgid
+				<< ", method = \"" << response.request.method << "\""
+				<< ", params = " << response.request.params.stringify() << std::endl;
+		}
+		break;
+		case linear::NOTIFY:
+		{
+			linear::Notify notify = msg.as<linear::Notify>();
+			std::cout << "recv Notify: "
+				<< "method = \"" << notify.method << "\""
+				<< ", params = " << notify.params.stringify()
+				<< " from " << info.addr << ":" << info.port << std::endl;
+			try {
+/*				Derived data = notify.params.as<Derived>();
+				std::cout << "parameters detail" << std::endl;
+				std::cout << "Base::"
+					<< "int: " << data.int_val
+					<< ", double: " << data.double_val
+					<< ", string: " << data.string_val
+					<< ", vector: " << data.vector_val[0]
+					<< ", map: {\"key\": " << data.map_val["key"] << "}" << std::endl;
+				std::cout << "Derived::int: " << data.derived_val << std::endl;*/
+			} catch(const std::bad_cast&) {
+				std::cout << "invalid type cast" << std::endl;
+			}
+		}
+		break;
+		default:
+		{
+			std::cout << "BUG: plz inform to linear-developpers" << std::endl;
+		}
+		break;
+		}
+	}
+	void OnError(const linear::Socket&, const linear::Message& msg, const linear::Error& err) {
+		switch(msg.type) {
+		case linear::REQUEST:
+		{
+			linear::Request request = msg.as<linear::Request>();
+			std::cout << "Error to Send Request: msgid = " << request.msgid
+				<< ", method = \"" << request.method << "\""
+				<< ", params = " << request.params.stringify()
+				<< ", err = " << err.Message() << std::endl;
+		}
+		break;
+		case linear::RESPONSE:
+		{
+			linear::Response response = msg.as<linear::Response>();
+			std::cout << "Error to Send Response: msgid = " << response.msgid
+				<< ", result = " << response.result.stringify()
+				<< ", error = " << response.error.stringify()
+				<< ", err = " << err.Message() << std::endl;
+			std::cout << "origin request: msgid = " << response.request.msgid
+				<< ", method = \"" << response.request.method << "\""
+				<< ", params = " << response.request.params.stringify() << std::endl;
+		}
+		break;
+		case linear::NOTIFY:
+		{
+			linear::Notify notify = msg.as<linear::Notify>();
+			std::cout << "Error to Send Notify: "
+				<< "method = \"" << notify.method << "\""
+				<< ", params = " << notify.params.stringify()
+				<< ", err = " << err.Message() << std::endl;
+		}
+		break;
+		default:
+		{
+			std::cout << "BUG: plz inform to linear-developpers" << std::endl;
+		}
+		break;
+		}
+	}
+
+private:
+	int m_retries;
+	linear::Timer m_retryTimer;
+};
+
+
 Client::Client()
 {
+
 #ifdef USE_PLUGINS
     m_plugin = NULL;
 #endif
-	m_client = NULL;
-	m_connected = false;
 	m_serverVer = 0;
 	m_errIndex = 0;
 	m_msgIndex = 0;
+
+	m_handler = linear::shared_ptr<Handler>(new Handler());
+	m_client = linear::TCPClient(m_handler);
+
+	m_timeout = 10000;
 }
 
 Client::~Client()
@@ -73,7 +283,6 @@ Client::~Client()
 #endif
     }
 #endif
-	delete m_client;
 }
 
 
@@ -202,10 +411,10 @@ COMERROR Client::Poll()
     if(m_plugin) m_plugin->Poll();
 #endif
 
-	if (!m_connected) return errCONNECT;
+	if (!IsConnected()) return errCONNECT;
 
 	COMERROR ret = errOK;
-
+/*
 	try
 	{
 		if (m_pollFuture.valid())
@@ -270,31 +479,13 @@ COMERROR Client::Poll()
 	{
 		cout << e.what() << std::endl;
 	}
-
+	*/
     return ret;
 }
 
 
-void Client::OnException(rpc::rpc_error &e)
-{
-	std::cout << std::endl << e.what() << std::endl;
-	std::cout << "in function '" << e.get_function_name() << "': "
-		<< e.get_error().as<std::string>() << std::endl;
-
-}
-
-void Client::OnException(clmdep_msgpack::type_error & e)
-{
-	std::cout << "Type error: " << e.what() << std::endl;
-}
-
-void Client::OnException(rpc::timeout &e)
-{
-	std::cout << "Timeout error: " << e.what() << std::endl;
-}
-
 //void(rpc::client &, connection_state, connection_state)
-
+/*
 void Client::OnConnectChange(rpc::client & client, rpc::connection_state was, rpc::connection_state now)
 {
 	if (was == rpc::connection_state::connected)
@@ -309,16 +500,13 @@ void Client::OnConnectChange(rpc::client & client, rpc::connection_state was, rp
 	if (!m_connected) m_state.machineStatus = mcNO_SERVER;
 	m_serverVer = 0;
 }
-
+*/
 
 
 
 bool Client::Connect(const unsigned int index, const CncString& address, const uint32_t port)
 {
-	m_port = port;
-	delete m_client;
-	m_pollFuture = std::future<RPCLIB_MSGPACK::object_handle>(); //invalidate future
-	m_address = to_utf8(address);
+	std::string addr = to_utf8(address);
 #ifdef USE_PLUGINS
     if(m_plugin)
     {
@@ -330,12 +518,11 @@ bool Client::Connect(const unsigned int index, const CncString& address, const u
         if(index > m_plugins.size()) return false;
         m_plugin = &m_plugins[index - 1];
         m_plugin->Start();
-		m_address = "localhost";
+		addr = "localhost";
 	}
 #endif
-
-	m_client = new rpc::client(m_address, port, [this](rpc::client & client, rpc::connection_state was, rpc::connection_state now) {OnConnectChange(client, was, now); });
-	m_client->set_timeout(500);
+	m_socket = m_client.CreateSocket(addr, port);
+	m_socket.Connect();
 	return true;
 }
 
@@ -348,13 +535,12 @@ void Client::Disconnect()
         m_plugin = NULL;
     }
 #endif
-	delete m_client;
-	m_client = NULL;
 }
 
 float Client::Ping(int waitMs)
 {
-	if (!m_connected) return -1;
+
+/*	if (!m_connected) return -1;
 	using namespace std::chrono;
 	high_resolution_clock::time_point t = high_resolution_clock::now();
 	try
@@ -365,13 +551,13 @@ float Client::Ping(int waitMs)
 		{
 			return (float)(duration_cast<microseconds>(high_resolution_clock::now() - t).count()) / 1000;
 		}
-	}CATCHRPC;
+	}CATCHRPC;*/
 	return -1;
 }
 
 bool Client::IsBusy(const int state)
 {
-	if (!m_connected) return true;
+	if (!IsConnected()) return true;
 	if(m_statusCache > m_state.machineStatus)
 	{
 		return(m_statusCache > state);
@@ -381,67 +567,70 @@ bool Client::IsBusy(const int state)
 
 void Client::DrivesOn(const bool state)
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("DrivesOn", state);
-	}CATCHRPC;
+	linear::Notify notify("DrivesOn", state);
+	notify.Send(m_socket);
 }
 
 void Client::JogVel(const Axes& velocities)
 {
-	if (!m_connected) return;
-	try
+	linear::Notify notify("JogVel", velocities);
+	if (notify.Send(m_socket) == linear::LNR_OK)
 	{
-		m_client->send("JogVel", velocities);
-	}CATCHRPC;
-	SetBusy(mcJOGGING);
+		SetBusy(mcJOGGING);
+	}
 }
+
+bool Client::Notify(std::string function, const linear::type::any& param)
+{
+	linear::Notify notify(function, param);
+	return (notify.Send(m_socket) == linear::LNR_OK);
+}
+
+
+bool Client::Call(std::string function, const linear::type::any& param, linear::Response& response)
+{
+	linear::Request request(function, param);
+	ResponseTrack trk(this, request.msgid, response);
+	if (request.Send(m_socket, m_timeout, Client::ResponseTrack::OnResponse, Client::ResponseTrack::OnError) != linear::LNR_OK)
+	{
+		return false;
+	}
+	return trk.Wait();
+}
+
 
 bool Client::Mdi(const string line)
 {
-	if (!m_connected) return false;
-	bool ret = false;
-	try
-	{
-		ret = m_client->call("Mdi", line).as<bool>();
-	}CATCHRPC;
+	linear::Response response;
+	if (!Call("Mdi", line, response)) return false;
 	SetBusy(mcMDI);
-	return ret;
+	return response.as<BoolData>().value;
 }
 
 
 void Client::FeedOverride(const double percent)
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("FeedOverride", percent);
-	}CATCHRPC;
+	linear::Notify notify("FeedOverride", percent);
+	notify.Send(m_socket);
 }
 
 void Client::SpindleOverride(const double percent)
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("SpindleOverride", percent);
-	}CATCHRPC;
+	linear::Notify notify("SpindleOverride", percent);
+	notify.Send(m_socket);
 }
 
 void Client::RapidOverride(const double percent)
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("RapidOverride", percent);
-	}CATCHRPC;
+	linear::Notify notify("RapidOverride", percent);
+	notify.Send(m_socket);
 }
 
 
 bool Client::LoadFile(string file)
 {
-	if (!m_connected) return false;
+	if (!IsConnected()) return false;
+	linear::Response response;
 	if (!IsLocal()) //need to upload
 	{
 		FILE * fp = fopen(file.c_str(), "rb");
@@ -459,112 +648,93 @@ bool Client::LoadFile(string file)
 		int e = file.find_last_of(".");
 		if (e == string::npos || e < s) e = file.size();
 		string name = file.substr(s + 1 , e - (s + 1));
-		try 
+		if (!Call("SendInit", name, response)) return false;
+		file = response.as<string>();
+		if (file.empty()) return false;
+		char buf[FILE_BLOCK_SIZE];
+		int bytes = 0;
+		FileData dat;
+		dat.block = 0;
+
+		do
 		{
-			file = m_client->call("SendInit", name).as<string>();
-			if (file.empty()) return false;
-			char buf[FILE_BLOCK_SIZE];
-			string s;
-			int blk = 0;
-			int bytes = 0;
-			do
-			{
-				bytes = fread(buf, 1, FILE_BLOCK_SIZE, fp);
-				s.assign(buf, bytes);
-				if (!m_client->call("SendData", s, blk++).as<bool>()) return false;
-				Poll();
-			} while (bytes == FILE_BLOCK_SIZE);
-		}CATCHRPC;
+			bytes = fread(buf, 1, FILE_BLOCK_SIZE, fp);
+			dat.data.assign(buf, bytes);
+
+			if (!Call("SendData", dat, response)) return false;
+			if (!response.as<BoolData>().value) return false;
+			Poll();
+		} while (bytes == FILE_BLOCK_SIZE);
 	}
 
 
 	bool ret = false;
-	try
-	{
-		ret = m_client->call("LoadFile", file).as<bool>();
-	}CATCHRPC;
+	Call("LoadFile", file, response);
+	ret = response.as<BoolData>().value;
 	return ret;
 }
 
-void Client::CloseFile()
+bool Client::CloseFile()
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("CloseFile");
-	}CATCHRPC;
+	linear::Response response;
+	if (!Call("CloseFile",0, response)) return false;
+	bool ret = false;
+	ret = response.as<BoolData>().value;
+	return ret;
 }
 
 
 void Client::CycleStart()
 {
-	if (!m_connected) return;
-	try
+	linear::Notify notify("CycleStart", true);
+	if (notify.Send(m_socket) == linear::LNR_OK)
 	{
-		m_client->send("CycleStart");
-	}CATCHRPC;
-	SetBusy(mcRUNNING);
+		SetBusy(mcRUNNING);
+	}
 }
 
 void Client::CycleStop()
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("CycleStop");
-	}CATCHRPC;
+	linear::Notify notify("CycleStart", false);
+	notify.Send(m_socket);
 }
 
 void Client::FeedHold(const bool state)
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("FeedHold", state);
-	}CATCHRPC;
+	linear::Notify notify("FeedHold", state);
+	notify.Send(m_socket);
 }
 
 
 void Client::BlockDelete(const bool state)
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("BlockDelete", state);
-	}CATCHRPC;
+	linear::Notify notify("BlockDelete", state);
+	notify.Send(m_socket);
 }
 
 void Client::SingleStep(const bool state)
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("SingleStep", state);
-	}CATCHRPC;
+	linear::Notify notify("SingleStep", state);
+	notify.Send(m_socket);
 }
 
 void Client::OptionalStop(const bool state)
 {
-	if (!m_connected) return;
-	try
-	{
-		m_client->send("OptionalStop", state);
-	}CATCHRPC;
+	linear::Notify notify("OptionalStop", state);
+	notify.Send(m_socket);
 }
 
 void Client::Home(const unsigned int axis)
 {
-	if (!m_connected) return;
 	if (axis >= MAX_AXES) return;
 	BoolAxes axes;
 	axes.Zero();
 	axes.array[axis] = true;
-	if (!m_connected) return;
-	try
+	linear::Notify notify("Home", axes);
+	if(notify.Send(m_socket) == linear::LNR_OK)
 	{
-		m_client->send("Home", axes);
-	}CATCHRPC;
-	SetBusy(mcRUNNING);
+		SetBusy(mcRUNNING);
+	}
 }
 
 void Client::HomeAll()
@@ -575,12 +745,11 @@ void Client::HomeAll()
 	{
 		axes.array[ct] = true;
 	}
-	if (!m_connected) return;
-	try
+	linear::Notify notify("Home", axes);
+	if(notify.Send(m_socket) == linear::LNR_OK)
 	{
-		m_client->send("Home", axes);
-	}CATCHRPC;
-	SetBusy(mcRUNNING);
+		SetBusy(mcRUNNING);
+	}
 }
 
 string Client::GetNextError()
@@ -589,7 +758,10 @@ string Client::GetNextError()
 	{
 		return string();
 	}
-	return m_client->call("GetError", m_errIndex++).as<string>();
+
+	linear::Response response;
+	Call("GetError", m_errIndex++, response);
+	return response.as<string>();
 }
 
 string Client::GetNextMessage()
@@ -598,15 +770,19 @@ string Client::GetNextMessage()
 	{
 		return string();
 	}
-	return m_client->call("GetMessage", m_msgIndex++).as<string>();
+
+	linear::Response response;
+	Call("GetMessage", m_msgIndex++, response);
+	return response.as<string>();
 }
 
 
 
 bool Client::IsLocal()
 {
-	//FIXME: Find a better way of detecting a local connection
-	return (m_connected && (m_address == "localhost" || m_address == "127.0.0.1"));
+	const linear::Addrinfo& peer = m_socket.GetPeerInfo();
+	const linear::Addrinfo& self = m_socket.GetSelfInfo();
+	return peer.addr == self.addr;
 }
 
 } //namespace CncRemote

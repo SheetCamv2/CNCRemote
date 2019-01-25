@@ -21,75 +21,470 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include <sstream>
 
 #include "timer.h"
+#include "callback.h"
+#include <iostream>
+
 
 namespace CncRemote
 {
 
-	enum { MAX_THREADS = 8 };
+enum { MAX_THREADS = 8 };
+
+
+
+class Server::Handler : public linear::Handler {
+public:
+	Handler() {}
+	~Handler() {}
+
+
+		void OnConnect(const linear::Socket& socket) {
+		const linear::Addrinfo& info = socket.GetPeerInfo();
+		std::cout << "OnConnect: " << info.addr << ":" << info.port << std::endl;
+	}
+
+	void OnDisconnect(const linear::Socket& socket, const linear::Error&) {
+		const linear::Addrinfo& info = socket.GetPeerInfo();
+		std::cout << "OnDisconnect: " << info.addr << ":" << info.port << std::endl;
+	}
+
+	void OnMessage(const linear::Socket& socket, const linear::Message& msg) {
+		const linear::Addrinfo& info = socket.GetPeerInfo();
+		switch(msg.type) {
+		case linear::REQUEST:
+		{
+			try 
+			{
+				linear::Request request = msg.as<linear::Request>();
+				for (int ct = 0; ct < m_requestHandlers.size(); ct++)
+				{
+					if (m_requestHandlers[ct]->GetName() == request.method)
+					{
+						m_requestHandlers[ct]->Execute(request, socket);
+						return;
+					}
+				}
+				linear::Response response(request.msgid, "_Exception_", ErrorData("method not found", request.method));
+				response.Send(socket);
+			}
+			catch (const std::exception& exc)
+			{
+				linear::Notify response("_Exception_", ErrorData(exc.what(), ""));
+				response.Send(socket);
+			}
+		}
+		break;
+
+		case linear::RESPONSE:
+		{
+			linear::Response response = msg.as<linear::Response>();
+			std::cout << "recv Response: msgid = " << response.msgid
+				<< ", result = " << response.result.stringify()
+				<< ", error = " << response.error.stringify()
+				<< " from " << info.addr << ":" << info.port << std::endl;
+			std::cout << "origin request: msgid = " << response.request.msgid
+				<< ", method = \"" << response.request.method << "\""
+				<< ", params = " << response.request.params.stringify() << std::endl;
+		}
+		break;
+
+		case linear::NOTIFY:
+		{
+			try 
+			{
+				linear::Notify notify = msg.as<linear::Notify>();
+				for (int ct = 0; ct < m_notifyHandlers.size(); ct++)
+				{
+					if (m_notifyHandlers[ct]->GetName() == notify.method)
+					{
+						m_notifyHandlers[ct]->Execute(notify, socket);
+						return;
+					}
+				}
+				linear::Notify response("_Exception_", ErrorData("method not found", notify.method));
+				response.Send(socket);
+			}
+			catch (const std::exception& exc)
+			{
+				linear::Notify response("_Exception_", ErrorData(exc.what(), ""));
+				response.Send(socket);
+			}
+		}
+		break;
+		default:
+		{
+			std::cout << "BUG: please inform to linear-developers" << std::endl;
+		}
+		break;
+		}
+	}
+	void OnError(const linear::Socket&, const linear::Message& msg, const linear::Error& err) {
+		switch(msg.type) {
+		case linear::REQUEST:
+		{
+			linear::Request request = msg.as<linear::Request>();
+			std::cout << "Error to Send Request: msgid = " << request.msgid
+				<< ", method = \"" << request.method << "\""
+				<< ", params = " << request.params.stringify()
+				<< ", err = " << err.Message() << std::endl;
+		}
+		break;
+		case linear::RESPONSE:
+		{
+			linear::Response response = msg.as<linear::Response>();
+			std::cout << "Error to Send Response: msgid = " << response.msgid
+				<< ", result = " << response.result.stringify()
+				<< ", error = " << response.error.stringify()
+				<< ", err = " << err.Message() << std::endl;
+		}
+		break;
+		case linear::NOTIFY:
+		{
+			linear::Notify notify = msg.as<linear::Notify>();
+			std::cout << "Error to Send Notify: "
+				<< "method = \"" << notify.method << "\""
+				<< ", params = " << notify.params.stringify()
+				<< ", err = " << err.Message() << std::endl;
+		}
+		break;
+		default:
+		{
+			std::cout << "BUG: please inform to linear-developpers" << std::endl;
+		}
+		break;
+		}
+	}
+
+	class HandlerCallback
+	{
+	public:
+		virtual ~HandlerCallback() {}
+		const string& GetName() {return m_name;}
+	protected:
+		void SetName(string n) 
+		{
+			m_name = n; 
+			if (!m_name.empty() && m_name.at(m_name.size() - 1) == '_') //special case - remove trailing underscore
+			{
+				m_name.erase(m_name.size() - 1);
+			}
+		}
+
+		string m_name;
+	};
+
+	class RequestHandler : public HandlerCallback
+	{
+	public:
+		virtual void Execute(const linear::Request& req, const linear::Socket& socket) = 0;
+	};
+
+
+
+	template <class R>
+	class RequestHandler0 : public RequestHandler
+	{
+	public:
+		RequestHandler0(string name, const CBFunctor0wRet<R> func)
+		{
+			SetName(name);
+			m_func = func;
+		}
+
+		virtual void Execute(const linear::Request& req, const linear::Socket& socket)
+		{
+			try
+			{
+				linear::Response response(req.msgid, m_func());
+				response.Send(socket);
+			}catch (const std::exception& exc)
+			{
+				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				response.Send(socket);
+			}
+		}
+
+	private:
+		CBFunctor0wRet<R> m_func;
+	};
+
+
+	template <class P, class R>
+	class RequestHandler1 : public RequestHandler
+	{
+	public:
+		RequestHandler1(string name, const CBFunctor1wRet<P, R> func)
+		{
+			SetName(name);
+			m_func = func;
+		}
+
+		virtual void Execute(const linear::Request& req, const linear::Socket& socket)
+		{
+			try
+			{
+				linear::Response response(req.msgid, m_func(req.as<P>()));
+				response.Send(socket);
+			}catch (const std::bad_cast&)
+			{
+				linear::Notify response("_Exception_", ErrorData("Invalid arguments", req.method));
+				response.Send(socket);
+			}catch (const std::exception& exc)
+			{
+				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				response.Send(socket);
+			}
+		}
+
+	private:
+		CBFunctor1wRet<P, R> m_func;
+	};
+
+	template <class P1, class P2, class R>
+	class RequestHandler2 : public RequestHandler
+	{
+	public:
+		RequestHandler2(string name, const CBFunctor2wRet<P1, P2, R> func)
+		{
+			SetName(name);
+			m_func = func;
+		}
+
+		virtual void Execute(const linear::Request& req, const linear::Socket& socket)
+		{
+			try
+			{
+				Data d = req.as<Data>();
+				linear::Response response(req.msgid, m_func(d.arg1, d.arg2));
+				response.Send(socket);
+			}catch (const std::bad_cast&)
+			{
+				linear::Notify response("_Exception_", ErrorData("Invalid arguments", req.method));
+				response.Send(socket);
+			}catch (const std::exception& exc)
+			{
+				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				response.Send(socket);
+			}
+		}
+
+		struct Data
+		{
+			P1 arg1;
+			P2 arg2;
+			MSGPACK_DEFINE_MAP(arg1, arg2);
+		};
+
+	private:
+		CBFunctor2wRet<P1, P2, R> m_func;
+	};
+
+
+
+	class NotifyHandler : public HandlerCallback
+	{
+	public:
+		virtual void Execute(const linear::Notify& req, const linear::Socket& socket) = 0;
+	};
+
+
+	class NotifyHandler0 : public NotifyHandler
+	{
+	public:
+		NotifyHandler0(string name, const CBFunctor0 func)
+		{
+			SetName(name);
+			m_func = func;
+		}
+
+		virtual void Execute(const linear::Notify& req, const linear::Socket& socket)
+		{
+			try
+			{
+				m_func();
+			}catch (const std::exception& exc)
+			{
+				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				response.Send(socket);
+			}
+		}
+
+	private:
+		CBFunctor0 m_func;
+	};
+
+	
+	template <class P>
+	class NotifyHandler1 : public NotifyHandler
+	{
+	public:
+		NotifyHandler1(string name, const CBFunctor1<P> func)
+		{
+			SetName(name);
+			m_func = func;
+		}
+
+		virtual void Execute(const linear::Notify& req, const linear::Socket& socket)
+		{
+			try
+			{
+				m_func(req.as<P>());
+			}catch (const std::bad_cast&)
+			{
+				linear::Notify response("_Exception_", ErrorData("Invalid arguments", req.method));
+				response.Send(socket);
+			}catch (const std::exception& exc)
+			{
+				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				response.Send(socket);
+			}
+		}
+
+	private:
+		CBFunctor1<P> m_func;
+	};
+
+	
+	template <class P1, class P2>
+	class NotifyHandler2 : public NotifyHandler
+	{
+	public:
+		NotifyHandler2(string name, const CBFunctor2<P1, P2> func)
+		{
+			SetName(name);
+			m_func = func;
+		}
+
+		virtual void Execute(const linear::Notify& req, const linear::Socket& socket)
+		{
+			try
+			{
+				Data d = req.as<Data>();
+				m_func(d.arg1, d.arg2);
+			}catch (const std::bad_cast&)
+			{
+				linear::Notify response("_Exception_", ErrorData("Invalid arguments", req.method));
+				response.Send(socket);
+			}catch (const std::exception& exc)
+			{
+				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				response.Send(socket);
+			}
+		}
+
+		struct Data
+		{
+			P1 arg1;
+			P2 arg2;
+			MSGPACK_DEFINE_MAP(arg1, arg2);
+		};
+
+	private:
+		CBFunctor2<P1, P2> m_func;
+	};
+	/*
+#define BIND_NOTIFY1(func, type)\
+	class Class_##func : public Server::Handler::NotifyHandler\
+	{\
+	public:\
+		Class_##func(string n, Server * svr){Init(n,svr);}\
+		virtual void Execute(const linear::Notify& req, const linear::Socket& socket)\
+		{\
+			try{\
+				m_server->func(req.as<type>());\
+			}catch (const std::bad_cast&){\
+				linear::Notify response("_Exception_", ErrorData("Invalid arguments", req.method));\
+				response.Send(socket);\
+			}catch (const std::exception& exc){\
+				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));\
+				response.Send(socket);\
+			}\
+		}\
+	};\
+	m_handler->BindNotify(new Class_##func(#func,this));
+
+*/
+
+
+	void BindRequest(RequestHandler * req)
+	{
+		m_requestHandlers.push_back(req);
+	}
+
+	void BindNotify(NotifyHandler * req)
+	{
+		m_notifyHandlers.push_back(req);
+	}
+
+private:
+	std::vector<NotifyHandler *> m_notifyHandlers;
+	std::vector<RequestHandler *> m_requestHandlers;
+};
+
 
 
 Server::Server()
 {
-	m_server = NULL;
 	m_file = NULL;
+
+	m_handler = linear::shared_ptr<Handler>(new Handler());
+	m_server = linear::TCPServer(m_handler);
+
+#define BIND_REQ0(R, func) m_handler->BindRequest(new Handler::RequestHandler0<R>(#func, makeFunctor((CBFunctor0wRet<R> *)0, *this, &Server::func)));
+#define BIND_REQ1(R, func, A1) m_handler->BindRequest(new Handler::RequestHandler1<R, A1>(#func, makeFunctor((CBFunctor1wRet<R, A1> *)0, *this, &Server::func)));
+#define BIND_REQ2(R, func, A1, A2) m_handler->BindRequest(new Handler::RequestHandler2<R, A1, A2>(#func, makeFunctor((CBFunctor2wRet<R, A1, A2> *)0, *this, &Server::func)));
+
+#define BIND_NOTIFY0(func) m_handler->BindNotify(new Handler::NotifyHandler0(#func, makeFunctor((CBFunctor0 *)0, *this, &Server::func)));
+#define BIND_NOTIFY1(func, A1) m_handler->BindNotify(new Handler::NotifyHandler1<A1>(#func, makeFunctor((CBFunctor1<A1> *)0, *this, &Server::func)));
+#define BIND_NOTIFY2(func, A1, A2) m_handler->BindNotify(new Handler::NotifyHandler2<A1, A2>(#func, makeFunctor((CBFunctor2<A1, A2> *)0, *this, &Server::func)));
+
+
+	BIND_REQ0(State, GetState);
+	BIND_NOTIFY1(DrivesOn, bool);
+	BIND_NOTIFY1(JogVel, Axes);
+	BIND_NOTIFY2(JogStep, Axes, double);
+	BIND_REQ1(bool, Mdi, string);
+	BIND_NOTIFY1(FeedOverride, double);
+	BIND_NOTIFY1(SpindleOverride, double);
+	BIND_NOTIFY1(RapidOverride, double);
+	BIND_REQ1(bool, LoadFile, string);
+	BIND_REQ0(bool, CloseFile);
+	BIND_NOTIFY0(CycleStart);
+	BIND_NOTIFY0(CycleStop);
+	BIND_NOTIFY1(FeedHold, bool);
+	BIND_NOTIFY1(BlockDelete, bool);
+	BIND_NOTIFY1(SingleStep, bool);
+	BIND_NOTIFY1(OptionalStop, bool);
+	BIND_NOTIFY1(Home, BoolAxes);
+	BIND_NOTIFY1(GetOffset, unsigned int);
+	BIND_NOTIFY1(SendInit, string);
+	BIND_REQ2(bool, SendData, string, int);
+	BIND_NOTIFY1(GetError, string);
+	BIND_NOTIFY1(GetMessage, int);
+	BIND_REQ0(int, Version);
 }
 
 Server::~Server()
 {
 	DeleteTemp();
-	delete m_server;
 }
 
 
-#define BIND0(name) m_server->bind(#name, [this]() {return name();});
-#define BIND1(name, type1) m_server->bind(#name, [this](type1 param1) {return name(param1);});
-#define BIND2(name, type1, type2) m_server->bind(#name, [this](type1 param1, type2 param2) {return name(param1, param2);});
 
 COMERROR Server::Bind(const uint32_t port)
 {
-	delete m_server;
-	m_server = new rpc::server(port);
-	m_server->suppress_exceptions(true);
-
-	m_server->bind("GetState", [this]() {return GetState2();});
-	BIND1(DrivesOn, bool);
-	BIND1(JogVel, Axes);
-	BIND2(JogStep, Axes, double);
-	BIND1(Mdi, string);
-	BIND1(FeedOverride, double);
-	BIND1(SpindleOverride, double);
-	BIND1(RapidOverride, double);
-	m_server->bind("LoadFile", [this](string param1) {return LoadFile2(param1);});
-	BIND0(CloseFile);
-	BIND0(CycleStart);
-	BIND0(CycleStop);
-	BIND1(FeedHold, bool);
-	BIND1(BlockDelete, bool);
-	BIND1(SingleStep, bool);
-	BIND1(OptionalStop, bool);
-	BIND1(Home, BoolAxes);
-	BIND1(GetOffset, unsigned int);
-	BIND1(SendInit, string);
-	BIND2(SendData, string, int);
-	BIND1(GetError, int);
-	BIND1(GetMessage, int);
-
-	m_server->bind("Ping", []() {return true; });
-	m_server->bind("Version", []() {return (CNCREMOTE_PROTOCOL_VERSION); });
-
-	m_server->async_run(MAX_THREADS);
+	m_server.Stop();
+	m_server.Start("0.0.0.0", port);
 	return errOK;
 }
 
 COMERROR Server::Poll()
 {
-	if (!m_server) return errCONNECT;
-    return errOK;
 }
 
-StatePtr Server::GetState()
+LockedState Server::GetState()
 {
-	StatePtr s(&m_state, &m_syncLock);
+	LockedState s(m_state, m_syncLock);
 	return s;
 }
 
@@ -161,13 +556,11 @@ void Server::DeleteTemp()
 	remove(m_curFile.c_str());
 }
 
-State Server::GetState2()
+State Server::GetState_()
 {
-	{
-		Sync();
-		UpdateState(m_state);
-	}
-	return State(m_state, m_syncLock);
+	ThreadLock lock = GetLock();
+	UpdateState(m_state);
+	return State(m_state);
 }
 
 bool Server::LoadFile2(const string file)

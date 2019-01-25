@@ -25,7 +25,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include <time.h>
 #include "cncplugin.h"
 #include "timer.h"
-#include "rpc/client.h"
+#include "linear/message.h"
 
 using namespace std;
 
@@ -47,8 +47,8 @@ namespace CncRemote
 #endif
 	};
 
-#define CNCREMOTE_PROTOCOL_VERSION 2
-#define CNCREMOTE_MIN_PROTOCOL_VERSION 2
+#define CNCREMOTE_PROTOCOL_VERSION 3
+#define CNCREMOTE_MIN_PROTOCOL_VERSION 3
 
 
 	enum {
@@ -244,7 +244,27 @@ namespace CncRemote
 		int * m_count;
 	};
 
+	struct FileData
+	{
+		string data;
+		size_t block;
+		MSGPACK_DEFINE_MAP(data, block);
+	};
 
+	class ErrorData
+	{
+	public:
+		ErrorData(string e, string f) { error = e; function = f; }
+		string error;
+		string function;
+		MSGPACK_DEFINE_MAP(error, function);
+	};
+
+	struct BoolData
+	{
+		bool value;
+		MSGPACK_DEFINE_MAP(value);
+	};
 
 #define CONN_TIMEOUT (2000000) //2 seconds
 
@@ -252,7 +272,7 @@ namespace CncRemote
 
 #define DEFAULT_COMMS_PORT 5090
 
-class Server;
+//class Server;
 
 enum COMERROR
 {
