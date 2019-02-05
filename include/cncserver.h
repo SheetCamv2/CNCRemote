@@ -58,7 +58,12 @@ public:
 
 	virtual ~LockedState() {}
 
-	State& operator ->() { return *m_state; }
+/*	LockedState(const LockedState &src) : linear::shared_ptr<linear::lock_guard<linear::mutex>>((linear::shared_ptr<linear::lock_guard<linear::mutex>>&)src)
+	{
+		m_state = src.m_state;
+	}*/
+
+	State* operator ->() { return m_state; }
 
 private:
 	State * m_state;
@@ -124,7 +129,7 @@ protected:
 	virtual void JogStep(const Axes distance, const double speed) = 0;
 
 	/** Execute an MDI string if possible.
-	Return false if the string could not be executed.
+	Return false if the string could not be executed (e.g drives off or gcode program is currently running).
 	Note: Return immediately. Do not wait for MDI to finish.
 	*/
 	virtual bool Mdi(const string line) = 0;
@@ -239,7 +244,7 @@ protected:
 	If a preview is currently in progress it should be aborted.
 	Note: m_curFile normally contains the path of the currently loaded file (if loaded)
 	*/
-	virtual bool StartPreview(const int recommendedSize) { return false; }
+	virtual bool StartPreview(const unsigned recommendedSize) { return false; }
 
 	/** Get Preview data.
 		Return a sequence of PreviewAxes points on the preview path.

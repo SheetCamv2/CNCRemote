@@ -34,11 +34,7 @@ bool Sim::Poll()
 		machine.busy --;
 	}
 
-	CONTROLSTATE busy = mcOFF;
-	if (machine.controlOn)
-	{
-		busy = mcIDLE;
-	}
+	CONTROLSTATE busy = mcIDLE;
 	if (machine.busy)
 	{
 		busy = mcMDI;
@@ -61,13 +57,28 @@ bool Sim::Poll()
 		{
 			busy = mcJOGGING;
 			state->position += machine.jogVel * 1;
+			machine.target = state->position;
 		}
 		else
 		{
 			machine.jogVel.Zero();
 		}
 	}
-	state->position.x += 0.01;
+	Axes dtg = machine.target - state->position;
+	double dist = dtg.Length();
+	if (dist > 0.0001)
+	{
+		dtg /= dist;
+		state->position += dtg * (machine.feedRate * machine.feedOverride);
+		busy = mcRUNNING;
+	}
+
+
+	if (!machine.controlOn)
+	{
+		busy = mcOFF;
+	}
+
 	state->machineStatus = busy;
 
     if(machine.running && !machine.paused)
@@ -89,37 +100,52 @@ void Sim::UpdateState(State& state)
 {
 }
 
-void Sim::DrivesOn(const bool state)
+void Sim::DrivesOn(const bool status)
 {
-	std::cout << "Drives on:" << state << std::endl;
+	std::cout << "Drives on:" << status << std::endl;
 
-	machine.controlOn = state;
+	machine.controlOn = status;
+	if (!status)
+	{
+		LockedState state = GetState();
+		machine.running = false;
+		machine.jogVel.Zero();
+		machine.target = state->position;
+	}
 }
 
 void Sim::JogVel(const Axes velocities)
 {
-	MutexLocker lock = GetLock(); //Sync with main thread
+	ThreadLock lock = GetLock(); //Sync with main thread
 	machine.jogVel = velocities;
+}
+
+void Sim::JogStep(const Axes distance, const double speed)
+{
+	LockedState state = GetState();
+	machine.target = state->position + distance;
+	machine.feedRate = speed;
 }
 
 bool Sim::Mdi(const string line)
 {
 	/*TODO: Proper g-code handling*/
 	std::cout << "MDI:" << line << std::endl;
+	LogMessage((string("MDI:") + line).c_str());
 	LockedState state = GetState();
 	return (state->machineStatus == mcIDLE || state->machineStatus == mcMDI);
 }
 
 void Sim::SpindleOverride(const double percent)
 {
-	MutexLocker lock = GetLock(); //Sync with main thread
+	ThreadLock lock = GetLock(); //Sync with main thread
 	machine.spindleOverride = percent;
 
 }
 
 void Sim::FeedOverride(const double percent)
 {
-	MutexLocker lock = GetLock(); //Sync with main thread because a double is not atomic on a 32 bit machine
+	ThreadLock lock = GetLock(); //Sync with main thread because a double is not atomic on a 32 bit machine
 	machine.feedOverride = percent;
 }
 
@@ -185,4 +211,11 @@ void Sim::Home(const BoolAxes axes)
 	}
 
 	std::cout << std::endl;
+}
+
+Axes Sim::GetOffset(const unsigned int index)
+{
+	Axes ret;
+	ret.Zero();
+	return ret;
 }

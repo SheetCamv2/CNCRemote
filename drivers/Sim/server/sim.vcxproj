@@ -80,9 +80,9 @@
     </ClCompile>
     <Link>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>rpcd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>liblinear.lib;libtv.lib;libuv.lib;Iphlpapi.lib;psapi.lib;userenv.lib;user32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>..\..\..\lib\win32\vc17;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\lib\win32\vc17;..\..\..\libraries\linear-rpc\Debug\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile />
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>

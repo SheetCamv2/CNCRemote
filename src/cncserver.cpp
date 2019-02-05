@@ -25,6 +25,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include <iostream>
 
 
+
 namespace CncRemote
 {
 
@@ -53,9 +54,9 @@ public:
 		switch(msg.type) {
 		case linear::REQUEST:
 		{
-			try 
+			linear::Request request = msg.as<linear::Request>();
+			try
 			{
-				linear::Request request = msg.as<linear::Request>();
 				for (int ct = 0; ct < m_requestHandlers.size(); ct++)
 				{
 					if (m_requestHandlers[ct]->GetName() == request.method)
@@ -64,12 +65,12 @@ public:
 						return;
 					}
 				}
-				linear::Response response(request.msgid, "_Exception_", ErrorData("method not found", request.method));
+				linear::Response response(request.msgid, "", ExceptionData("Function not found", request.method));
 				response.Send(socket);
 			}
 			catch (const std::exception& exc)
 			{
-				linear::Notify response("_Exception_", ErrorData(exc.what(), ""));
+				linear::Response response(request.msgid, "", ExceptionData(exc.what(), ""));
 				response.Send(socket);
 			}
 		}
@@ -101,12 +102,12 @@ public:
 						return;
 					}
 				}
-				linear::Notify response("_Exception_", ErrorData("method not found", notify.method));
+				linear::Notify response("_Exception_", ExceptionData("Method not found", notify.method));
 				response.Send(socket);
 			}
 			catch (const std::exception& exc)
 			{
-				linear::Notify response("_Exception_", ErrorData(exc.what(), ""));
+				linear::Notify response("_Exception_", ExceptionData(exc.what(), ""));
 				response.Send(socket);
 			}
 		}
@@ -199,7 +200,7 @@ public:
 				response.Send(socket);
 			}catch (const std::exception& exc)
 			{
-				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				linear::Response response(req.msgid, req.method, exc.what());
 				response.Send(socket);
 			}
 		}
@@ -223,15 +224,15 @@ public:
 		{
 			try
 			{
-				linear::Response response(req.msgid, m_func(req.as<P>()));
+				linear::Response response(req.msgid, m_func(req.params.as<P>()));
 				response.Send(socket);
 			}catch (const std::bad_cast&)
 			{
-				linear::Notify response("_Exception_", ErrorData("Invalid arguments", req.method));
+				linear::Response response(req.msgid, "", ExceptionData("Invalid arguments:" + req.params.stringify(), req.method));
 				response.Send(socket);
 			}catch (const std::exception& exc)
 			{
-				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				linear::Response response(req.msgid, "", ExceptionData(exc.what(), req.method));
 				response.Send(socket);
 			}
 		}
@@ -254,16 +255,16 @@ public:
 		{
 			try
 			{
-				Data d = req.as<Data>();
+				Data d = req.params.as<Data>();
 				linear::Response response(req.msgid, m_func(d.arg1, d.arg2));
 				response.Send(socket);
 			}catch (const std::bad_cast&)
 			{
-				linear::Notify response("_Exception_", ErrorData("Invalid arguments", req.method));
+				linear::Response response(req.msgid, "", ExceptionData("Invalid arguments:" + req.params.stringify(), req.method));
 				response.Send(socket);
 			}catch (const std::exception& exc)
 			{
-				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				linear::Response response(req.msgid, "", ExceptionData(exc.what(), req.method));
 				response.Send(socket);
 			}
 		}
@@ -304,7 +305,7 @@ public:
 				m_func();
 			}catch (const std::exception& exc)
 			{
-				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				linear::Notify response("_Exception_", ExceptionData(exc.what(), req.method));
 				response.Send(socket);
 			}
 		}
@@ -328,14 +329,14 @@ public:
 		{
 			try
 			{
-				m_func(req.as<P>());
+				m_func(req.params.as<P>());
 			}catch (const std::bad_cast&)
 			{
-				linear::Notify response("_Exception_", ErrorData("Invalid arguments", req.method));
+				linear::Notify response("_Exception_", ExceptionData("Invalid arguments: " + req.params.stringify(), req.method));
 				response.Send(socket);
 			}catch (const std::exception& exc)
 			{
-				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				linear::Notify response("_Exception_", ExceptionData(exc.what(), req.method));
 				response.Send(socket);
 			}
 		}
@@ -359,15 +360,15 @@ public:
 		{
 			try
 			{
-				Data d = req.as<Data>();
+				Data d = req.params.as<Data>();
 				m_func(d.arg1, d.arg2);
 			}catch (const std::bad_cast&)
 			{
-				linear::Notify response("_Exception_", ErrorData("Invalid arguments", req.method));
+				linear::Notify response("_Exception_", ExceptionData("Invalid arguments: " + req.params.stringify(), req.method));
 				response.Send(socket);
 			}catch (const std::exception& exc)
 			{
-				linear::Notify response("_Exception_", ErrorData(exc.what(), req.method));
+				linear::Notify response("_Exception_", ExceptionData(exc.what(), req.method));
 				response.Send(socket);
 			}
 		}
@@ -422,7 +423,6 @@ private:
 };
 
 
-
 Server::Server()
 {
 	m_file = NULL;
@@ -431,15 +431,15 @@ Server::Server()
 	m_server = linear::TCPServer(m_handler);
 
 #define BIND_REQ0(R, func) m_handler->BindRequest(new Handler::RequestHandler0<R>(#func, makeFunctor((CBFunctor0wRet<R> *)0, *this, &Server::func)));
-#define BIND_REQ1(R, func, A1) m_handler->BindRequest(new Handler::RequestHandler1<R, A1>(#func, makeFunctor((CBFunctor1wRet<R, A1> *)0, *this, &Server::func)));
-#define BIND_REQ2(R, func, A1, A2) m_handler->BindRequest(new Handler::RequestHandler2<R, A1, A2>(#func, makeFunctor((CBFunctor2wRet<R, A1, A2> *)0, *this, &Server::func)));
+#define BIND_REQ1(R, func, A1) m_handler->BindRequest(new Handler::RequestHandler1<A1, R>(#func, makeFunctor((CBFunctor1wRet<A1, R> *)0, *this, &Server::func)));
+#define BIND_REQ2(R, func, A1, A2) m_handler->BindRequest(new Handler::RequestHandler2<A1, A2, R>(#func, makeFunctor((CBFunctor2wRet<A1, A2, R> *)0, *this, &Server::func)));
 
 #define BIND_NOTIFY0(func) m_handler->BindNotify(new Handler::NotifyHandler0(#func, makeFunctor((CBFunctor0 *)0, *this, &Server::func)));
 #define BIND_NOTIFY1(func, A1) m_handler->BindNotify(new Handler::NotifyHandler1<A1>(#func, makeFunctor((CBFunctor1<A1> *)0, *this, &Server::func)));
 #define BIND_NOTIFY2(func, A1, A2) m_handler->BindNotify(new Handler::NotifyHandler2<A1, A2>(#func, makeFunctor((CBFunctor2<A1, A2> *)0, *this, &Server::func)));
 
 
-	BIND_REQ0(State, GetState);
+	BIND_REQ0(State, GetState_);
 	BIND_NOTIFY1(DrivesOn, bool);
 	BIND_NOTIFY1(JogVel, Axes);
 	BIND_NOTIFY2(JogStep, Axes, double);
@@ -456,12 +456,15 @@ Server::Server()
 	BIND_NOTIFY1(SingleStep, bool);
 	BIND_NOTIFY1(OptionalStop, bool);
 	BIND_NOTIFY1(Home, BoolAxes);
-	BIND_NOTIFY1(GetOffset, unsigned int);
-	BIND_NOTIFY1(SendInit, string);
+	BIND_REQ1(Axes, GetOffset, unsigned int);
+	BIND_REQ1(string, SendInit, string);
 	BIND_REQ2(bool, SendData, string, int);
-	BIND_NOTIFY1(GetError, string);
-	BIND_NOTIFY1(GetMessage, int);
+	BIND_REQ1(string, GetError, unsigned int);
+	BIND_REQ1(string, GetMessage, unsigned int);
 	BIND_REQ0(int, Version);
+	BIND_REQ1(bool, StartPreview, int);
+	BIND_REQ0(PreviewData, GetPreview);
+	BIND_NOTIFY0(EndPreview);
 }
 
 Server::~Server()
@@ -480,6 +483,7 @@ COMERROR Server::Bind(const uint32_t port)
 
 COMERROR Server::Poll()
 {
+	return errOK;
 }
 
 LockedState Server::GetState()

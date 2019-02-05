@@ -32,23 +32,8 @@ using namespace std;
 namespace CncRemote
 {
 
-	class Mutex
-	{
-	public:
-		Mutex();
-		virtual ~Mutex();
-		void Lock();
-		void Unlock();
-	private:
-#ifdef _WIN32
-		HANDLE m_mutex;
-#else
-		pthread_mutex_t m_mutex;
-#endif
-	};
-
-#define CNCREMOTE_PROTOCOL_VERSION 3
-#define CNCREMOTE_MIN_PROTOCOL_VERSION 3
+#define CNCREMOTE_PROTOCOL_VERSION 3.0f
+#define CNCREMOTE_MIN_PROTOCOL_VERSION 3.0f
 
 
 	enum {
@@ -151,6 +136,8 @@ namespace CncRemote
 				OP(*);
 				OP(/);
 		#undef OP
+
+		double Length() { return (sqrt((x * x) + (y * y) + (z * z) + (a * a) + (b * b) + (c * c))); }
 	};
 
 	struct PreviewAxes : Axes
@@ -193,9 +180,6 @@ namespace CncRemote
 	class State {
 	public:
 		State(); ///<Create a standard instance
-		State(const State& src, Mutex& mutex); ///<Create a ref counted, mutex locked instance. The mutex is unlocked once all copies of this instance are deleted.
-		State(const State& src);
-		virtual ~State();
 		Axes position; ///<Axes in tool coordinates (in metric units)
 		Axes machinePos; ///<Axes in machine coordinates (in metric units)
 		bool feedHold; ///<Feed hold status
@@ -238,33 +222,28 @@ namespace CncRemote
 			currentLine, singleStep, spindleCmd, spindleActual, _spindleState, mist, flood, homed, axisAngular, errorCount, messageCount,
 			maxFeedLin, maxFeedAng, gcodeUnits, spindleOverride, rapidOverride, feedCmd, feedActual, tool, interpState, fileCount);
 
-//		void Clear() { memset(this, 0, sizeof(State));}
-	private:
-		Mutex * m_mutex;
-		int * m_count;
 	};
 
-	struct FileData
-	{
-		string data;
-		size_t block;
-		MSGPACK_DEFINE_MAP(data, block);
-	};
 
-	class ErrorData
+	struct ExceptionData
 	{
-	public:
-		ErrorData(string e, string f) { error = e; function = f; }
-		string error;
+		ExceptionData() {}
+		ExceptionData(string m, string f) { message = m; function = f; }
+		string message;
 		string function;
-		MSGPACK_DEFINE_MAP(error, function);
+		MSGPACK_DEFINE_MAP(message, function);
 	};
 
-	struct BoolData
+
+
+	template <class A1, class A2>
+	struct CallData2
 	{
-		bool value;
-		MSGPACK_DEFINE_MAP(value);
+		A1 arg1;
+		A2 arg2;
+		MSGPACK_DEFINE_MAP(arg1, arg2);
 	};
+
 
 #define CONN_TIMEOUT (2000000) //2 seconds
 
@@ -277,21 +256,18 @@ namespace CncRemote
 enum COMERROR
 {
     errOK, //no error
-//    errSOCKET, //Failed to create socket
- //   errBIND, //Failed to bind socket (server only)
     errCONNECT, //No connection
- //   errNOSOCKET, //No valid socket
     errFAILED, //Failed to send data
     errNODATA, //no data was received. This is not an error. Simply no data was available to be processed.
     errTHREAD, //Failed to create thread
     errRUNNING, //Thread is already running
     errNOTHREAD, //Unable to create thread
+	errWRONGVER, //Server uses old protocol version
 };
 
 enum CONNSTATE
 {
     connNONE, //No network connection
- //   connNETWORK, //Network connection but no data is being trasferred
     connDATA, //Connected and talking
 };
 

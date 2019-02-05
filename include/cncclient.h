@@ -31,24 +31,156 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include "linear/timer.h"
 #include "linear/handler.h"
 #include "linear/mutex.h"
+#include <mutex>
 
 
 namespace CncRemote
 {
+
+class TimeoutError : public std::exception
+{
+public:
+	TimeoutError() :std::exception("Timed out calling function") {}
+};
+
+class RemoteError : public std::exception
+{
+public:
+	RemoteError(string err) : std::exception(err.c_str()) {}
+
+};
+
+class TransferError : public std::exception
+{
+public:
+	TransferError(std::string err) : exception(err.c_str()) {}
+};
+
+class SendError : public std::exception
+{
+public:
+	SendError():exception() {};
+	SendError(string err) : exception(err.c_str()) {}
+};
+
+
+class BusyError : public std::exception
+{
+public:
+	BusyError() :std::exception("Waiting for response") {}
+};
+
+/**
+This class handles RPC call data.
+NOTE: when using asynchronous calls this object must remain in scope until the asynchronous call returns or throws an error.
+*/
+
+class RemoteCall 
+{
+public:
+	RemoteCall();
+	/**
+	Call a remote function and wait for the result.
+	The timeout is in ms.
+	Returns the response from the call. Throws an exception on any errors.
+	*/
+	linear::Response& Call(linear::Socket& socket, unsigned timeout, const std::string& function)
+	{
+		return Call(socket, timeout, function, 0);
+	}
+
+	linear::Response& Call(linear::Socket& socket, unsigned timeout, const std::string& function, const linear::type::any& param);
+	
+	template<typename A1, typename A2>
+	linear::Response& Call(linear::Socket& socket, unsigned timeout, const std::string& function, A1 arg1, A2 arg2)
+	{
+		CallData2<A1, A2> dat;
+		dat.arg1 = arg1;
+		dat.arg2 = arg2;
+		return Call(socket, timeout, function, dat);
+	}
+
+
+	/**
+	Call a remote function asynchronously.
+	The timeout is in ms.
+	Returns immediately. You need to wait for IsBusy to return false before attempting to read the response.
+	*/
+	void CallAsync(linear::Socket& socket, unsigned timeout, const std::string& function)
+	{
+		CallAsync(socket, timeout, function, 0);
+	}
+	void CallAsync(linear::Socket& socket, unsigned timeout, const std::string& function, const linear::type::any& param);
+	template<typename A1, typename A2>
+	void CallAsync(linear::Socket& socket, unsigned timeout, const std::string& function, A1 arg1, A2 arg2)
+	{
+		CallData2<A1, A2> dat;
+		dat.arg1 = arg1;
+		dat.arg2 = arg2;
+		return CallAsync(socket, timeout, function, dat);
+	}
+
+
+	/**
+	Wait for a remote call to complete.
+	*/
+	bool Wait(unsigned ms = 0);
+
+	/**
+	Check if we have a valid response
+	*/
+	bool HasResponse() { return m_hasResponse; }
+
+	/**
+	Get the response. Note only use this after checking HasRespnse()
+	You need to check if teh response contains an error.
+	*/
+	linear::Response& GetResponse();
+
+	/**
+	We are waiting for a response
+	*/
+	bool IsBusy() { return m_busy; }
+	
+	/**
+	Clear the HasResponse flag. Useful if re-using this object.
+	*/
+	void ClearResponse() { m_hasResponse = false;}
+
+private:
+	void OnResponse(const linear::Socket& socket, const linear::Response& response);
+	void OnError(const linear::Socket& socket, const linear::Request& request, const linear::Error& error);
+
+	linear::Response * m_response;
+	bool m_hasResponse;
+	string m_error;
+	bool m_busy;
+
+	std::function<void(const linear::Socket&, const linear::Response&)> m_onResponse;
+	std::function<void(const linear::Socket&, const linear::Request&, const linear::Error&)> m_onError;
+};
+
+
+
+
+
 #ifdef USE_PLUGINS
 struct Plugin
 {
-    LIBHANDLE handle;
-    CNCSTARTFUNC Start;
-    CNCSTOPFUNC Stop;
-    CNCGETNAMEFUNC GetName;
-    CNCQUITFUNC Quit;
-    CNCPOLLFUNC Poll;
-    CNCCONTROLEXISTSFUNC ControlExists;
+	LIBHANDLE handle;
+	CNCSTARTFUNC Start;
+	CNCSTOPFUNC Stop;
+	CNCGETNAMEFUNC GetName;
+	CNCQUITFUNC Quit;
+	CNCPOLLFUNC Poll;
+	CNCCONTROLEXISTSFUNC ControlExists;
 };
-
 class Client : private Plugin
 #else
+/**
+This is the main client class. 
+*/
+
 class Client
 #endif // USE_PLUGINS
 
@@ -97,15 +229,30 @@ public:
 	string GetNextMessage(); ///<Get the next message. Returns empty string if none pending.
 
 	bool IsLocal(); ///<Returns true if this is a local connection
+
+#ifdef HANDLE_CNCREMOTE_EXCEPTIONS
+	/**
+	If HANDLE_CNCREMOTE_EXCEPTIONS is defined all communication exceptions are rerouted to this handler.
+	Otherwise most of teh above calls will thro exceptions if there are any errors.
+	*/
+	virtual void OnException(std::exception& exc) = 0;
+#endif
+
+	virtual void OnConnect() {} ///<Called when we are connected to the server
+	virtual void OnDisConnect() {} ///<Called when we are disconnected from the server
+	virtual void OnIncorrectVersion(const float serverVersion) {} ///<Called if the server is too old
+	virtual void OnRemoteException(const ExceptionData& exception) {} ///<Called if there is an exception on the server after a notify is sent
+
+
 protected:
+
 	void SetBusy(const int state); ///<Must be called if the last command sent may make the machine move
 	State m_state;
-	int m_roundTrip; //Time for a GetState() round trip in us
+	int m_roundTrip; ///<Time for a GetState() round trip in us
 
-	bool Notify(std::string function, const linear::type::any& param);
-	bool Call(std::string function, const linear::type::any& param, linear::Response& response);
 private:
-
+	void OnDisConnect2(); //Triggered when we are connected to the server
+	std::chrono::high_resolution_clock::time_point m_pollTimer;
 
 #ifdef USE_PLUGINS
     vector<Plugin> m_plugins;
@@ -124,33 +271,7 @@ private:
 	linear::TCPClient m_client;
 	linear::TCPSocket m_socket;
 	unsigned m_timeout;
-	
-	struct ResponseData
-	{
-		uint32_t msgid;
-		Client * client;
-		linear::mutex mutex;
-		linear::Response* response;
-		bool ok;
-	};
-	
-	class ResponseTrack
-	{
-	public:
-		ResponseTrack(Client* client, const int32_t msgid, linear::Response& response);
-		~ResponseTrack();
-		bool Wait();
-		static ResponseData* Find(const int32_t msgid);
-
-		static void OnResponse(const linear::Socket& socket, const linear::Response& response);
-		static void OnError(const linear::Socket& socket, const linear::Request& request, const linear::Error& error);
-
-
-	private:
-		ResponseData m_data;
-		static std::vector<ResponseData *> m_responses;
-		static linear::mutex m_mutex;
-	};
+	RemoteCall m_StatusCall;
 };
 
 } //namespace CncRemote

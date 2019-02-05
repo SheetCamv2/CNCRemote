@@ -68,7 +68,8 @@ protected:
 		double spindleSpeed;
 		double spindleOverride;
 		CncRemote::Axes jogVel;
-		CncRemote::Axes curPos;
+		CncRemote::Axes target;
+		double feedRate;
 		int runCount;
 	} machine;
 
