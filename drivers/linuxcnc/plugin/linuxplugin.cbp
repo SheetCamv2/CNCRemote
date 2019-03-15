@@ -61,6 +61,7 @@
 		<Unit filename="../../../clsocket/src/PassiveSocket.h" />
 		<Unit filename="../../../clsocket/src/SimpleSocket.h" />
 		<Unit filename="../../../clsocket/src/StatTimer.h" />
+		<Unit filename="main.cpp" />
 		<Unit filename="../../../include/cncclient.h" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
@@ -70,9 +71,7 @@
 		<Unit filename="../../../src/cncclient.cpp" />
 		<Unit filename="../../../src/cnccomms.cpp" />
 		<Unit filename="../../../src/cncplugin.cpp" />
-		<Unit filename="../../../src/cncstatebuf.pb.cc" />
 		<Unit filename="../../../src/timer.cpp" />
-		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />
 			<envvars />

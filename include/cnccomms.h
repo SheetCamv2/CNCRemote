@@ -26,8 +26,10 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include "cncplugin.h"
 #include "timer.h"
 #include "linear/message.h"
+#include <math.h>
 
 using namespace std;
+
 
 namespace CncRemote
 {
@@ -52,7 +54,7 @@ namespace CncRemote
 		mcOFFLINE, ///<Machine is off line (e.g server is running but it can't connect to the machine hardware)
 		mcOFF, ///<Machine is connected but drives are off
 		mcIDLE, ///<Drives on but not moving
-		mcJOGGING, ///<Machine is jogging
+		mcMOVING, ///<Machine is moving but not executing code (homing/jogging etc)
 		mcMDI, ///<Executing MDI code
 		mcRUNNING, ///<Executing g-code file
 	};
@@ -180,6 +182,10 @@ namespace CncRemote
 	class State {
 	public:
 		State(); ///<Create a standard instance
+
+		//All memory from here to the start of classes (see near the end of this class) will be
+		//initialised to 0 when this class is instantiated.
+
 		Axes position; ///<Axes in tool coordinates (in metric units)
 		Axes machinePos; ///<Axes in machine coordinates (in metric units)
 		bool feedHold; ///<Feed hold status
@@ -188,7 +194,7 @@ namespace CncRemote
 		bool optionalStop; ///<stop
 		bool blockDelete; ///<block delete
 		union {
-			CONTROLSTATE machineStatus; ///<Current machine state
+			CONTROLSTATE machineState; ///<Current machine state
 			int _machineStatus; //MessagePack can't handle enums directly
 		};
 		int currentLine; ///<current gcode line running. -1 if no line is running
@@ -211,14 +217,20 @@ namespace CncRemote
 		double feedCmd; ///<Commanded feed rate
 		double feedActual; ///<Actual feed rate
 		int tool; ///<Currently selected tool
-		string interpState; ///<Interpreter state text
 
-		/* The following are for internal use*/
+		// The following are for internal use
 		int errorCount; ///<The total number error messages
 		int messageCount; ///<The total number warning messages
 		int fileCount; ///<A count of files loaded. Used to indicate that a file has changed
 
-		MSGPACK_DEFINE_MAP(position, machinePos, feedOverride, feedHold, optionalStop, blockDelete, _machineStatus,
+
+
+        // Classes go here
+		string interpState; ///<Interpreter state text
+
+
+
+		MSGPACK_DEFINE_MAP(machinePos, position, feedOverride, feedHold, optionalStop, blockDelete, _machineStatus,
 			currentLine, singleStep, spindleCmd, spindleActual, _spindleState, mist, flood, homed, axisAngular, errorCount, messageCount,
 			maxFeedLin, maxFeedAng, gcodeUnits, spindleOverride, rapidOverride, feedCmd, feedActual, tool, interpState, fileCount);
 

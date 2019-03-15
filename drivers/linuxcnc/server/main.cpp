@@ -18,7 +18,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 
 #include <iostream>
-#include <cstdint>
+//#include <cstdint>
 #include <time.h>
 
 #include <signal.h>
@@ -72,7 +72,7 @@ static void Disconnect()
     emcErrorBuffer = 0;
     delete emcStatusBuffer;
     emcStatusBuffer = 0;
-    emcStatus = 0;
+//    emcStatus = 0;
     delete emcCommandBuffer;
     emcCommandBuffer = 0;
 }
@@ -185,6 +185,7 @@ int main(int argc, char * argv[])
             {
                 break;
             }
+            SleepMs(100);
         }
         printf("Disconnected from LinuxCNC\n");
         Disconnect();

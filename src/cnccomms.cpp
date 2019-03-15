@@ -35,11 +35,11 @@ namespace CncRemote
 
 	State::State()
 	{
-		memset(this, 0, sizeof(State));
+		memset(&position, 0, (unsigned)((unsigned)&interpState - (unsigned)&position));
 		errorCount = 0;
 		messageCount = 0;
 		fileCount = 0;
-		machineStatus = mcNO_SERVER;
+		machineState = mcNO_SERVER;
 	}
 } //namespace CncRemote
 

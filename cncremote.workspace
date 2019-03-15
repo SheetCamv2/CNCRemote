@@ -2,9 +2,8 @@
 <CodeBlocks_workspace_file>
 	<Workspace title="Workspace">
 		<Project filename="drivers/linuxcnc/plugin/linuxplugin.cbp" />
-		<Project filename="drivers/linuxcnc/server/linuxcncserver.cbp" />
+		<Project filename="drivers/linuxcnc/server/linuxcncserver.cbp" active="1" />
 		<Project filename="drivers/Sim/plugin/simplugin.cbp" />
 		<Project filename="drivers/Sim/server/sim.cbp" />
-		<Project filename="../scanything.cbp" />
 	</Workspace>
 </CodeBlocks_workspace_file>

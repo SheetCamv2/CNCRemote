@@ -75,7 +75,7 @@ This class handles RPC call data.
 NOTE: when using asynchronous calls this object must remain in scope until the asynchronous call returns or throws an error.
 */
 
-class RemoteCall 
+class RemoteCall
 {
 public:
 	RemoteCall();
@@ -90,7 +90,7 @@ public:
 	}
 
 	linear::Response& Call(linear::Socket& socket, unsigned timeout, const std::string& function, const linear::type::any& param);
-	
+
 	template<typename A1, typename A2>
 	linear::Response& Call(linear::Socket& socket, unsigned timeout, const std::string& function, A1 arg1, A2 arg2)
 	{
@@ -141,7 +141,7 @@ public:
 	We are waiting for a response
 	*/
 	bool IsBusy() { return m_busy; }
-	
+
 	/**
 	Clear the HasResponse flag. Useful if re-using this object.
 	*/
@@ -178,7 +178,7 @@ struct Plugin
 class Client : private Plugin
 #else
 /**
-This is the main client class. 
+This is the main client class.
 */
 
 class Client
@@ -210,7 +210,7 @@ public:
 	If the server is remote the file is first uploaded to a temporary directory.
 	Returns false if failed. This function blocks until the file is loaded.
 	*/
-	bool LoadFile(string file); 
+	bool LoadFile(string file);
 	bool CloseFile(); ///<Close any loaded files (some controls lock the file they have open)
     void CycleStart(); ///<cycle start
     void CycleStop(); ///<Stop execution
@@ -233,7 +233,7 @@ public:
 #ifdef HANDLE_CNCREMOTE_EXCEPTIONS
 	/**
 	If HANDLE_CNCREMOTE_EXCEPTIONS is defined all communication exceptions are rerouted to this handler.
-	Otherwise most of teh above calls will thro exceptions if there are any errors.
+	Otherwise most of the above calls will throw exceptions if there are any errors.
 	*/
 	virtual void OnException(std::exception& exc) = 0;
 #endif

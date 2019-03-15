@@ -36,11 +36,11 @@ namespace CncRemote {
 The mutex will remain locked for as long as this object or any copies of it exist
 
 */
-class ThreadLock : private linear::shared_ptr<linear::lock_guard<linear::mutex>>
+class ThreadLock : private linear::shared_ptr<linear::lock_guard<linear::mutex> >
 {
 public:
-	ThreadLock(linear::mutex& mutex) : 
-		linear::shared_ptr<linear::lock_guard<linear::mutex>>(new linear::lock_guard<linear::mutex>(mutex))
+	ThreadLock(linear::mutex& mutex) :
+		linear::shared_ptr<linear::lock_guard<linear::mutex> >(new linear::lock_guard<linear::mutex>(mutex))
 	{
 	}
 };
@@ -48,7 +48,7 @@ public:
 /** A locked smart pointer to a State object
 The state remains mutex locked for as long as this object or any copies of it exist
 */
-class LockedState:public State, private ThreadLock
+class LockedState: private ThreadLock
 {
 public:
 	LockedState(State& state, linear::mutex& mutex) : ThreadLock(mutex)
@@ -73,7 +73,7 @@ private:
 /** The server base class.
 All servers are based on this class.
 Note the virtual functions are multi threaded.
-To make your functions thread safe you must either use GetState() or Sync().
+To make your functions thread safe you must either use GetState() or GetLock().
 */
 class Server
 {
@@ -84,15 +84,7 @@ public:
 	*/
 	COMERROR Bind(const uint32_t port = DEFAULT_COMMS_PORT);
 
-	/**	Call this every so often from your main loop.
-	Note this is used to synchronize connection threads with your main thread.\n
-	If you use thread synchronization you need to call this often to keep latency low.\n
-	NOTE: If you intend to use this you must call it at least once before you bind the server.\n
-	*/
-    COMERROR Poll();
-
-	/**Sync your thread to the main thread for as long as the ThreadLock object or copies of it exist.\n
-	Basically locks your thread to the server's Poll() loop	\n
+	/**Lock the state synchronization mutex
 	A normal usage case: \code
 	ThreadLock lock = GetLock();
 	//The server will now be locked and the state object is guaranteed thread safe until all copies of lock are destroyed
@@ -102,15 +94,16 @@ public:
 
 
 	/** Get the current machine state.
-	This returns a thread safe smart pointer to the global state.
-	The state remains locked for as long as this object exists
+	This returns a thread safe smart pointer to the global state.\n
+	The state remains locked for as long as this object exists.
 	*/
 	LockedState GetState();
 
 protected:
 	//Override these to provide machine functionality
 
-	/** Called just before m_state is sent to a client.
+	/** Called just before the state is sent to a client.
+	Note: the state mutex is locked when this function is called.\n
 	*/
 	virtual void UpdateState(State& state) = 0;
 
@@ -186,16 +179,31 @@ protected:
 	*/
 	virtual void Home(const BoolAxes axes) = 0;
 
-	/** Get The given offset
+	/** Get the given offset
 	As different controls handle offsets differently the number of offsets available may vary. As a recommendation:
 	\verbatim
 	0 = tool offset
 	1 = G5x offset
-	2 = G9x offset
+	2 = G92 offset
 	\endverbatim
 	Return all zeros for indexes that are not recognised.
 	*/
 	virtual Axes GetOffset(const unsigned int index) = 0;
+
+
+	/** Get a list of the currently active G-codes
+	The g-codes are multiplied by 10. For example:\n
+	\verbatim
+	G03 = 30
+	G38.2 = 382
+	\endverbatim
+	*/
+    virtual vector<int> GetGCodes() = 0;
+
+
+	/** Get a list of the currently active M-codes
+	*/
+    virtual vector<int> GetMCodes() = 0;
 
 	/** Start receiving a file.
 	Create a temporary file and open it for writing. \n
@@ -203,7 +211,6 @@ protected:
 	For example if nameHint is "test" the file name could be "/tmp/test001.tmp"\n
 	If the file could not be opened, return an empty string.
 	NOTE: nameHint should not contain any characters that are invalid in unix or Windows file names (e.g "\", "/", "?" or "*").\n
-
 
 	The default behaviour is to open the file in /tmp or %TEMP%
 	If you override this and don't override SendData you must set the following:
@@ -259,7 +266,6 @@ protected:
 	May be called before all preview data has been read, for example if the user aborts previewing.
 	*/
 	virtual void EndPreview() {}
-
 
 
 	/** Log an error message. Empty messages will be discarded.
