@@ -569,7 +569,6 @@ void Client::JogVel(const Axes& velocities)
 
 bool Client::Mdi(const string line)
 {
-
 	TRY_EXCEPTION();
 	RemoteCall c;
 	c.Call(m_socket, m_timeout, "Mdi", line);
@@ -744,6 +743,43 @@ void Client::HomeAll()
 	CATCH_EXCEPTION();
 }
 
+
+vector<int> Client::GetGCodes()
+{
+	TRY_EXCEPTION();
+	RemoteCall c;
+	c.Call(m_socket, m_timeout, "GetGCodes");
+	return c.GetResponse().result.as<vector<int>>();
+	CATCH_EXCEPTION();
+	vector<int> ret;
+	return ret;
+}
+
+void Client::GetGCodes(RemoteCall& call)
+{
+	call.ClearResponse();
+	call.Call(m_socket, m_timeout, "GetGCodes");
+}
+
+
+vector<int> Client::GetMCodes()
+{
+	TRY_EXCEPTION();
+	RemoteCall c;
+	c.Call(m_socket, m_timeout, "GetMCodes");
+	return c.GetResponse().result.as<vector<int>>();
+	CATCH_EXCEPTION();
+	vector<int> ret;
+	return ret;
+}
+
+void Client::GetMCodes(RemoteCall& call)
+{
+	call.ClearResponse();
+	call.Call(m_socket, m_timeout, "GetGCodes");
+}
+
+
 string Client::GetNextError()
 {
 	string ret;
@@ -789,6 +825,7 @@ bool Client::IsLocal()
 void Client::OnDisConnect2()
 {
 	m_serverVer = 0;
+	m_state.machineStatus = mcNO_SERVER;
 	OnDisConnect();
 }
 

@@ -132,8 +132,8 @@ public:
 	bool HasResponse() { return m_hasResponse; }
 
 	/**
-	Get the response. Note only use this after checking HasRespnse()
-	You need to check if teh response contains an error.
+	Get the response. Note only use this after checking HasResponse()
+	You need to check if the response contains an error.
 	*/
 	linear::Response& GetResponse();
 
@@ -222,6 +222,39 @@ public:
 	void HomeAll(); ///<Home all
 
 	State & GetState() { return (m_state); } ///<Get the current machine state
+	/** Get a list of the currently active G-codes.
+	The g-codes are multiplied by 10. For example:
+	\verbatim
+	G03 = 30
+	G91.1 = 911
+	\endverbatim
+	*/
+	vector<int> GetGCodes();
+
+	/**Async version of GetGCodes
+	Example code:
+	\verbatim
+	CncRemote::RemoteCall call;
+	GetGCodes(call);
+	...do stuff
+	if(call.HasResponse())
+	{
+		try 
+		{
+			vector<int> result = call.GetResponse().result.as<vector<int>>();
+			//do something with the result
+
+		}
+		catch (std::exception& exc) //catch any exceptions
+		{
+		}
+	}
+	\endverbatim
+	*/
+	void GetGCodes(RemoteCall& call);
+
+	vector<int> GetMCodes(); ///<Get a list of the currently active M-codes.
+	void GetMCodes(RemoteCall& call); ///<Async version of GetMCodes
 
 	bool HasErrors() { return m_errIndex < m_state.errorCount; } ///<Returns true is there are any errors pending
 	bool HasMessages() { return m_msgIndex < m_state.messageCount; } ///<Returns true if there are any messages pending
@@ -251,7 +284,7 @@ protected:
 	int m_roundTrip; ///<Time for a GetState() round trip in us
 
 private:
-	void OnDisConnect2(); //Triggered when we are connected to the server
+	void OnDisConnect2(); //Triggered when we are disconnected from the server
 	std::chrono::high_resolution_clock::time_point m_pollTimer;
 
 #ifdef USE_PLUGINS
