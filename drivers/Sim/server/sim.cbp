@@ -16,7 +16,6 @@
 				<Option projectCompilerOptionsRelation="-1" />
 				<Option projectLinkerOptionsRelation="-1" />
 				<Option projectIncludeDirsRelation="-1" />
-				<Option projectResourceIncludeDirsRelation="-1" />
 				<Option projectLibDirsRelation="-1" />
 				<MakeCommands>
 					<Build command="" />
@@ -35,15 +34,18 @@
 				<Option compiler="gcc" />
 				<Option use_console_runner="0" />
 				<Compiler>
-					<Add option="-std=c++11" />
 					<Add option="-g" />
 					<Add option="-D_LINUX" />
 					<Add directory="../../../include" />
-					<Add directory="../../../libraries/rpclib/include" />
+					<Add directory="../../../libraries/build/include" />
 				</Compiler>
 				<Linker>
+					<Add library="liblinear.a" />
+					<Add library="libtv.a" />
+					<Add library="libuv.a" />
 					<Add library="pthread" />
-					<Add directory="../../../libraries/lib/i386-linux-gnu" />
+					<Add library="rt" />
+					<Add directory="../../../libraries/build/lib" />
 				</Linker>
 			</Target>
 			<Target title="Release-Linux">
@@ -98,6 +100,10 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
+		<Unit filename="sim.cpp" />
+		<Unit filename="sim.h" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
 		<Unit filename="../../../include/cncserver.h" />
@@ -105,10 +111,6 @@
 		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncserver.cpp" />
 		<Unit filename="../../../src/timer.cpp" />
-		<Unit filename="main.cpp" />
-		<Unit filename="main.h" />
-		<Unit filename="sim.cpp" />
-		<Unit filename="sim.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

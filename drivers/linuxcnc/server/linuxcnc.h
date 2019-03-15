@@ -34,17 +34,34 @@ public:
     LinuxCnc();
     void ConnectLCnc();
     bool Poll();
-    virtual void UpdateState();
-    virtual Connection * CreateConnection(CActiveSocket * client, Server * server);
     static void ZeroJog();
-
-
-/*    void SetMode(const int mode);
-    inline void SendJog(const int axis, const double vel);
+    void SetMode(const int mode);
+    void SendJog(const int axis, const double vel);
     int SendJogVel(const double x, const double y, const double z, const double a, const double b, const double c);
     void SendJogStep(const int axis, const double val);
-    hal_data_u * FindPin(const char * name, hal_type_t type);
-    void LoadAxis(const int index);*/
+
+	virtual void UpdateState(State& state);
+	virtual void DrivesOn(const bool state);
+	virtual void JogVel(const Axes velocities);
+	virtual void JogStep(const Axes distance, const double speed);
+	virtual bool Mdi(const string line);
+	virtual void SpindleOverride(const double percent);
+	virtual void FeedOverride(const double percent);
+	virtual void RapidOverride(const double percent);
+	virtual bool LoadFile(const string fileName);
+	virtual bool CloseFile();
+	virtual void CycleStart();
+	virtual void CycleStop();
+	virtual void FeedHold(const bool state);
+	virtual void BlockDelete(const bool state);
+	virtual void SingleStep(const bool state);
+	virtual void OptionalStop(const bool state);
+	virtual void Home(const BoolAxes axes);
+	virtual Axes GetOffset(const unsigned int index);
+    virtual vector<int> GetGCodes();
+    virtual vector<int> GetMCodes();
+
+
 
 
 private:
@@ -55,7 +72,6 @@ private:
     uint32_t m_heartbeat;
     time_t m_nextTime;
     bool m_connected;
-//    UTimer m_jogTimer;
 
 };
 

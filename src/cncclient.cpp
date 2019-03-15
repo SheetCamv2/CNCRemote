@@ -55,7 +55,7 @@ RemoteCall::RemoteCall()
 }
 
 linear::Response& RemoteCall::Call(linear::Socket& socket, unsigned timeout, const std::string& function, const linear::type::any& param)
-{	
+{
 	CallAsync(socket, timeout, function, param);
 	if (!Wait(timeout))
 	{
@@ -144,14 +144,14 @@ public:
 
 	~Handler() {}
 
-	static void Reconnect(void* args) 
+	static void Reconnect(void* args)
 	{
 		linear::Socket* socket = reinterpret_cast<linear::Socket*>(args);
 		socket->Connect();
 		delete socket;
 	}
 
-	void OnConnect(const linear::Socket& socket) 
+	void OnConnect(const linear::Socket& socket)
 	{
 		m_retries = 0;
 		const linear::Addrinfo& info = socket.GetPeerInfo();
@@ -400,7 +400,7 @@ void Client::SetBusy(const int state)
 {
 	if(state > m_statusCache)
 	{
-		m_statusCache = state; 
+		m_statusCache = state;
 	}
 	m_busyHeart = m_heartBeat+ 1;
 }
@@ -422,7 +422,7 @@ COMERROR Client::Poll()
 		if (m_serverVer < 0) return errWRONGVER;
 		if (m_StatusCall.HasResponse())
 		{
-			try 
+			try
 			{
 				float ver = m_StatusCall.GetResponse().result.as<float>();
 				if (ver < CNCREMOTE_MIN_PROTOCOL_VERSION)
@@ -461,7 +461,7 @@ COMERROR Client::Poll()
 	if (m_StatusCall.HasResponse())
 	{
 		m_roundTrip = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - m_pollTimer).count();
-		try 
+		try
 		{
 			m_state = m_StatusCall.GetResponse().result.as<State>();
 			if (m_heartBeat >= m_busyHeart)
@@ -541,11 +541,11 @@ float Client::Ping(int waitMs)
 bool Client::IsBusy(const int state)
 {
 	if (!IsConnected()) return true;
-	if(m_statusCache > m_state.machineStatus)
+	if(m_statusCache > m_state.machineState)
 	{
 		return(m_statusCache > state);
 	}
-	return (m_state.machineStatus > state);
+	return (m_state.machineState > state);
 }
 
 void Client::DrivesOn(const bool state)
@@ -562,7 +562,7 @@ void Client::JogVel(const Axes& velocities)
 	linear::Notify notify("JogVel", velocities);
 	if (notify.Send(m_socket) == linear::LNR_OK)
 	{
-		SetBusy(mcJOGGING);
+		SetBusy(mcMOVING);
 	}
 	CATCH_EXCEPTION();
 }
@@ -728,7 +728,7 @@ void Client::Home(const unsigned int axis)
 
 void Client::HomeAll()
 {
-	
+
 	BoolAxes axes;
 	for (int ct = 0; ct < MAX_AXES; ct++)
 	{

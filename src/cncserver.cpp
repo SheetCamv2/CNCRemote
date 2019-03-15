@@ -57,7 +57,7 @@ public:
 			linear::Request request = msg.as<linear::Request>();
 			try
 			{
-				for (int ct = 0; ct < m_requestHandlers.size(); ct++)
+				for (unsigned ct = 0; ct < m_requestHandlers.size(); ct++)
 				{
 					if (m_requestHandlers[ct]->GetName() == request.method)
 					{
@@ -91,10 +91,10 @@ public:
 
 		case linear::NOTIFY:
 		{
-			try 
+			try
 			{
 				linear::Notify notify = msg.as<linear::Notify>();
-				for (int ct = 0; ct < m_notifyHandlers.size(); ct++)
+				for (unsigned ct = 0; ct < m_notifyHandlers.size(); ct++)
 				{
 					if (m_notifyHandlers[ct]->GetName() == notify.method)
 					{
@@ -162,9 +162,9 @@ public:
 		virtual ~HandlerCallback() {}
 		const string& GetName() {return m_name;}
 	protected:
-		void SetName(string n) 
+		void SetName(string n)
 		{
-			m_name = n; 
+			m_name = n;
 			if (!m_name.empty() && m_name.at(m_name.size() - 1) == '_') //special case - remove trailing underscore
 			{
 				m_name.erase(m_name.size() - 1);
@@ -314,7 +314,7 @@ public:
 		CBFunctor0 m_func;
 	};
 
-	
+
 	template <class P>
 	class NotifyHandler1 : public NotifyHandler
 	{
@@ -345,7 +345,7 @@ public:
 		CBFunctor1<P> m_func;
 	};
 
-	
+
 	template <class P1, class P2>
 	class NotifyHandler2 : public NotifyHandler
 	{
@@ -457,6 +457,9 @@ Server::Server()
 	BIND_NOTIFY1(OptionalStop, bool);
 	BIND_NOTIFY1(Home, BoolAxes);
 	BIND_REQ1(Axes, GetOffset, unsigned int);
+	BIND_REQ0(vector<int>, GetGCodes);
+	BIND_REQ0(vector<int>, GetMCodes);
+
 	BIND_REQ1(string, SendInit, string);
 	BIND_REQ2(bool, SendData, string, int);
 	BIND_REQ1(string, GetError, unsigned int);
@@ -478,11 +481,6 @@ COMERROR Server::Bind(const uint32_t port)
 {
 	m_server.Stop();
 	m_server.Start("0.0.0.0", port);
-	return errOK;
-}
-
-COMERROR Server::Poll()
-{
 	return errOK;
 }
 
@@ -562,7 +560,7 @@ void Server::DeleteTemp()
 
 State Server::GetState_()
 {
-	ThreadLock lock = GetLock();
+    ThreadLock lock = GetLock();
 	UpdateState(m_state);
 	return State(m_state);
 }

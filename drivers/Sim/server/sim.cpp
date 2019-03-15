@@ -44,6 +44,12 @@ bool Sim::Poll()
 		busy = mcRUNNING;
 	}
 
+	if (!machine.controlOn)
+	{
+		busy = mcOFF;
+	}
+
+
 	LockedState state = GetState();
 
 	if (machine.jogVel.x != 0 ||
@@ -53,9 +59,9 @@ bool Sim::Poll()
 		machine.jogVel.b != 0 ||
 		machine.jogVel.c != 0)
 	{
-		if (busy == mcIDLE || busy == mcJOGGING)
+		if (busy == mcIDLE || busy == mcMOVING)
 		{
-			busy = mcJOGGING;
+			busy = mcMOVING;
 			state->position += machine.jogVel * 1;
 			machine.target = state->position;
 		}
@@ -74,12 +80,7 @@ bool Sim::Poll()
 	}
 
 
-	if (!machine.controlOn)
-	{
-		busy = mcOFF;
-	}
-
-	state->machineStatus = busy;
+	state->machineState = busy;
 
     if(machine.running && !machine.paused)
     {
@@ -133,7 +134,7 @@ bool Sim::Mdi(const string line)
 	std::cout << "MDI:" << line << std::endl;
 	LogMessage((string("MDI:") + line).c_str());
 	LockedState state = GetState();
-	return (state->machineStatus == mcIDLE || state->machineStatus == mcMDI);
+	return (state->machineState == mcIDLE || state->machineState == mcMDI);
 }
 
 void Sim::SpindleOverride(const double percent)
