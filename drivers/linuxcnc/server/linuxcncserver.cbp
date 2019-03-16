@@ -17,8 +17,8 @@
 					<Add option="-O0" />
 					<Add option="-DULAPI" />
 					<Add option="-D_LINUX" />
-					<Add directory="$(EMC2_HOME)/src/emc/usr_intf" />
-					<Add directory="$(EMC2_HOME)/include" />
+					<Add directory="$(LINUXCNC)/src/emc/usr_intf" />
+					<Add directory="$(LINUXCNC)/include" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/build/include" />
@@ -47,50 +47,39 @@
 				<Option compiler="gcc" />
 				<Option use_console_runner="0" />
 				<Compiler>
-					<Add option="-O2" />
-					<Add option="-std=c++11" />
+					<Add option="-g" />
+					<Add option="-O0" />
+					<Add option="--std=c++11" />
 					<Add option="-DULAPI" />
 					<Add option="-D_LINUX" />
 					<Add directory="$(LINUXCNC)/src/emc/usr_intf" />
 					<Add directory="$(LINUXCNC)/include" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
-					<Add directory="../../../libraries/include" />
-					<Add directory="../../../clsocket/src" />
+					<Add directory="../../../libraries/build/include" />
 				</Compiler>
 				<Linker>
-					<Add option="-s" />
-					<Add library="protobuf-lite-3.1.0" />
 					<Add library="linuxcnchal" />
 					<Add library="linuxcnc" />
 					<Add library="nml" />
+					<Add library="liblinear.a" />
+					<Add library="libuv.a" />
+					<Add library="libtv.a" />
 					<Add library="pthread" />
 					<Add library="linuxcncini" />
 					<Add directory="$(LINUXCNC)/lib" />
-					<Add directory="../../../libraries/lib/i386-linux-gnu" />
-					<Add directory="../../../libraries/lib" />
+					<Add directory="../../../libraries/build/lib" />
 				</Linker>
 				<ExtraCommands>
 					<Add before="./version.sh $(LINUXCNC)" />
 					<Add after="./copy.sh $(LINUXCNC) $(TARGET_OUTPUT_FILE)" />
 				</ExtraCommands>
-				<Environment>
-					<Variable name="LINUXCNC" value="/home/gw/Documents/src/linuxcnc" />
-				</Environment>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Unit filename="../../../clsocket/src/ActiveSocket.h" />
-		<Unit filename="../../../clsocket/src/Host.h" />
-		<Unit filename="../../../clsocket/src/PassiveSocket.h" />
-		<Unit filename="../../../clsocket/src/SimpleSocket.h" />
-		<Unit filename="../../../clsocket/src/StatTimer.h" />
-		<Unit filename="linuxcnc.cpp" />
-		<Unit filename="linuxcnc.h" />
-		<Unit filename="main.cpp" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncserver.h" />
 		<Unit filename="../../../include/timer.h" />
@@ -98,122 +87,9 @@
 		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncserver.cpp" />
 		<Unit filename="../../../src/timer.cpp" />
-		<Unit filename="../../../../linuxcnc/include/_sem.h" />
-		<Unit filename="../../../../linuxcnc/include/_shm.h" />
-		<Unit filename="../../../../linuxcnc/include/_timer.h" />
-		<Unit filename="../../../../linuxcnc/include/blendmath.h" />
-		<Unit filename="../../../../linuxcnc/include/canon.hh" />
-		<Unit filename="../../../../linuxcnc/include/canon_position.hh" />
-		<Unit filename="../../../../linuxcnc/include/cmd_msg.hh" />
-		<Unit filename="../../../../linuxcnc/include/cms.hh" />
-		<Unit filename="../../../../linuxcnc/include/cms_aup.hh" />
-		<Unit filename="../../../../linuxcnc/include/cms_cfg.hh" />
-		<Unit filename="../../../../linuxcnc/include/cms_dup.hh" />
-		<Unit filename="../../../../linuxcnc/include/cms_srv.hh" />
-		<Unit filename="../../../../linuxcnc/include/cms_up.hh" />
-		<Unit filename="../../../../linuxcnc/include/cms_user.hh" />
-		<Unit filename="../../../../linuxcnc/include/cms_xup.hh" />
-		<Unit filename="../../../../linuxcnc/include/cmsdiag.hh" />
-		<Unit filename="../../../../linuxcnc/include/config.h" />
-		<Unit filename="../../../../linuxcnc/include/cubic.h" />
-		<Unit filename="../../../../linuxcnc/include/debugflags.h" />
-		<Unit filename="../../../../linuxcnc/include/emc.hh" />
-		<Unit filename="../../../../linuxcnc/include/emcIniFile.hh" />
-		<Unit filename="../../../../linuxcnc/include/emc_nml.hh" />
-		<Unit filename="../../../../linuxcnc/include/emccfg.h" />
-		<Unit filename="../../../../linuxcnc/include/emcglb.h" />
-		<Unit filename="../../../../linuxcnc/include/emcmotcfg.h" />
-		<Unit filename="../../../../linuxcnc/include/emcpos.h" />
-		<Unit filename="../../../../linuxcnc/include/emctool.h" />
-		<Unit filename="../../../../linuxcnc/include/genhexkins.h" />
-		<Unit filename="../../../../linuxcnc/include/genserkins.h" />
-		<Unit filename="../../../../linuxcnc/include/gomath.h" />
-		<Unit filename="../../../../linuxcnc/include/gotypes.h" />
-		<Unit filename="../../../../linuxcnc/include/hal.h" />
-		<Unit filename="../../../../linuxcnc/include/hal_parport.h" />
-		<Unit filename="../../../../linuxcnc/include/iniaxis.hh" />
-		<Unit filename="../../../../linuxcnc/include/inifile.h" />
-		<Unit filename="../../../../linuxcnc/include/inifile.hh" />
-		<Unit filename="../../../../linuxcnc/include/inihal.hh" />
-		<Unit filename="../../../../linuxcnc/include/inijoint.hh" />
-		<Unit filename="../../../../linuxcnc/include/initool.hh" />
-		<Unit filename="../../../../linuxcnc/include/initraj.hh" />
-		<Unit filename="../../../../linuxcnc/include/interp_base.hh" />
-		<Unit filename="../../../../linuxcnc/include/interp_internal.hh" />
-		<Unit filename="../../../../linuxcnc/include/interp_return.hh" />
-		<Unit filename="../../../../linuxcnc/include/interpl.hh" />
-		<Unit filename="../../../../linuxcnc/include/kinematics.h" />
-		<Unit filename="../../../../linuxcnc/include/linklist.hh" />
-		<Unit filename="../../../../linuxcnc/include/locmem.hh" />
-		<Unit filename="../../../../linuxcnc/include/memsem.hh" />
-		<Unit filename="../../../../linuxcnc/include/motion.h" />
-		<Unit filename="../../../../linuxcnc/include/motion_types.h" />
-		<Unit filename="../../../../linuxcnc/include/nml.hh" />
-		<Unit filename="../../../../linuxcnc/include/nml_mod.hh" />
-		<Unit filename="../../../../linuxcnc/include/nml_oi.hh" />
-		<Unit filename="../../../../linuxcnc/include/nml_srv.hh" />
-		<Unit filename="../../../../linuxcnc/include/nml_type.hh" />
-		<Unit filename="../../../../linuxcnc/include/nmldiag.hh" />
-		<Unit filename="../../../../linuxcnc/include/nmlmsg.hh" />
-		<Unit filename="../../../../linuxcnc/include/phantom.hh" />
-		<Unit filename="../../../../linuxcnc/include/physmem.hh" />
-		<Unit filename="../../../../linuxcnc/include/posemath.h" />
-		<Unit filename="../../../../linuxcnc/include/pumakins.h" />
-		<Unit filename="../../../../linuxcnc/include/rcs.hh" />
-		<Unit filename="../../../../linuxcnc/include/rcs_exit.hh" />
-		<Unit filename="../../../../linuxcnc/include/rcs_print.hh" />
-		<Unit filename="../../../../linuxcnc/include/rcsversion.h" />
-		<Unit filename="../../../../linuxcnc/include/recvn.h" />
-		<Unit filename="../../../../linuxcnc/include/rem_msg.hh" />
-		<Unit filename="../../../../linuxcnc/include/rs274ngc.hh" />
-		<Unit filename="../../../../linuxcnc/include/rtapi.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_app.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_atomic.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_bitops.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_bool.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_byteorder.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_ctype.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_device.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_errno.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_firmware.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_gfp.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_io.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_limits.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_list.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_math.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_math64.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_math_i386.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_mutex.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_parport.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_pci.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_slab.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_stdint.h" />
-		<Unit filename="../../../../linuxcnc/include/rtapi_string.h" />
-		<Unit filename="../../../../linuxcnc/include/sem.hh" />
-		<Unit filename="../../../../linuxcnc/include/sendn.h" />
-		<Unit filename="../../../../linuxcnc/include/shm.hh" />
-		<Unit filename="../../../../linuxcnc/include/shmem.hh" />
-		<Unit filename="../../../../linuxcnc/include/simple_tp.h" />
-		<Unit filename="../../../../linuxcnc/include/sincos.h" />
-		<Unit filename="../../../../linuxcnc/include/spherical_arc.h" />
-		<Unit filename="../../../../linuxcnc/include/stat_msg.hh" />
-		<Unit filename="../../../../linuxcnc/include/tc.h" />
-		<Unit filename="../../../../linuxcnc/include/tc_types.h" />
-		<Unit filename="../../../../linuxcnc/include/tcp_opts.hh" />
-		<Unit filename="../../../../linuxcnc/include/tcp_srv.hh" />
-		<Unit filename="../../../../linuxcnc/include/tcpmem.hh" />
-		<Unit filename="../../../../linuxcnc/include/tcq.h" />
-		<Unit filename="../../../../linuxcnc/include/timer.hh" />
-		<Unit filename="../../../../linuxcnc/include/tp.h" />
-		<Unit filename="../../../../linuxcnc/include/tp_types.h" />
-		<Unit filename="../../../../linuxcnc/include/usrmotintf.h" />
-		<Unit filename="../../../../linuxcnc/src/config.h.in" />
-		<Unit filename="../../../../linuxcnc/src/emc/usr_intf/shcom.hh" />
-		<Unit filename="../../../../linuxcnc/src/emc/usr_intf/touchy/touchy.hal.example" />
-		<Unit filename="../../../../linuxcnc/src/hal/drivers/mesa-hostmot2/doc/encoder/index.html" />
-		<Unit filename="../../../../linuxcnc/src/hal/user_comps/huanyang-vfd/config-files/custom.hal" />
-		<Unit filename="../../../../linuxcnc/src/hal/user_comps/huanyang-vfd/config-files/custom_postgui.hal" />
-		<Unit filename="../../../../linuxcnc/src/hal/user_comps/vfs11_vfd/vfs11_vfd.hal" />
+		<Unit filename="linuxcnc.cpp" />
+		<Unit filename="linuxcnc.h" />
+		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />
 			<envvars />
