@@ -4,12 +4,15 @@
 #e.g build.sh v2.7.3
 #Note: this takes a LONG time
 
-#Path to LinuxCNC source code. Must be a Git repository.
-lcnc=/home/gw/Documents/src/linuxcnc
-
+if [ -z "$LINUXCNC" ]
+then
+	echo "You must define a variable called LINUXCNC with the path to your LinuxCNC source. See readme.txt for more details"
+	exit -1
+fi
+echo "using LinuxCNC directory: $LINUXCNC"
 
 home=$(dirname $(readlink -f "$0"))
-cd $lcnc
+cd "$LINUXCNC"
 git checkout $1
 if [ $? -ne 0 ] 
 then

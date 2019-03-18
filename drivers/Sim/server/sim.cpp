@@ -24,6 +24,7 @@ Sim::Sim()
 {
     memset(&machine, 0, sizeof(machine));
 	GetState()->maxFeedLin = 1000;
+	machine.controlOn = true;
 }
 
 
@@ -94,7 +95,7 @@ bool Sim::Poll()
 		}
         if(machine.step) machine.paused = true;
     }
-    return(Server::Poll());
+    return true;
 }
 
 void Sim::UpdateState(State& state)
@@ -219,4 +220,19 @@ Axes Sim::GetOffset(const unsigned int index)
 	Axes ret;
 	ret.Zero();
 	return ret;
+}
+
+vector<int> Sim::GetGCodes()
+{
+    vector<int> ret;
+    ret.push_back(90);
+    ret.push_back(0);
+    return ret;
+}
+
+vector<int> Sim::GetMCodes()
+{
+    vector<int> ret;
+    ret.push_back(3);
+    return ret;
 }

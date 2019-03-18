@@ -13,10 +13,11 @@
 				<Option type="1" />
 				<Option compiler="msvc8" />
 				<Option use_console_runner="0" />
-				<Option projectCompilerOptionsRelation="-1" />
-				<Option projectLinkerOptionsRelation="-1" />
-				<Option projectIncludeDirsRelation="-1" />
-				<Option projectLibDirsRelation="-1" />
+				<Option projectCompilerOptionsRelation="0" />
+				<Option projectLinkerOptionsRelation="0" />
+				<Option projectIncludeDirsRelation="0" />
+				<Option projectResourceIncludeDirsRelation="0" />
+				<Option projectLibDirsRelation="0" />
 				<MakeCommands>
 					<Build command="" />
 					<CompileFile command="" />
@@ -35,6 +36,7 @@
 				<Option use_console_runner="0" />
 				<Compiler>
 					<Add option="-g" />
+					<Add option="--std=c++11" />
 					<Add option="-D_LINUX" />
 					<Add directory="../../../include" />
 					<Add directory="../../../libraries/build/include" />
@@ -56,21 +58,20 @@
 				<Option compiler="gcc" />
 				<Option use_console_runner="0" />
 				<Compiler>
-					<Add option="-march=i686" />
 					<Add option="-O3" />
 					<Add option="-std=c++11" />
 					<Add option="-D_LINUX" />
 					<Add directory="../../../include" />
-					<Add directory="../../../src" />
-					<Add directory="../../../libraries/include" />
-					<Add directory="../../../clsocket/src" />
+					<Add directory="../../../libraries/build/include" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
-					<Add library="protobuf-lite-3.1.0" />
-					<Add library="zmq-4.2.3" />
 					<Add library="pthread" />
-					<Add directory="../../../libraries/lib/i386-linux-gnu" />
+					<Add library="liblinear.a" />
+					<Add library="libtv.a" />
+					<Add library="libuv.a" />
+					<Add library="rt" />
+					<Add directory="../../../libraries/build/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug-Windows-GCC">
@@ -100,10 +101,6 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Unit filename="main.cpp" />
-		<Unit filename="main.h" />
-		<Unit filename="sim.cpp" />
-		<Unit filename="sim.h" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncplugin.h" />
 		<Unit filename="../../../include/cncserver.h" />
@@ -111,6 +108,10 @@
 		<Unit filename="../../../src/cncplugin.cpp" />
 		<Unit filename="../../../src/cncserver.cpp" />
 		<Unit filename="../../../src/timer.cpp" />
+		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
+		<Unit filename="sim.cpp" />
+		<Unit filename="sim.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

@@ -37,37 +37,39 @@ along with this program; if not, you can obtain a copy from mozilla.org
 namespace CncRemote
 {
 
-class TimeoutError : public std::exception
+class TimeoutError : public std::runtime_error
 {
 public:
-	TimeoutError() :std::exception("Timed out calling function") {}
+	TimeoutError() :std::runtime_error("Timed out calling function") {}
 };
 
-class RemoteError : public std::exception
+class RemoteError : public std::runtime_error
 {
 public:
-	RemoteError(string err) : std::exception(err.c_str()) {}
+	RemoteError(string& err) : std::runtime_error(err) {}
+	RemoteError(string err) : std::runtime_error(err) {}
 
 };
 
-class TransferError : public std::exception
+class TransferError : public std::runtime_error
 {
 public:
-	TransferError(std::string err) : exception(err.c_str()) {}
+	TransferError(std::string err) : runtime_error(err) {}
+	TransferError(std::string& err) : runtime_error(err) {}
 };
 
-class SendError : public std::exception
+class SendError : public std::runtime_error
 {
 public:
-	SendError():exception() {};
-	SendError(string err) : exception(err.c_str()) {}
+//	SendError():runtime_error() {};
+	SendError(string& err) : runtime_error(err) {}
 };
 
 
-class BusyError : public std::exception
+class BusyError : public std::runtime_error
 {
 public:
-	BusyError() :std::exception("Waiting for response") {}
+	BusyError() :std::runtime_error("Waiting for response") {}
 };
 
 /**

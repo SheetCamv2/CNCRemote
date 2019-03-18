@@ -215,7 +215,11 @@ void LinuxCnc::UpdateState(State& state)
 
     if(state.machineState != mcIDLE) ZeroJog();
 
+#if LINUXCNC_MULTI_SPINDLE
+    switch(emcStatus->motion.spindle[0].enabled)
+#else
     switch(emcStatus->motion.spindle.enabled)
+#endif
     {
     case 0:
         state.spindleState = CncRemote::spinOFF;
@@ -229,8 +233,13 @@ void LinuxCnc::UpdateState(State& state)
         state.spindleState = CncRemote::spinFWD;
         break;
     }
+#if LINUXCNC_MULTI_SPINDLE
+    state.spindleCmd = emcStatus->motion.spindle[0].speed;
+    state.spindleActual = emcStatus->motion.spindle[0].speed; //FIXME: Should be actual spindle speed
+#else
     state.spindleCmd = emcStatus->motion.spindle.speed;
     state.spindleActual = emcStatus->motion.spindle.speed; //FIXME: Should be actual spindle speed
+#endif
 
     state.feedHold = emcStatus->task.task_paused;
 #if LINUXCNC_PRE_JOINTS
@@ -434,7 +443,11 @@ void LinuxCnc::SpindleOverride(const double percent)
 {
     ThreadLock lock = GetLock();
     if(!emcStatus) return;
+#if LINUXCNC_MULTI_SPINDLE
+    sendSpindleOverride(0,percent);
+#else
     sendSpindleOverride(percent);
+#endif
 }
 
 void LinuxCnc::FeedOverride(const double percent)
