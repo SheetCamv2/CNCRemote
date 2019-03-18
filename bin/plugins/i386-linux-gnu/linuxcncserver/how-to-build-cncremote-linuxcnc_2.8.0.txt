@@ -5,7 +5,7 @@ git checkout 201288d
 Follow the build instructions at <http://linuxcnc.org/docs/devel/html/code/building-linuxcnc.html>
 git clone https://github.com/sheetcam/CNCRemote.git cncremote
 cd cncremote
-git checkout 65c61cf
+git checkout 8edf140
 Install CodeBlocks <www.codeblocks.org>
 Run CodeBlocks from a LinuxCNC rip-environment
 Using CodeBlocks open cncremote/drivers/linuxcnc/server/linuxcncserver.cbp and build it.
