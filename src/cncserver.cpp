@@ -464,7 +464,7 @@ Server::Server()
 	BIND_REQ2(bool, SendData, string, int);
 	BIND_REQ1(string, GetError, unsigned int);
 	BIND_REQ1(string, GetMessage, unsigned int);
-	BIND_REQ0(int, Version);
+	BIND_REQ0(float, Version);
 	BIND_REQ1(bool, StartPreview, int);
 	BIND_REQ0(PreviewData, GetPreview);
 	BIND_NOTIFY0(EndPreview);

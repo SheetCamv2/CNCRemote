@@ -1,6 +1,6 @@
 /*
 EdingCNC server plugin
-Copyright 2018 Stable Design <les@sheetcam.com>
+Copyright 2019 Stable Design <les@sheetcam.com>
 
 
 This program is free software; you can redistribute it and/or modify
@@ -16,11 +16,11 @@ You should have received a copy of the Mozilla Public License
 along with this program; if not, you can obtain a copy from mozilla.org
 ******************************************************************/
 
+#include "winsock2.h"
 #include "cnccomms.h"
 #include "EdingCNC.h"
 
 #include <tlhelp32.h>
-
 #define ASARRAYD(n) ((double *)&n)
 #define ASARRAYB(n) ((int *)&n)
 
@@ -131,6 +131,7 @@ bool EdingCncServer::LoadDll()
                 path = keyData;
             }
             RegCloseKey(key2);
+if (dllVersion == 2) break;
         }
     }
     RegCloseKey(key);
@@ -167,13 +168,20 @@ bool EdingCncServer::LoadDll()
     GETSYMBOL(CNCISSERVERCONNECTED, CncIsServerConnected);
     GETSYMBOL(CNCCONNECTSERVER, CncConnectServer);
     GETSYMBOL(CNCDISCONNECTSERVER, CncDisConnectServer);
-    GETSYMBOL(CNCLOADJOB, CncLoadJob);
+	if (dllVersion < 3)
+	{
+		GETSYMBOL(CNCLOADJOB, CncLoadJob);
+		GETSYMBOL(CNCGETCURINTERPRETERLINE, CncGetCurInterpreterLine);
+	}else
+	{
+		GETSYMBOL2(CNCLOADJOB, CncLoadJob, CncLoadJobW);
+		GETSYMBOL2(CNCGETCURINTERPRETERLINE, CncGetCurInterpreterLine, CncGetCurInterpreterLineNumber);
+	}
     GETSYMBOL(CNCLOADTOOLTABLE, CncLoadToolTable);
     GETSYMBOL(CNCUPDATETOOLDATA, CncUpdateToolData);
     GETSYMBOL(CNCGETSTATE, CncGetState);
-    GETSYMBOL(CNCGETSTATETEXT, CncGetStateText);
-    GETSYMBOL(CNCGETCURINTERPRETERLINE, CncGetCurInterpreterLine);
-    GETSYMBOL(CNCGETCUREXECLINE, CncGetCurExecLine);
+    GETSYMBOL(CNCGETSTATETEXT, CncGetStateText);    
+	GETSYMBOL(CNCGETCUREXECLINE, CncGetCurExecLine);
     GETSYMBOL(CNCGETJOINTSTATUS, CncGetJointStatus);
     GETSYMBOL(CNCGETSIMULATIONMODE, CncGetSimulationMode);
     GETSYMBOL(CNCGETALLAXESHOMED, CncGetAllAxesHomed);
@@ -231,7 +239,6 @@ bool EdingCncServer::LoadDll()
 void EdingCncServer::Poll()
 {
 	PollConnected();
-	Server::Poll();
 	CNC_LOG_MESSAGE msg;
 	CNC_RC ret = CncLogFifoGet(&msg);
 	if(ret == CNC_RC_OK)
@@ -331,22 +338,22 @@ void EdingCncServer::UpdateState(State& state)
 	{
 	case CNC_IE_POWERUP_STATE:
 	case CNC_IE_IDLE_STATE:
-		state.machineStatus = mcOFFLINE;
+		state.machineState = mcOFFLINE;
 		return;
 
 	case CNC_IE_READY_STATE:
 		if (!CncGetOutput(CNC_IOID_DRIVE_ENABLE_OUT))
 		{
-			state.machineStatus = mcOFF;
+			state.machineState = mcOFF;
 			break;
 		}
-		state.machineStatus = mcIDLE;
+		state.machineState = mcIDLE;
 		break;
 
 	case CNC_IE_EXEC_ERROR_STATE:
 	case CNC_IE_INT_ERROR_STATE:
 	case CNC_IE_ABORTED_STATE:
-		state.machineStatus = mcOFF;
+		state.machineState = mcOFF;
 		break;
 
 	case CNC_IE_RUNNING_JOB_STATE:
@@ -361,21 +368,22 @@ void EdingCncServer::UpdateState(State& state)
 	case CNC_IE_PAUSED_SUB_SEARCH_STATE:
 	case CNC_IE_RUNNING_LINE_HANDWHEEL_STATE:
 	case CNC_IE_RUNNING_LINE_PAUSED_STATE:
-		state.machineStatus = mcRUNNING;
+		state.machineState = mcRUNNING;
 		break;
 
 	case CNC_IE_RUNNING_HANDWHEEL_STATE:
 	case CNC_IE_RUNNING_AXISJOG_STATE:
 	case CNC_IE_RUNNING_IPJOG_STATE:
-		state.machineStatus = mcJOGGING;
+		state.machineState = mcMOVING;
 		break;
 
 	case CNC_IE_RENDERING_GRAPH_STATE:
 	case CNC_IE_SEARCHING_STATE:
 	case CNC_IE_SEARCHED_DONE_STATE:
-		state.machineStatus = mcMDI; //not strictly correct but need to indicate interpreter is busy
+		state.machineState = mcMDI; //not strictly correct but need to indicate interpreter is busy
 		break;
 	}
+	CNC_CART_DOUBLE absPos = CncGetMachinePos();
 
 	CNC_MOTION_STATUS motStatus = CncGetMotionStatus();
 
@@ -383,7 +391,6 @@ void EdingCncServer::UpdateState(State& state)
 
 
 
-	CNC_CART_DOUBLE absPos = CncGetMachinePos();
 	CNC_CART_DOUBLE workPos = CncGetWorkPos();
 	for (int ct = 0; ct < MAX_AXES; ct++)
 	{
@@ -450,7 +457,7 @@ void EdingCncServer::UpdateState(State& state)
 
 void EdingCncServer::DrivesOn(const bool drivesOn)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	if (CncGetEMStopActive()) //can't do anything if external estop active
 	{
 		return;
@@ -516,8 +523,7 @@ void EdingCncServer::JogVel(const Axes velocities)
 		}
 	}
 
-	LockedState s = GetState();
-	State& state = s.Data();
+	LockedState state = GetState();
 
 	if(move)
 	{
@@ -532,7 +538,7 @@ void EdingCncServer::JogVel(const Axes velocities)
 			for(int ct=0; ct< MAX_AXES; ct++)
 			{
 				ASARRAYB(move)[ct] = true;
-				ASARRAYD(vels)[ct] = velocities.array[ct] * state.maxFeedLin;
+				ASARRAYD(vels)[ct] = velocities.array[ct] * state->maxFeedLin;
 			}
 			CncSetTrackingVelocity(vels, move);
 		}else //does not support tracking mode
@@ -543,7 +549,7 @@ void EdingCncServer::JogVel(const Axes velocities)
 				double d = velocities.array[ct];
 				vel += d * d;
 			}
-			vel = sqrt(vel) * state.maxFeedLin;
+			vel = sqrt(vel) * state->maxFeedLin;
 			CncStartJog((double *)velocities.array, vel, true);
 		}
 	}else
@@ -566,7 +572,7 @@ void EdingCncServer::JogStep(const Axes distance, const double speed)
 	if (cnc <= CNC_IE_ABORTED_STATE) return; //already moving so ignore
 
 	LockedState state = GetState();
-	CncStartJog((double *)distance.array, speed * state.Data().maxFeedLin, false);
+	CncStartJog((double *)distance.array, speed * state->maxFeedLin, false);
 }
 
 
@@ -592,7 +598,7 @@ void EdingCncServer::RapidOverride(const double percent)
 
 bool EdingCncServer::LoadFile(const string file)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	CncString s1 = from_utf8(file.c_str());
 	const wchar_t * s2 = s1.c_str();
 	CNC_RC ret = CncLoadJob(s2);
@@ -720,6 +726,22 @@ Axes EdingCncServer::GetOffset(const unsigned int index)
 	}
 	return ret;
 }
+
+vector<int> EdingCncServer::GetGCodes()
+{
+	vector<int> ret;
+	char buf[80];
+	CncGetCurrentGcodesText(buf);
+	return ret;
+}
+
+vector<int> EdingCncServer::GetMCodes()
+{
+	vector<int> ret;
+//	CncGetCurrentMcodesText(buf);
+	return ret;
+}
+
 
 
 bool EdingCncServer::StartPreview(const int recommendedSize)

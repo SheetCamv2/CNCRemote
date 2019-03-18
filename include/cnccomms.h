@@ -195,7 +195,7 @@ namespace CncRemote
 		bool blockDelete; ///<block delete
 		union {
 			CONTROLSTATE machineState; ///<Current machine state
-			int _machineStatus; //MessagePack can't handle enums directly
+			int _machineState; //MessagePack can't handle enums directly
 		};
 		int currentLine; ///<current gcode line running. -1 if no line is running
 		bool singleStep; ///<Single step
@@ -230,7 +230,7 @@ namespace CncRemote
 
 
 
-		MSGPACK_DEFINE_MAP(machinePos, position, feedOverride, feedHold, optionalStop, blockDelete, _machineStatus,
+		MSGPACK_DEFINE_MAP(machinePos, position, feedOverride, feedHold, optionalStop, blockDelete, _machineState,
 			currentLine, singleStep, spindleCmd, spindleActual, _spindleState, mist, flood, homed, axisAngular, errorCount, messageCount,
 			maxFeedLin, maxFeedAng, gcodeUnits, spindleOverride, rapidOverride, feedCmd, feedActual, tool, interpState, fileCount);
 

@@ -114,63 +114,60 @@ void MachServer::Poll()
 	}
 
 
-	LockedState lockedState = GetState();
-	State& state = lockedState.Data();
+	LockedState state = GetState();
 
 	if (Engine->CurrentUnits == 1)
 	{
-		state.gcodeUnits = 1/25.4;
+		state->gcodeUnits = 1/25.4;
 	}
 	else
 	{
-		state.gcodeUnits = 1;
+		state->gcodeUnits = 1;
 	}
-	state.feedHold = GetLED(111);
-	state.feedOverride = GetDRO(821) / 100;
-	state.optionalStop = GetLED(65);
-	state.blockDelete = GetLED(66);
+	state->feedHold = GetLED(111);
+	state->feedOverride = GetDRO(821) / 100;
+	state->optionalStop = GetLED(65);
+	state->blockDelete = GetLED(66);
 	if (Engine->EStop)
 	{
-		state.machineStatus = mcOFF;
+		state->machineState = mcOFF;
 	}else
 	{
 		if (Engine->TrajIndex != Engine->TrajHead)
 		{
-			state.machineStatus = mcRUNNING;
+			state->machineState = mcRUNNING;
 		}
 		else
 		{
-			state.machineStatus = mcIDLE;
+			state->machineState = mcIDLE;
 			for (int ct = 0; ct < MAX_AXES; ct++)
 			{
 				if (Engine->Axis[ct].Jogging)
 				{
-					state.machineStatus = mcJOGGING;
+					state->machineState = mcMOVING;
 					break;
 				}
 			}
 		}
 	}
-	state.currentLine = Engine->DisplayLine;
-	state.singleStep = GetLED(82);
-	state.spindleActual = GetDRO(39);
-	state.spindleCmd = GetDRO(817);
-	if (GetLED(164)) state.spindleState = spinFWD;
-	else if(GetLED(165)) state.spindleState = spinREV;
-	else state.spindleState = spinOFF;
-	state.mist = GetLED(12);
-	state.flood = GetLED(13);
+	state->currentLine = Engine->DisplayLine;
+	state->singleStep = GetLED(82);
+	state->spindleActual = GetDRO(39);
+	state->spindleCmd = GetDRO(817);
+	if (GetLED(164)) state->spindleState = spinFWD;
+	else if(GetLED(165)) state->spindleState = spinREV;
+	else state->spindleState = spinOFF;
+	state->mist = GetLED(12);
+	state->flood = GetLED(13);
 
-	state.spindleOverride = GetDRO(74) / 100;
-	state.rapidOverride = GetDRO(223) / 100;
+	state->spindleOverride = GetDRO(74) / 100;
+	state->rapidOverride = GetDRO(223) / 100;
 
 	for (int ct = 0; ct < MAX_AXES; ct++)
 	{
-		state.homed.array[ct] = Engine->Referenced[ct];
-		state.position.array[ct] = GetDRO(800+ ct);
+		state->homed.array[ct] = Engine->Referenced[ct];
+		state->position.array[ct] = GetDRO(800+ ct);
 	}
-
-	Server::Poll();
 }
 
 
@@ -180,15 +177,14 @@ void MachServer::LoadThread(void * param) //poll axis positions quickly
 
 	if (svr->running == 1 && svr->m_filePath[0] != 0)
 	{
-		LockedState lockedState = svr->GetState();
-		State& state = lockedState.Data();
-		state.machineStatus = mcRUNNING;
+		LockedState state = svr->GetState();
+		state->machineState = mcRUNNING;
 		if (svr->m_Mach4App)
 		{
 			Invoke(svr->m_Mach4App, DISPATCH_METHOD, NULL, NULL, NULL, OLESTR("LoadGCodeFile"), TEXT("s"), svr->m_filePath);
 		}
 		svr->m_filePath[0] = 0;
-		state.machineStatus = mcIDLE;
+		state->machineState = mcIDLE;
 	}
 }
 
@@ -196,25 +192,25 @@ void MachServer::UpdateState(State& state)
 {
 	if (Engine->CurrentUnits == 1)
 	{
-		for (int ct = 0; ct < MAX_AXES; ct++)
+		for (int ct = 1; ct < MAX_AXES; ct++)
 		{
 			state.machinePos.array[ct] = (Engine->Axis[ct].Index / MainPlanner->StepsPerAxis[ct]) * 25.4;
 		}
 	}
 	else
 	{
-		for (int ct = 0; ct < MAX_AXES; ct++)
+		for (int ct = 1; ct < MAX_AXES; ct++)
 		{
 			state.machinePos.array[ct] = Engine->Axis[ct].Index / MainPlanner->StepsPerAxis[ct];
 		}
 	}
 }
 
-void MachServer::DrivesOn(const bool state)
+void MachServer::DrivesOn(const bool mode)
 {
-	LockedState lockedState = GetState();
-	bool cur = lockedState.Data().machineStatus > mcOFF;
-	if(state != cur) DoButton(1021);
+	LockedState state = GetState();
+	bool cur = state->machineState > mcOFF;
+	if(mode != cur) DoButton(1021);
 }
 
 void MachServer::JogVel(const Axes velocities)
@@ -291,43 +287,41 @@ void MachServer::JogStep(const Axes distance, const double speed)
 
 bool MachServer::Mdi(const string line)
 {
-	LockedState lockedState = GetState();
-	State& state = lockedState.Data();
-	if (state.machineStatus <= mcOFF || state.machineStatus >= mcRUNNING) return false;
+	LockedState state = GetState();
+	if (state->machineState <= mcOFF || state->machineState >= mcRUNNING) return false;
 	Code(line.c_str());
 	return true;
 }
 
 void MachServer::SpindleOverride(const double percent)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	SetDRO(74, percent * 100);
 }
 
 void MachServer::FeedOverride(const double percent)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	SetDRO(821, percent * 100);
 }
 
 
 void MachServer::RapidOverride(const double percent)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	SetDRO(223, percent * 100);
 }
 
 bool MachServer::LoadFile(const string file)
 {
-	LockedState lockedState = GetState();
-	State& state = lockedState.Data();
-	if(!m_Mach4Scripter || state.machineStatus >= mcRUNNING) return false;
+	LockedState state = GetState();
+	if(!m_Mach4Scripter || state->machineState >= mcRUNNING) return false;
 	if(0 == MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED, file.c_str(), -1, m_filePath, MAX_PATH))
 	{
 		m_filePath[0] = 0;
 		return false;
 	}
-	state.machineStatus = mcRUNNING;
+	state->machineState = mcRUNNING;
 	_beginthread(LoadThread, 0, this); //load is slow so run it asynchronously
 	return true;
 }
@@ -335,45 +329,44 @@ bool MachServer::LoadFile(const string file)
 
 bool MachServer::CloseFile()
 {
-	LockedState lockedState = GetState();
-	State& state = lockedState.Data();
-	if(state.machineStatus >= mcRUNNING) return false;
-	Sync();
+	LockedState state = GetState();
+	if(state->machineState >= mcRUNNING) return false;
+	ThreadLock lock = GetLock();
 	DoButton(169);
 	return true;
 }
 
 void MachServer::CycleStart()
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	DoButton(1000);
 }
 
 
 void MachServer::CycleStop()
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	DoButton(1003);
 	DoButton(1002);
 }
 
 void MachServer::FeedHold(const bool state)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	bool cur = GetLED(111);
 	if(state != cur) DoButton(1001);
 }
 
 void MachServer::BlockDelete(const bool state)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	bool cur = GetLED(66);
 	if(state != cur) DoButton(176);
 }
 
 void MachServer::SingleStep(const bool state)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	bool cur = GetLED(82);
 	if(state != cur) DoButton(1004);
 	SetLED(82, state);
@@ -381,7 +374,7 @@ void MachServer::SingleStep(const bool state)
 
 void MachServer::OptionalStop(const bool state)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	SetLED(65, state);
 	bool cur = GetLED(65);
 	if(state != cur) DoButton(177);
@@ -389,7 +382,7 @@ void MachServer::OptionalStop(const bool state)
 
 void MachServer::Home(const BoolAxes axes)
 {
-	Sync();
+	ThreadLock lock = GetLock();
 	bool all = true;
 	for (int ct = 0; ct < MAX_AXES; ct++)
 	{
@@ -405,9 +398,8 @@ void MachServer::Home(const BoolAxes axes)
 		return;
 	}
 
-//		state.gcodeUnits
-	LockedState lockedState = GetState();
-	State& state = lockedState.Data();
+//		state->gcodeUnits
+	LockedState state = GetState();
 
 	char buf[128] = "G28.1";
 	double feed = 0;
@@ -417,14 +409,14 @@ void MachServer::Home(const BoolAxes axes)
 	{
 		if (axes.array[ct])
 		{
-			sprintf(buf, "%s %c%f", buf, axChars[ct], 50 * state.gcodeUnits);
+			sprintf(buf, "%s %c%f", buf, axChars[ct], 50 * state->gcodeUnits);
 			double f = m_jogAxes[ct].homeSpeed * MainPlanner->Velocities[ct] * 60;
 			feed += (f * f);
 		}
 	}
 	if (feed == 0) return;
 	feed = sqrt(feed);
-	sprintf(buf, "%s F%f", buf, feed * state.gcodeUnits);
+	sprintf(buf, "%s F%f", buf, feed * state->gcodeUnits);
 	Code(buf);
 }
 
@@ -458,6 +450,36 @@ Axes MachServer::GetOffset(const unsigned int index)
 	}
 	return ret;
 }
+
+vector<int> MachServer::GetGCodes()
+{
+	vector<int> ret;
+	for (int ct = 0; ct < RS274NGC_ACTIVE_G_CODES; ct++)
+	{
+		int a = _setup->active_g_codes[ct];
+		if (a >= 0)
+		{
+			ret.push_back(a);
+		}
+	}
+	return ret;
+}
+
+vector<int> MachServer::GetMCodes()
+{
+	vector<int> ret;
+	for (int ct = 0; ct < RS274NGC_ACTIVE_G_CODES; ct++)
+	{
+		int a = _setup->active_m_codes[ct];
+		if (a >= 0)
+		{
+			ret.push_back(a);
+		}
+	}
+	return ret;
+}
+
+
 
 bool MachServer::LoadSettings()
 {

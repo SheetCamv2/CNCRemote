@@ -15,7 +15,7 @@ Mozilla Public License for more details.
 You should have received a copy of the Mozilla Public License
 along with this program; if not, you can obtain a copy from mozilla.org
 ******************************************************************/
-
+#include "winsock2.h"
 #include "cncplugin.h"
 #include "cncapi2.h"
 #include "EdingCNC.h"

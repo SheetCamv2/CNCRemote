@@ -34,6 +34,9 @@ protected:
 	virtual void OptionalStop(const bool state);
 	virtual void Home(const BoolAxes axes);
 	virtual Axes GetOffset(const unsigned int index);
+	virtual vector<int> GetGCodes();
+	virtual vector<int> GetMCodes();
+
 
 
 

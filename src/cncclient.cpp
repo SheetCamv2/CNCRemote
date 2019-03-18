@@ -825,7 +825,7 @@ bool Client::IsLocal()
 void Client::OnDisConnect2()
 {
 	m_serverVer = 0;
-	m_state.machineStatus = mcNO_SERVER;
+	m_state.machineState = mcNO_SERVER;
 	OnDisConnect();
 }
 

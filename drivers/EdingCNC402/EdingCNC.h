@@ -18,8 +18,8 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 #ifndef EDINGCNC_PLUGIN_H
 #define EDINGCNC_PLUGIN_H
-#include "cncapi2.h"
 #include "cncserver.h"
+#include "cncapi2.h"
 
 using namespace std;
 using namespace CncRemote;
@@ -53,6 +53,8 @@ protected:
 	virtual void OptionalStop(const bool state);
 	virtual void Home(const BoolAxes axes);
 	virtual Axes GetOffset(const unsigned int index);
+	virtual vector<int> GetGCodes();
+	virtual vector<int> GetMCodes();
 	virtual bool StartPreview(const int recommendedSize);
 	virtual PreviewData GetPreview();
 

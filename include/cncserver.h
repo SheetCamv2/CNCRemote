@@ -284,7 +284,7 @@ protected:
 
 private:
 	State GetState_();
-	int Version() { return CNCREMOTE_PROTOCOL_VERSION; }
+	float Version() { return CNCREMOTE_PROTOCOL_VERSION; }
 
 	linear::mutex m_syncLock;
 	State m_state;
