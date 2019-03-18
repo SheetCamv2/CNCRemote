@@ -19,6 +19,11 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 #ifdef _WIN32
 #include <WinSock2.h>
+#else
+#include <dlfcn.h>
+#include <sys/types.h>
+#include <dirent.h>
+
 #endif
 
 
@@ -96,7 +101,7 @@ linear::Response& RemoteCall::GetResponse()
 
 	if (!m_error.empty())
 	{
-		throw(SendError(m_error.c_str()));
+		throw(SendError(m_error));
 	}
 	return *m_response;
 }
