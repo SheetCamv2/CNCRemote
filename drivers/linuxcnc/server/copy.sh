@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ver=`$1/scripts/linuxcnc_var LINUXCNCVERSION`
+ver=`linuxcnc_var LINUXCNCVERSION`
 ver=`expr $ver : '\([0-9]*\.[0-9]*\.[0-9]*\)'`
 if [ $? -ne 0 ]
 then 

@@ -6,7 +6,7 @@ then
 	exit -1
 fi
 echo "using LinuxCNC directory: $LINUXCNC"
-ver=`"$LINUXCNC/scripts/linuxcnc_var" LINUXCNCVERSION`
+ver=`"linuxcnc_var" LINUXCNCVERSION`
 echo "ver = $ver"
 ver=`expr $ver : '\([0-9]*\.[0-9]*\.[0-9]*\)'`
 if [ $? -ne 0 ]

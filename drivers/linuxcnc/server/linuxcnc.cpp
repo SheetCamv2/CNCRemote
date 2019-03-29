@@ -243,8 +243,8 @@ void LinuxCnc::UpdateState(State& state)
 
     state.feedHold = emcStatus->task.task_paused;
 #if LINUXCNC_PRE_JOINTS
-    state.max_feed_lin = ((g_maxSpeedLin * 60) / emcStatus->motion.traj.linearUnits);
-    state.max_feed_ang = ((g_maxSpeedAng * 60) / emcStatus->motion.traj.angularUnits);
+    state.maxFeedLin = ((g_maxSpeedLin * 60) / emcStatus->motion.traj.linearUnits);
+    state.maxFeedAng = ((g_maxSpeedAng * 60) / emcStatus->motion.traj.angularUnits);
 #else
     state.maxFeedLin = ((g_maxSpeedLin * 60) / emcStatus->motion.traj.linearUnits);
     state.maxFeedAng = ((g_maxSpeedAng * 60) / emcStatus->motion.traj.angularUnits);

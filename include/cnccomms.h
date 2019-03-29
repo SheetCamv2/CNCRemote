@@ -230,7 +230,7 @@ namespace CncRemote
 
 
 
-		MSGPACK_DEFINE_MAP(machinePos, position, feedOverride, feedHold, optionalStop, blockDelete, _machineState,
+		MSGPACK_DEFINE_ARRAY(machinePos, position, feedOverride, feedHold, optionalStop, blockDelete, _machineState,
 			currentLine, singleStep, spindleCmd, spindleActual, _spindleState, mist, flood, homed, axisAngular, errorCount, messageCount,
 			maxFeedLin, maxFeedAng, gcodeUnits, spindleOverride, rapidOverride, feedCmd, feedActual, tool, interpState, fileCount);
 
