@@ -1,17 +1,6 @@
 #!/bin/bash
 home=$(dirname $(readlink -f "$0"))
-<<<<<<< Updated upstream
-if [ -z "$LINUXCNC" ]
-then
-	echo "You must define a variable called LINUXCNC with the path to your LinuxCNC source. See readme.txt for more details"
-	exit -1
-fi
-echo "using LinuxCNC directory: $LINUXCNC"
-ver=`"linuxcnc_var" LINUXCNCVERSION`
-echo "ver = $ver"
-=======
 ver=`$EMC2_HOME/scripts/linuxcnc_var LINUXCNCVERSION`
->>>>>>> Stashed changes
 ver=`expr $ver : '\([0-9]*\.[0-9]*\.[0-9]*\)'`
 if [ $? -ne 0 ]
 then 
@@ -40,6 +29,7 @@ echo "cd cncremote" >> $targ
 echo "git checkout $branch" >> $targ
 echo "Install CodeBlocks <www.codeblocks.org>" >> $targ
 echo "Run CodeBlocks from a LinuxCNC rip-environment" >> $targ
+echo "If you are not sure what a rip-environment is, read the LinuxCNC installation instructions http://linuxcnc.org/docs/master/html/code/building-linuxcnc.html" >> $targ
 echo "Using CodeBlocks open cncremote/drivers/linuxcnc/server/linuxcncserver.cbp and build it." >> $targ
 echo "For more information on building CNCRemote see cncremote/README.txt" >> $targ
 exit 0

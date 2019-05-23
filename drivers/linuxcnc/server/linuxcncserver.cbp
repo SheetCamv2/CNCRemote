@@ -51,8 +51,8 @@
 					<Add option="-O0" />
 					<Add option="-DULAPI" />
 					<Add option="-D_LINUX" />
-					<Add directory="$(LINUXCNC)/src/emc/usr_intf" />
-					<Add directory="$(LINUXCNC)/include" />
+					<Add directory="$(EMC2_HOME)/src/emc/usr_intf" />
+					<Add directory="$(EMC2_HOME)/include" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/build/include" />
@@ -67,12 +67,12 @@
 					<Add library="libtv.a" />
 					<Add library="pthread" />
 					<Add library="linuxcncini" />
-					<Add directory="$(LINUXCNC)/lib" />
+					<Add directory="$(EMC2_HOME)/lib" />
 					<Add directory="../../../libraries/build/lib" />
 				</Linker>
 				<ExtraCommands>
-					<Add before="./version.sh $(LINUXCNC)" />
-					<Add after="./copy.sh $(LINUXCNC) $(TARGET_OUTPUT_FILE)" />
+					<Add before="./version.sh $(EMC2_HOME)" />
+					<Add after="./copy.sh $(EMC2_HOME) $(TARGET_OUTPUT_FILE)" />
 				</ExtraCommands>
 			</Target>
 		</Build>
