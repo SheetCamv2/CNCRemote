@@ -1,5 +1,6 @@
 #!/bin/bash
 home=$(dirname $(readlink -f "$0"))
+<<<<<<< Updated upstream
 if [ -z "$LINUXCNC" ]
 then
 	echo "You must define a variable called LINUXCNC with the path to your LinuxCNC source. See readme.txt for more details"
@@ -8,6 +9,9 @@ fi
 echo "using LinuxCNC directory: $LINUXCNC"
 ver=`"linuxcnc_var" LINUXCNCVERSION`
 echo "ver = $ver"
+=======
+ver=`$EMC2_HOME/scripts/linuxcnc_var LINUXCNCVERSION`
+>>>>>>> Stashed changes
 ver=`expr $ver : '\([0-9]*\.[0-9]*\.[0-9]*\)'`
 if [ $? -ne 0 ]
 then 
