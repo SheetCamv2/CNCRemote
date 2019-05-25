@@ -21,6 +21,11 @@ then
    echo LinuxCNC not found
    exit 1
 fi
+
+BASEDIR=$(dirname "$0")
+cd "$BASEDIR"
+LD_LIBRARY_PATH=../../../lib export LD_LIBRARY_PATH
+
 exe=$(dirname $(readlink -f "$0"))/$drvname
 if [ -f "$exe" ]
 then
@@ -32,10 +37,6 @@ then
    exit 0
 fi
 echo LinuxCNC version = $ver
-
-BASEDIR=$(dirname "$0")
-cd "$BASEDIR"
-LD_LIBRARY_PATH=..\..\..\lib export LD_LIBRARY_PATH
 
 exe=$exe\_$ver
 if [ -f "$exe" ]

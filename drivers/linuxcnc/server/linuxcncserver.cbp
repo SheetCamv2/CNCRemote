@@ -27,9 +27,9 @@
 					<Add library="linuxcnchal" />
 					<Add library="linuxcnc" />
 					<Add library="nml" />
-					<Add library="liblinear.a" />
-					<Add library="libuv.a" />
-					<Add library="libtv.a" />
+					<Add library="linear" />
+					<Add library="uv" />
+					<Add library="tv" />
 					<Add library="pthread" />
 					<Add library="linuxcncini" />
 					<Add directory="$(LINUXCNC)/lib" />
@@ -47,8 +47,7 @@
 				<Option compiler="gcc" />
 				<Option use_console_runner="0" />
 				<Compiler>
-					<Add option="-g" />
-					<Add option="-O0" />
+					<Add option="-O3" />
 					<Add option="-DULAPI" />
 					<Add option="-D_LINUX" />
 					<Add directory="$(EMC2_HOME)/src/emc/usr_intf" />
@@ -59,14 +58,16 @@
 					<Add directory="/usr/include/linuxcnc" />
 				</Compiler>
 				<Linker>
+					<Add option="-s" />
+					<Add option="-fvisibility=hidden" />
 					<Add library="linuxcnchal" />
 					<Add library="linuxcnc" />
 					<Add library="nml" />
-					<Add library="liblinear.a" />
-					<Add library="libuv.a" />
-					<Add library="libtv.a" />
 					<Add library="pthread" />
 					<Add library="linuxcncini" />
+					<Add library="linear" />
+					<Add library="tv" />
+					<Add library="uv" />
 					<Add directory="$(EMC2_HOME)/lib" />
 					<Add directory="../../../libraries/build/lib" />
 				</Linker>

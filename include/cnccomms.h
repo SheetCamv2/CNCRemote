@@ -219,9 +219,9 @@ namespace CncRemote
 		int tool; ///<Currently selected tool
 
 		// The following are for internal use
-		int errorCount; ///<The total number error messages
-		int messageCount; ///<The total number warning messages
-		int fileCount; ///<A count of files loaded. Used to indicate that a file has changed
+		unsigned int errorCount; ///<The total number error messages
+		unsigned int messageCount; ///<The total number warning messages
+		unsigned int fileCount; ///<A count of files loaded. Used to indicate that a file has changed
 
 
 

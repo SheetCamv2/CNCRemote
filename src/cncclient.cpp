@@ -159,7 +159,7 @@ public:
 	void OnConnect(const linear::Socket& socket)
 	{
 		m_retries = 0;
-		const linear::Addrinfo& info = socket.GetPeerInfo();
+//		const linear::Addrinfo& info = socket.GetPeerInfo();
 	}
 
 	void OnDisconnect(const linear::Socket& socket, const linear::Error&) {
@@ -623,18 +623,18 @@ bool Client::LoadFile(string file)
 		}
 
 #ifdef _WIN32
-		int s = file.find_last_of("/\\");
+		size_t s = file.find_last_of("/\\");
 #else
-		int s = file.find_last_of("/");
+		size_t s = file.find_last_of("/");
 #endif
 		if (s == string::npos) s = 0;
-		int e = file.find_last_of(".");
+		size_t e = file.find_last_of(".");
 		if (e == string::npos || e < s) e = file.size();
 		string name = file.substr(s + 1 , e - (s + 1));
 		file = remote.Call(m_socket, m_timeout, "SendInit", name).result.as<string>();
 		if (file.empty()) return false;
 		char buf[FILE_BLOCK_SIZE];
-		int bytes = 0;
+		size_t bytes = 0;
 		int block = 0;
 		string data;
 		do
@@ -646,9 +646,6 @@ bool Client::LoadFile(string file)
 			Poll();
 		} while (bytes == FILE_BLOCK_SIZE);
 	}
-
-
-	bool ret = false;
 	return (remote.Call(m_socket, m_timeout, "LoadFile", file).result.as<bool>());
 	CATCH_EXCEPTION();
 	return false;
