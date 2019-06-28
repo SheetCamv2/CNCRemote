@@ -13,7 +13,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option host_application="/home/linuxcnc/Documents/src/scanything/scanything" />
+				<Option host_application="/home/lathe/Documents/src/scanything/scanything" />
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-fvisibility=hidden" />
@@ -24,13 +24,8 @@
 					<Add option="-DMSGPACK_USE_CPP03" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
-					<Add directory="../../../libraries/include" />
-					<Add directory="../../../clsocket/src" />
+					<Add directory="../../../libraries/build/include" />
 				</Compiler>
-				<Linker>
-					<Add option="-fvisibility=hidden" />
-					<Add directory="../../../libraries/lib/i386-linux-gnu/" />
-				</Linker>
 			</Target>
 			<Target title="Release-Linux">
 				<Option platforms="Unix;" />
@@ -46,12 +41,10 @@
 					<Add option="-DMSGPACK_USE_CPP03" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
-					<Add directory="../../../libraries/include" />
-					<Add directory="../../../clsocket/src" />
+					<Add directory="../../../libraries/build/include" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
-					<Add directory="../../../libraries/lib/i386-linux-gnu/" />
 				</Linker>
 			</Target>
 		</Build>

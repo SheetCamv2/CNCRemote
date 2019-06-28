@@ -12,16 +12,18 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="-d" />
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-O0" />
 					<Add option="-DULAPI" />
 					<Add option="-D_LINUX" />
-					<Add directory="$(LINUXCNC)/src/emc/usr_intf" />
-					<Add directory="$(LINUXCNC)/include" />
+					<Add directory="$(EMC2_HOME)/include" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/build/include" />
+					<Add directory="/usr/include/linuxcnc/" />
+					<Add directory="daemonize" />
 				</Compiler>
 				<Linker>
 					<Add library="linuxcnchal" />
@@ -50,12 +52,10 @@
 					<Add option="-O3" />
 					<Add option="-DULAPI" />
 					<Add option="-D_LINUX" />
-					<Add directory="$(EMC2_HOME)/src/emc/usr_intf" />
-					<Add directory="$(EMC2_HOME)/include" />
 					<Add directory="../../../include" />
 					<Add directory="../../../src" />
 					<Add directory="../../../libraries/build/include" />
-					<Add directory="/usr/include/linuxcnc" />
+					<Add directory="$(EMC2_HOME)/include" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -81,9 +81,15 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="cncremote.comp" />
+		<Unit filename="daemonize/daemonize.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="linuxcnc.cpp" />
 		<Unit filename="linuxcnc.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
+		<Unit filename="make-comp.sh" />
 		<Unit filename="../../../include/cnccomms.h" />
 		<Unit filename="../../../include/cncserver.h" />
 		<Unit filename="../../../include/timer.h" />

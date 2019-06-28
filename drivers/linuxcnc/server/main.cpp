@@ -39,17 +39,19 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #include "inifile.hh"		// INIFILE
 #include "rcs_print.hh"
 #include "timer.hh"             // etime()
-#include "shcom.hh"
+#include <syslog.h>
+
 
 int port = DEFAULT_COMMS_PORT;
 string a = PACKAGE_VERSION;
+char defaultPath[LINELEN] = {0};
+bool isDaemon = false;
 
 
 struct option longopts[] =
 {
     {"help", 0, NULL, 'h'},
     {"port", 1, NULL, 'p'},
-    {"path", 1, NULL, 'd'},
     {NULL,0,NULL,0}
 };
 
@@ -58,34 +60,16 @@ struct option longopts[] =
 using namespace std;
 
 
-
-static void Disconnect()
-{
-//    EMC_NULL emc_null_msg;
-
-    if (emcStatusBuffer != 0) // wait until current message has been received
-    {
-        emcCommandWaitReceived();
-    }
-
-    delete emcErrorBuffer;
-    emcErrorBuffer = 0;
-    delete emcStatusBuffer;
-    emcStatusBuffer = 0;
-//    emcStatus = 0;
-    delete emcCommandBuffer;
-    emcCommandBuffer = 0;
-}
-
+LinuxCnc machine;
 
 static void sigQuit(int sig)
 {
 
-    Disconnect();
+    machine.DisconnectNml();
     exit(0);
 }
 
-
+/*
 static void initMain()
 {
     emcWaitType = EMC_WAIT_RECEIVED;
@@ -104,32 +88,30 @@ static void initMain()
     operator_display_string[LINELEN-1] = 0;
     programStartLine = 0;
 }
-
+*/
 
 static void usage(char* pname)
 {
     printf("Usage: \n");
     printf("         %s [Options] [-- LinuxCNC_Options]\n"
            "Options:\n"
-           "         --help       this help\n"
-           "         --port       <port number>  (default=%d)\n"
-           "         --path       <path>         (default=%s)\n"
+           "         -h,--help       this help\n"
+           "         -p,--port       <port number>  (default=%d)\n"
+           "         -d,--daemon     Run as a daemon in the background\n"
 //           "LinuxCNC_Options:\n"
 //           "         -ini        <inifile>      (default=%s)\n"
-           ,pname,port,defaultPath
+           ,pname,port
           );
 }
 
 #include "timer.h"
 
 
-
 int main(int argc, char * argv[])
 {
 
-    initMain();
-    // process local command line args
-/*    while((opt = getopt_long(argc, argv, "he:p:d:", longopts, NULL)) != - 1)
+    int opt;
+    while((opt = getopt_long(argc, argv, "h:p:d", longopts, NULL)) != - 1)
     {
         switch(opt)
         {
@@ -139,24 +121,13 @@ int main(int argc, char * argv[])
         case 'p':
             sscanf(optarg, "%d", &port); break;
             break;
-        case 'd':
-            strncpy(defaultPath, optarg, strlen(optarg) + 1);
-            break;
         }
-    }*/
+    }
 
     // process LinuxCNC command line args
     // Note: '--' may be used to separate cmd line args
     //       optind is index of next arg to process
     //       make argv[optind] zeroth arg
-    argc = argc - optind + 1;
-    argv = argv + optind - 1;
-    if (emcGetArgs(argc, argv) != 0)
-    {
-        rcs_print_error("error in argument list\n");
-        exit(1);
-    }
-
     // attach our quit function to SIGINT
     {
         struct sigaction act;
@@ -166,13 +137,12 @@ int main(int argc, char * argv[])
         sigaction(SIGINT, &act, NULL);
     }
 
-
-    LinuxCnc machine;
     if(machine.Bind(port) != CncRemote::errOK)
     {
         printf("Failed to bind port %d. Is another server already running on that port?\n", port);
         return -1;
     }
+
     while(1)
     {
         printf("Waiting for LinuxCNC\n");
@@ -185,10 +155,10 @@ int main(int argc, char * argv[])
             {
                 break;
             }
-            SleepMs(100);
+            SleepMs(1);
         }
         printf("Disconnected from LinuxCNC\n");
-        Disconnect();
+        machine.DisconnectNml();
     }
     return 0;
 }

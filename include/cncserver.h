@@ -287,6 +287,8 @@ private:
 	float Version() { return CNCREMOTE_PROTOCOL_VERSION; }
 
 	linear::mutex m_syncLock;
+	linear::mutex m_msgLock;
+
 	State m_state;
 
 	void DeleteTemp();

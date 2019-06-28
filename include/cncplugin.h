@@ -48,6 +48,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 #ifdef __cplusplus //DLL interface is pure C for compatibility across compilers
 extern "C" {
 #endif
+	typedef void (* CNCLOGFUNC) (const CncChar * msg);
 
 #ifdef _CREATING_CLIENT
    #ifdef _WIN32
@@ -63,7 +64,7 @@ extern "C" {
     typedef const char * (* CNCGETNAMEFUNC)();
 	typedef void (* CNCQUITFUNC) ();
 	typedef void (* CNCPOLLFUNC) ();
-	typedef uint32_t (* CNCCONTROLEXISTSFUNC) (const CncChar * path);
+	typedef uint32_t (* CNCCONTROLEXISTSFUNC) (const CncChar * path, CNCLOGFUNC logCallback);
 
 #else
     #ifdef _WIN32
@@ -91,7 +92,7 @@ extern "C" {
 /* Check for the existence of the controller. pluginDir is a UTF-8 encoded path to the plugin directory including a trailing slash.
     returns true if the control exists on this machine
 */
-    EXPORT_CNC const uint32_t ControlExists(const char * pluginDir);
+    EXPORT_CNC const uint32_t ControlExists(const char * pluginDir, CNCLOGFUNC logCallback);
 
 /* Called just before the library is unloaded
 */
@@ -101,6 +102,10 @@ extern "C" {
 */
     EXPORT_CNC void Poll();
 #endif
+
+/* You must implement this function. It is called whenever a plugin wants to write to the log.
+*/
+IMPORT_CNC void DoLog(const char * text);
 
 #ifdef __cplusplus
 }

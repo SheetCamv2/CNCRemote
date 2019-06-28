@@ -22,20 +22,50 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 #include "cncserver.h"
 #include "timer.h"
-#include "rtapi.h"		// RTAPI realtime OS API
-//#include "hal.h"		// HAL public API decls
-//#include "../src/hal/hal_priv.h"	// private HAL decls
+#include "rcs.hh"
+#include "posemath.h"
+#include "emc.hh"
+#include "emc_nml.hh"
+#include "nml_oi.hh"
+#include "canon.hh"
+#include "emcglb.h"
+#include "emccfg.h"
+#include "inifile.hh"
+#include "rcs_print.hh"
+#include "timer.hh"
+#include "rtapi.h"
 
 using namespace CncRemote;
+
+enum LINEAR_UNIT_CONVERSION {
+    LINEAR_UNITS_CUSTOM = 1,
+    LINEAR_UNITS_AUTO,
+    LINEAR_UNITS_MM,
+    LINEAR_UNITS_INCH,
+    LINEAR_UNITS_CM
+};
+
+#define INCH_PER_MM (1.0/25.4)
+#define CM_PER_MM 0.1
+#define GRAD_PER_DEG (100.0/90.0)
+#define RAD_PER_DEG TO_RAD	// from posemath.h
+
+#define JOGTELEOP 0
+#define JOGJOINT  1
 
 class LinuxCnc : public CncRemote::Server
 {
 public:
     LinuxCnc();
-    void ConnectLCnc();
+    void DisconnectNml();
+    bool ConnectNml();
+    bool OK();
+    int IniLoad(const char *filename);
+    bool ConnectLCnc();
     bool Poll();
     static void ZeroJog();
-    void SetMode(const int mode);
+    bool CommandSend(RCS_CMD_MSG & cmd);
+    bool SetMode(const EMC_TASK_MODE_ENUM mode);
     void SendJog(const int axis, const double vel);
     int SendJogVel(const double x, const double y, const double z, const double a, const double b, const double c);
     void SendJogStep(const int axis, const double val);
@@ -71,7 +101,13 @@ private:
     int m_slowCount;
     uint32_t m_heartbeat;
     time_t m_nextTime;
-    bool m_connected;
+    void *m_lastMessage;
+
+    RCS_CMD_CHANNEL *m_emcCommandBuffer;
+    RCS_STAT_CHANNEL *m_emcStatusBuffer;
+    EMC_STAT *m_emcStatus;
+    NML *m_emcErrorBuffer;
+    LINEAR_UNIT_CONVERSION m_linearUnitConversion;
 
 };
 

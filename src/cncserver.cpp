@@ -573,12 +573,14 @@ bool Server::LoadFile2(const string file)
 
 string Server::GetError(const unsigned int index)
 {
+	ThreadLock l(m_msgLock);
 	if (index >= m_errors.size()) return string();
 	return m_errors[index];
 }
 
 string Server::GetMessage(const unsigned int index)
 {
+	ThreadLock l(m_msgLock);
 	if (index >= m_messages.size()) return string();
 	return m_messages[index];
 }
@@ -587,6 +589,7 @@ void Server::LogError(string error)
 {
 	if (error.size() > 0)
 	{
+		ThreadLock l(m_msgLock);
 		m_errors.push_back(error);
 		m_state.errorCount = m_errors.size();
 	}
@@ -596,6 +599,7 @@ void Server::LogMessage(string message)
 {
 	if (message.size() > 0)
 	{
+		ThreadLock l(m_msgLock);
 		m_messages.push_back(message);
 		m_state.messageCount = m_messages.size();
 	}

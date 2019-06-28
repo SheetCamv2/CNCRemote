@@ -276,7 +276,7 @@ Client::Client()
 Client::~Client()
 {
 #ifdef USE_PLUGINS
-
+    Disconnect();
     for(size_t ct=0; ct < m_plugins.size(); ct++)
     {
         Plugin &plg = m_plugins[ct];
@@ -293,9 +293,10 @@ Client::~Client()
 
 #ifdef USE_PLUGINS
 
-bool Client::LoadPlugins(const CncString& path)
+bool Client::LoadPlugins(const CncString& path, CNCLOGFUNC logFunc)
 {
     if(m_plugins.size() > 0) return true; //Only enumerate plugins once
+    if(!logFunc) return false;
 
 #ifdef _WIN32
     /*
@@ -352,27 +353,28 @@ bool Client::LoadPlugins(const CncString& path)
     {
         return false;
     }
-    dirent * file = readdir(dir);
+    dirent *file = readdir(dir);
     if(file == NULL)
     {
         return false;
     }
     do
     {
-        Plugin plg;
-        if(strcmp(file->d_name, ".") == 0 ||
+        if(file->d_type != DT_REG) continue;
+/*        if(strcmp(file->d_name, ".") == 0 ||
            strcmp(file->d_name, "..") == 0)
         {
             continue;
-        }
+        }*/
         string dllName = path + "/" + file->d_name;
-        plg.handle = dlopen(dllName.c_str(), RTLD_NOW);
-        if(!plg.handle)
+        LIBHANDLE handle = dlopen(dllName.c_str(), RTLD_LAZY);
+        if(!handle)
         {
-            char * msg = dlerror();
-            printf("%s\n", msg);
+            if(logFunc) logFunc(dlerror());
             continue;
         }
+        Plugin plg;
+        plg.handle = handle;
         plg.Start = (CNCSTARTFUNC) dlsym(plg.handle,"Start");
         plg.Stop = (CNCSTOPFUNC) dlsym(plg.handle,"Stop");
         plg.GetName = (CNCGETNAMEFUNC) dlsym(plg.handle,"GetName");
@@ -385,7 +387,7 @@ bool Client::LoadPlugins(const CncString& path)
                 !plg.Quit ||
                 !plg.Poll ||
                 !plg.ControlExists ||
-                plg.ControlExists((path + "/").c_str()) == false)
+                plg.ControlExists((path + "/").c_str(), logFunc) == false)
         {
             dlclose(plg.handle);
         }
@@ -509,7 +511,7 @@ bool Client::Connect(const unsigned int index, const CncString& address, const u
         if(index > m_plugins.size()) return false;
         m_plugin = &m_plugins[index - 1];
         m_plugin->Start();
-		addr = "localhost";
+		addr = "127.0.0.1";
 	}
 #endif
 	m_socket = m_client.CreateSocket(addr, port);

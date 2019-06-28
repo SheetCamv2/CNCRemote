@@ -21,7 +21,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 #include "timer.h"
 
-#ifdef _WIN32
+#ifdef _WIN32_
 #include "windows.h"
 #elif _POSIX_C_SOURCE >+ 199309L
 #include <time.h> //for nanosleep
@@ -34,7 +34,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 void SleepMs(const unsigned int time)
 {
-#ifdef _WIN32
+#ifdef _WIN32_
     Sleep(time);
 #elif _POSIX_C_SOURCE >+ 199309L
     struct timespec ts;
@@ -49,7 +49,7 @@ void SleepMs(const unsigned int time)
 
 UTimer::UTimer()
 {
-#ifdef _WIN32
+#ifdef _WIN32_
     QueryPerformanceFrequency(&m_frequency);
 #endif
     Restart();
@@ -57,7 +57,7 @@ UTimer::UTimer()
 
 void UTimer::Restart()
 {
-#ifdef _WIN32
+#ifdef _WIN32_
     QueryPerformanceCounter(&m_time);
 #else
     clock_gettime(CLOCK_MONOTONIC, &m_time);
@@ -66,7 +66,7 @@ void UTimer::Restart()
 
 uint64_t UTimer::GetElapsed(const bool restart)
 {
-#ifdef _WIN32
+#ifdef _WIN32_
     LARGE_INTEGER now;
     QueryPerformanceCounter(&now);
     LARGE_INTEGER ret;

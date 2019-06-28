@@ -46,7 +46,6 @@ public:
 class RemoteError : public std::runtime_error
 {
 public:
-	RemoteError(string& err) : std::runtime_error(err) {}
 	RemoteError(string err) : std::runtime_error(err) {}
 
 };
@@ -55,14 +54,12 @@ class TransferError : public std::runtime_error
 {
 public:
 	TransferError(std::string err) : runtime_error(err) {}
-	TransferError(std::string& err) : runtime_error(err) {}
 };
 
 class SendError : public std::runtime_error
 {
 public:
-//	SendError():runtime_error() {};
-	SendError(string& err) : runtime_error(err) {}
+	SendError(string err) : runtime_error(err) {}
 };
 
 
@@ -191,7 +188,14 @@ public:
     Client();
 	virtual ~Client();
 #ifdef USE_PLUGINS
-	bool LoadPlugins(const CncString& pluginPath); ///<Load plugins from the given path. Note path should end with a trailing path delimiter. Returns false if plugins dir nor found.
+/**
+Load plugins from the given path.
+Note path should end with a trailing path delimiter.
+Returns false if plugins dir nor found.
+
+If USE_PLUGINS is defined you must implement the function DoLog() as defined in cncplugin.h
+*/
+	bool LoadPlugins(const CncString& pluginPath, CNCLOGFUNC logFunc);
 	const vector<Plugin> GetPlugins(){return m_plugins;} ///<Get the available plugins
 #endif
     COMERROR Poll(); ///<Call at least as often as you need to send/receive data. Returns true if any data was received.
@@ -241,7 +245,7 @@ public:
 	...do stuff
 	if(call.HasResponse())
 	{
-		try 
+		try
 		{
 			vector<int> result = call.GetResponse().result.as<vector<int>>();
 			//do something with the result
