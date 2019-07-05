@@ -19,7 +19,7 @@ along with this program; if not, you can obtain a copy from mozilla.org
 
 #include "linuxcnc.h"
 
-#include "version.h"
+#include "include/version.h"
 
 
 /*
@@ -557,7 +557,7 @@ bool LinuxCnc::CommandSend(RCS_CMD_MSG & cmd)
         int serial_diff = m_emcStatus->echo_serial_number - serial;
         if (serial_diff >= 0)
         {
-            return 0;
+            return true;
         }
         esleep(0.001);
     }
@@ -710,7 +710,8 @@ bool LinuxCnc::Mdi(const string line)
     EMC_TASK_PLAN_EXECUTE emc_task_plan_execute_msg;
     strncpy(emc_task_plan_execute_msg.command, line.c_str(), LINELEN);
     emc_task_plan_execute_msg.command[LINELEN-1] = 0;
-    return CommandSend(emc_task_plan_execute_msg);
+    bool ret = CommandSend(emc_task_plan_execute_msg);
+    return ret;
 }
 
 void LinuxCnc::SpindleOverride(const double percent)

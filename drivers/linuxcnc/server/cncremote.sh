@@ -90,10 +90,7 @@ if [ "$1" == "-b" ]; then
    rm -rf obj
 fi
 mkdir -p obj
-cd include
-../version.sh
-cd ..
-make -j -f makefile 
+make -j3 -f makefile 
 if [ $? -ne 0 ]; then
    echo "Failed to build the server"
    run_builtin

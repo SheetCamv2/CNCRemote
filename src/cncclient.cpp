@@ -361,16 +361,11 @@ bool Client::LoadPlugins(const CncString& path, CNCLOGFUNC logFunc)
     do
     {
         if(file->d_type != DT_REG) continue;
-/*        if(strcmp(file->d_name, ".") == 0 ||
-           strcmp(file->d_name, "..") == 0)
-        {
-            continue;
-        }*/
         string dllName = path + "/" + file->d_name;
         LIBHANDLE handle = dlopen(dllName.c_str(), RTLD_LAZY);
         if(!handle)
         {
-            if(logFunc) logFunc(dlerror());
+            logFunc(dlerror());
             continue;
         }
         Plugin plg;

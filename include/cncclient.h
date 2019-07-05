@@ -283,6 +283,7 @@ If USE_PLUGINS is defined you must implement the function DoLog() as defined in 
 	virtual void OnRemoteException(const ExceptionData& exception) {} ///<Called if there is an exception on the server after a notify is sent
 
 
+    int32_t GetHeartbeat() {return m_heartBeat;} ///<Get the heartbeat counter
 protected:
 
 	void SetBusy(const int state); ///<Must be called if the last command sent may make the machine move
