@@ -348,6 +348,7 @@ bool Client::LoadPlugins(const CncString& path, CNCLOGFUNC logFunc)
     while(FindNextFileW(hFind, &dir) != NULL);
     FindClose(hFind);
 #else
+logFunc(path.c_str());
     DIR* dir = opendir((path).c_str());
     if (dir == NULL)
     {
@@ -363,6 +364,7 @@ bool Client::LoadPlugins(const CncString& path, CNCLOGFUNC logFunc)
         if(file->d_type != DT_REG) continue;
         string dllName = path + "/" + file->d_name;
         LIBHANDLE handle = dlopen(dllName.c_str(), RTLD_LAZY);
+logFunc(dllName.c_str());
         if(!handle)
         {
             logFunc(dlerror());
