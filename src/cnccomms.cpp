@@ -35,7 +35,7 @@ namespace CncRemote
 
 	State::State()
 	{
-		memset(&position, 0, (unsigned)((unsigned)&interpState - (unsigned)&position));
+		memset(&position, 0, (long)((long)&interpState - (long)&position));
 		errorCount = 0;
 		messageCount = 0;
 		fileCount = 0;

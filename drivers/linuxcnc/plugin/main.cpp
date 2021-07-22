@@ -245,7 +245,7 @@ EXPORT_CNC const uint32_t ControlExists(const char * pluginDir, CNCLOGFUNC logFu
             usleep(1000);
         }
     }
-    if(execRet == 0);
+    if(execRet == 0)
     {
         g_serverPath = string(pluginDir) + "linuxcncserver/cncremote.sh 2>&1";
         return true;
