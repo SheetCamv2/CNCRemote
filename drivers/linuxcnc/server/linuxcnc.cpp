@@ -498,7 +498,7 @@ void LinuxCnc::UpdateState(State& state)
         axes.c = m_emcStatus->motion.joint[5].homed;
 #endif
     }
-    switch (m_linearUnitConversion)
+/*    switch (m_linearUnitConversion)
     {
     case LINEAR_UNITS_MM:
         state.gcodeUnits = 1;
@@ -527,8 +527,8 @@ void LinuxCnc::UpdateState(State& state)
     case LINEAR_UNITS_CUSTOM:
         state.gcodeUnits = 1;
         break;
-    }
-
+    }*/
+    state.gcodeUnits = m_emcStatus->motion.traj.linearUnits;
 
 
 }
@@ -630,15 +630,16 @@ int LinuxCnc::SendJogVel(const double x, const double y, const double z, const d
 
 void LinuxCnc::SendJogStep(const int axis, const double val)
 {
-    EMC_JOG_INCR emc_jog_incr_msg;
 
 #if LINUXCNC_PRE_JOINTS
+	EMC_AXIS_INCR_JOG emc_jog_incr_msg;
     if(m_emcStatus->motion.axis[axis].axisType == EMC_AXIS_LINEAR)
         emc_jog_incr_msg.vel = g_maxSpeedLin / 60.0;
     else
         emc_jog_incr_msg.vel = g_maxSpeedAng / 60.0;
     emc_jog_incr_msg.axis = axis;
 #else
+    EMC_JOG_INCR emc_jog_incr_msg;
     if(m_emcStatus->motion.joint[axis].jointType == EMC_LINEAR)
         emc_jog_incr_msg.vel = g_maxSpeedLin / 60.0;
     else
@@ -857,8 +858,21 @@ void LinuxCnc::Home(const BoolAxes axes)
     emc_set_teleop_enable_msg.enable = true;
     CommandSend(emc_set_teleop_enable_msg);
 
+#if LINUXCNC_PRE_JOINTS
+    EMC_AXIS_HOME emc_axis_home_msg;
+    if(axes.x && axes.y && axes.z)
+    {
+        emc_axis_home_msg.axis = -1;
+        CommandSend(emc_axis_home_msg);
+        return;
+    }
+    for(int ct=0; ct < MAX_AXES; ct++)
+    {
+        emc_axis_home_msg.axis = ct;
+        CommandSend(emc_axis_home_msg);
+    }
+#else
     EMC_JOINT_HOME emc_joint_home_msg;
-
     if(axes.x && axes.y && axes.z)
     {
         emc_joint_home_msg.joint = -1;
@@ -870,6 +884,7 @@ void LinuxCnc::Home(const BoolAxes axes)
         emc_joint_home_msg.joint = ct;
         CommandSend(emc_joint_home_msg);
     }
+#endif
 }
 
 Axes LinuxCnc::GetOffset(const unsigned int index)
